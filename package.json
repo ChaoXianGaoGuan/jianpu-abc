@@ -1,0 +1,31 @@
+{
+  "name": "jianpu-abc",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ABC-style text notation, rendering, playback, and MusicXML export for numbered musical notation.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChaoXianGaoGuan/jianpu-abc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ChaoXianGaoGuan/jianpu-abc/issues"
+  },
+  "homepage": "https://github.com/ChaoXianGaoGuan/jianpu-abc#readme",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -p tsconfig.build.json && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.0.16"
+  },
+  "dependencies": {
+    "abcjs": "^6.6.3"
+  }
+}

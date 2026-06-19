@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="JABC 简谱解析与播放验收页" />
+    <title>JABC 简谱工作台</title>
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Jianpu ABC</p>
+        <h1>JABC 简谱工作台</h1>
+        <p class="subtitle">编辑简谱文本，实时检查 AST 转换并用 Web Audio 播放。</p>
+      </div>
+      <div class="milestone">Milestone 5</div>
+    </header>
+
+    <main>
+      <section class="controls" aria-labelledby="playback-title">
+        <div>
+          <p class="section-label" id="playback-title">播放控制</p>
+          <div class="button-row">
+            <button id="play-button" class="primary" type="button">播放</button>
+            <button id="pause-button" type="button">暂停</button>
+            <button id="resume-button" type="button">继续</button>
+            <button id="stop-button" type="button">停止</button>
+          </div>
+        </div>
+        <div class="playback-readout">
+          <span>播放器：<strong id="playback-state">空闲</strong></span>
+          <span>当前事件：<code id="current-event">—</code></span>
+        </div>
+      </section>
+
+      <section class="panel preview-panel" aria-labelledby="jianpu-preview-title">
+        <div class="panel-heading">
+          <div>
+            <p class="section-label">实时乐谱</p>
+            <h2 id="jianpu-preview-title">简谱预览</h2>
+          </div>
+          <span class="live-indicator">SVG</span>
+        </div>
+        <div id="jianpu-preview" class="jianpu-preview" aria-live="polite"></div>
+      </section>
+
+      <section class="panel preview-panel" aria-labelledby="staff-preview-title">
+        <div class="panel-heading">
+          <div>
+            <p class="section-label">同步乐谱</p>
+            <h2 id="staff-preview-title">五线谱预览</h2>
+          </div>
+          <span class="live-indicator">ABCJS</span>
+        </div>
+        <div id="staff-preview" class="staff-preview" aria-live="polite"></div>
+      </section>
+
+      <section class="workspace">
+        <article class="panel editor-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-label">输入</p>
+              <h2>JABC 文本</h2>
+            </div>
+            <span class="live-indicator">实时解析</span>
+          </div>
+          <label class="sr-only" for="jabc-editor">JABC 文本编辑器</label>
+          <textarea id="jabc-editor" spellcheck="false"></textarea>
+          <div id="parse-status" class="status" role="status"></div>
+          <pre id="parse-errors" class="errors" aria-live="polite"></pre>
+        </article>
+
+        <article class="panel output-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-label">转换结果</p>
+              <h2>标准 ABC</h2>
+            </div>
+            <span id="event-count" class="counter">0 个音符</span>
+          </div>
+          <div class="export-actions">
+            <button id="copy-abc-button" type="button">复制 ABC</button>
+            <button id="download-abc-button" type="button">下载 ABC</button>
+          </div>
+          <label class="sr-only" for="abc-output">标准 ABC 输出</label>
+          <textarea id="abc-output" class="export-output" readonly spellcheck="false"></textarea>
+
+          <div class="panel-heading compact-heading">
+            <div>
+              <p class="section-label">导出文件</p>
+              <h2>MusicXML</h2>
+            </div>
+            <span class="live-indicator">.musicxml</span>
+          </div>
+          <div class="export-actions">
+            <button id="copy-musicxml-button" type="button">复制 MusicXML</button>
+            <button id="download-musicxml-button" type="button">下载 MusicXML</button>
+          </div>
+          <label class="sr-only" for="musicxml-output">MusicXML 输出</label>
+          <textarea id="musicxml-output" class="export-output" readonly spellcheck="false"></textarea>
+          <p class="hint">支持组合语法：#4、b7、1'、1,、1/2、1*2、1.、#4'/2.。修改左侧文本后再次点击播放即可验收。</p>
+        </article>
+      </section>
+    </main>
+
+    <script type="module" src="/src/web/main.ts"></script>
+  </body>
+</html>
