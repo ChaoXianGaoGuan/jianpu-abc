@@ -24,6 +24,14 @@ interface LayoutMeasure {
   cellWidth: number;
 }
 
+interface PositionedEvent {
+  event: MusicalEvent;
+  eventIndex: number;
+  centerX: number;
+  slotCount: number;
+  startTime: Fraction;
+}
+
 const ACCIDENTAL_TEXT: Record<Accidental, string> = {
   sharp: "♯",
   flat: "♭",
@@ -38,23 +46,34 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
   const showLyrics = options.showLyrics ?? true;
   const padding = Math.max(24, fontSize);
   const defaultLength = score.header.defaultNoteLength ?? DEFAULT_NOTE_LENGTH;
+  const beatDuration = score.header.meter
+    ? { numerator: 1, denominator: score.header.meter.denominator }
+    : defaultLength;
   const titleY = padding;
   const metaY = score.header.title ? padding + 34 : padding;
-  const musicTop = metaY + 58;
-  const lineHeight = fontSize * (showLyrics ? 3.15 : 2.35);
+  const musicTop = metaY + 64;
+  const lineHeight = fontSize * (showLyrics ? 3.35 : 2.55);
   const title = score.header.title ?? "JABC score";
   const renderedVoices: string[] = [];
   let cursorY = musicTop;
 
   for (const [voiceIndex, voice] of score.voices.entries()) {
     if (score.voices.length > 1) {
-      renderedVoices.push(`<text class="voice-label" x="${padding}" y="${round(cursorY - fontSize * 0.88)}">${escapeXml(voice.id)}</text>`);
+      renderedVoices.push(`<text class="voice-label" x="${padding}" y="${round(cursorY - fontSize * 1.18)}">${escapeXml(voice.id)}</text>`);
     }
-    const layout = layoutMeasures(voice, width, padding, cursorY, lineHeight, fontSize);
+    const layout = layoutMeasures(
+      voice,
+      width,
+      padding,
+      cursorY,
+      lineHeight,
+      fontSize,
+      beatDuration,
+    );
     renderedVoices.push(...layout.map((placed) => renderMeasure(
       voice,
       placed,
-      defaultLength,
+      beatDuration,
       fontSize,
       showLyrics,
       options.highlightEventId,
@@ -64,7 +83,6 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
   }
 
   const height = Math.ceil(cursorY + padding * 0.4);
-
   const content = [
     renderHeader(score, width, padding, titleY, metaY),
     ...renderedVoices,
@@ -79,15 +97,17 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     .measure-barline{stroke:#33483f;stroke-width:1.6}
     .barline-text,.ending-text{font:700 15px ui-monospace,Consolas,monospace;fill:#33483f;text-anchor:middle}
     .event-bg{fill:transparent;transition:fill .12s ease}
-    .event-symbol{font:600 ${fontSize}px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#1f332a;text-anchor:middle}
+    .event-symbol,.duration-extension{font:600 ${fontSize}px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#1f332a;text-anchor:middle}
     .event-accidental{font:600 ${fontSize * 0.52}px serif;fill:#1f332a;text-anchor:middle}
     .octave-dot,.duration-dot{fill:#1f332a}
-    .duration-line{stroke:#1f332a;stroke-width:1.5;stroke-linecap:round}
-    .duration-label{font:11px ui-monospace,Consolas,monospace;fill:#718078;text-anchor:middle}
-    .tie-mark,.tuplet-mark,.slur-mark{font:700 ${fontSize * 0.56}px ui-monospace,Consolas,monospace;fill:#8d3f23;text-anchor:middle}
+    .duration-line{stroke:#1f332a;stroke-width:1.7;stroke-linecap:round}
+    .relation-arc{fill:none;stroke:#35483f;stroke-width:1.8;stroke-linecap:round}
+    .tie-arc{stroke-width:1.65}
+    .tuplet-number{font:700 ${fontSize * 0.48}px Georgia,serif;fill:#35483f;text-anchor:middle;dominant-baseline:middle}
+    .relation-label-bg{fill:#fffef9}
     .event-lyric{font:15px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#4f6259;text-anchor:middle}
     .is-highlighted .event-bg{fill:#f7d98b}
-    .is-highlighted .event-symbol,.is-highlighted .event-accidental{fill:#8d3f23}
+    .is-highlighted .event-symbol,.is-highlighted .event-accidental,.is-highlighted .duration-extension{fill:#8d3f23}
   </style>
   ${content}
 </svg>`;
@@ -100,9 +120,10 @@ function layoutMeasures(
   musicTop: number,
   lineHeight: number,
   fontSize: number,
+  beatDuration: Fraction,
 ): LayoutMeasure[] {
   const availableWidth = width - padding * 2;
-  const baseCellWidth = fontSize * 1.55;
+  const baseCellWidth = fontSize * 1.5;
   const barSpace = fontSize * 0.55;
   const measureGap = fontSize * 0.35;
   const output: LayoutMeasure[] = [];
@@ -110,10 +131,13 @@ function layoutMeasures(
   let y = musicTop;
 
   for (const [measureIndex, measure] of voice.measures.entries()) {
-    const eventCount = Math.max(1, measure.events.length);
-    const naturalWidth = eventCount * baseCellWidth + barSpace;
+    const slotCount = Math.max(
+      1,
+      measure.events.reduce((total, event) => total + visualSlotCount(event, beatDuration), 0),
+    );
+    const naturalWidth = slotCount * baseCellWidth + barSpace;
     const measureWidth = Math.min(availableWidth, naturalWidth);
-    const cellWidth = (measureWidth - barSpace) / eventCount;
+    const cellWidth = (measureWidth - barSpace) / slotCount;
     if (x > padding && x + measureWidth > width - padding) {
       x = padding;
       y += lineHeight;
@@ -154,81 +178,85 @@ function renderHeader(
 function renderMeasure(
   voice: Voice,
   placed: LayoutMeasure,
-  defaultLength: Fraction,
+  beatDuration: Fraction,
   fontSize: number,
   showLyrics: boolean,
   highlightEventId: string | undefined,
 ): string {
-  const events = placed.measure.events.map((event, eventIndex) => {
-    const eventId = `${voice.id}:${placed.measureIndex}:${eventIndex}`;
-    const centerX = eventIndex * placed.cellWidth + placed.cellWidth / 2;
+  const positioned = positionEvents(placed, beatDuration);
+  const events = positioned.map((item) => {
+    const eventId = `${voice.id}:${placed.measureIndex}:${item.eventIndex}`;
     return renderEvent(
-      event,
+      item,
       eventId,
-      centerX,
       placed.cellWidth,
-      defaultLength,
       fontSize,
       showLyrics,
       eventId === highlightEventId,
     );
   }).join("");
+  const durationLines = renderDurationLines(positioned, beatDuration, fontSize);
+  const relations = renderRelations(positioned, placed.width, fontSize);
   const leftBarline = placed.measure.leftBarline
     ? `<text class="barline-text" x="${round(-fontSize * 0.18)}" y="${round(-fontSize * 0.18)}">${escapeXml(placed.measure.leftBarline.sourceText)}</text>`
     : "";
   const ending = placed.measure.ending
-    ? `<text class="ending-text" x="${round(fontSize * 0.34)}" y="${round(-fontSize * 1.28)}">${escapeXml(placed.measure.ending.sourceText)}</text>`
+    ? `<text class="ending-text" x="${round(fontSize * 0.34)}" y="${round(-fontSize * 1.65)}">${escapeXml(placed.measure.ending.sourceText)}</text>`
     : "";
   const barline = placed.measure.barline
     ? placed.measure.barline.type === "single"
-      ? `<line class="measure-barline" x1="${placed.width - fontSize * 0.22}" y1="${-fontSize}" x2="${placed.width - fontSize * 0.22}" y2="${fontSize * 0.52}"/>`
+      ? `<line class="measure-barline" x1="${placed.width - fontSize * 0.22}" y1="${-fontSize}" x2="${placed.width - fontSize * 0.22}" y2="${fontSize * 0.62}"/>`
       : `<text class="barline-text" x="${round(placed.width - fontSize * 0.18)}" y="${round(-fontSize * 0.18)}">${escapeXml(placed.measure.barline.sourceText)}</text>`
     : "";
-  return `<g class="measure" data-measure-index="${placed.measureIndex}" transform="translate(${round(placed.x)} ${round(placed.y)})">${leftBarline}${ending}${events}${barline}</g>`;
+  return `<g class="measure" data-measure-index="${placed.measureIndex}" transform="translate(${round(placed.x)} ${round(placed.y)})">${leftBarline}${ending}${events}${durationLines}${relations}${barline}</g>`;
+}
+
+function positionEvents(placed: LayoutMeasure, beatDuration: Fraction): PositionedEvent[] {
+  let slotOffset = 0;
+  let startTime: Fraction = { numerator: 0, denominator: 1 };
+  return placed.measure.events.map((event, eventIndex) => {
+    const slotCount = visualSlotCount(event, beatDuration);
+    const positioned: PositionedEvent = {
+      event,
+      eventIndex,
+      centerX: (slotOffset + 0.5) * placed.cellWidth,
+      slotCount,
+      startTime,
+    };
+    slotOffset += slotCount;
+    startTime = addFractions(startTime, event.duration);
+    return positioned;
+  });
 }
 
 function renderEvent(
-  event: MusicalEvent,
+  positioned: PositionedEvent,
   eventId: string,
-  centerX: number,
   cellWidth: number,
-  defaultLength: Fraction,
   fontSize: number,
   showLyrics: boolean,
   highlighted: boolean,
 ): string {
+  const { event, centerX, slotCount } = positioned;
   const symbol = event.type === "note" ? String(event.degree) : event.type === "rest" ? "0" : "−";
   const className = highlighted ? "jabc-event is-highlighted" : "jabc-event";
-  const backgroundHeight = fontSize * (showLyrics ? 2.35 : 1.65);
+  const backgroundHeight = fontSize * (showLyrics ? 2.45 : 1.75);
   const dots = event.type === "extension" ? 0 : event.dots ?? 0;
+  const visualWidth = slotCount * cellWidth;
   const parts = [
-    `<rect class="event-bg" x="${round(centerX - cellWidth * 0.4)}" y="${round(-fontSize * 1.18)}" width="${round(cellWidth * 0.8)}" height="${round(backgroundHeight)}" rx="7"/>`,
+    `<rect class="event-bg" x="${round(centerX - cellWidth * 0.4)}" y="${round(-fontSize * 1.25)}" width="${round(visualWidth - cellWidth * 0.2)}" height="${round(backgroundHeight)}" rx="7"/>`,
     `<text class="event-symbol" x="${round(centerX)}" y="0">${symbol}</text>`,
   ];
+
+  for (let index = 1; index < slotCount; index += 1) {
+    parts.push(`<text class="duration-extension" x="${round(centerX + index * cellWidth)}" y="0">−</text>`);
+  }
 
   if (event.type === "note") {
     if (event.accidental) {
       parts.push(`<text class="event-accidental" x="${round(centerX - fontSize * 0.55)}" y="${round(-fontSize * 0.08)}">${ACCIDENTAL_TEXT[event.accidental]}</text>`);
     }
     parts.push(renderOctaveDots(centerX, event.octaveShift, fontSize));
-    if (event.slurStart) {
-      parts.push(`<text class="slur-mark" x="${round(centerX - fontSize * 0.52)}" y="${round(-fontSize * 1.18)}">(</text>`);
-    }
-    if (event.slurEnd) {
-      parts.push(`<text class="slur-mark" x="${round(centerX + fontSize * 0.52)}" y="${round(-fontSize * 1.18)}">)</text>`);
-    }
-    if (event.tieEnd) {
-      parts.push(`<text class="tie-mark" x="${round(centerX - fontSize * 0.52)}" y="${round(-fontSize * 0.62)}">~</text>`);
-    }
-    if (event.tieStart) {
-      parts.push(`<text class="tie-mark" x="${round(centerX + fontSize * 0.52)}" y="${round(-fontSize * 0.62)}">~</text>`);
-    }
-  }
-  if (event.type !== "extension") {
-    if (event.tuplet?.position === "start") {
-      parts.push(`<text class="tuplet-mark" x="${round(centerX - fontSize * 0.52)}" y="${round(-fontSize * 1.02)}">(${event.tuplet.actual}</text>`);
-    }
-    parts.push(renderDuration(event.duration, dots, defaultLength, centerX, fontSize));
   }
   if (dots > 0) {
     for (let index = 0; index < dots; index += 1) {
@@ -236,10 +264,140 @@ function renderEvent(
     }
   }
   if (showLyrics && event.type === "note" && event.lyric) {
-    parts.push(`<text class="event-lyric" x="${round(centerX)}" y="${round(fontSize * 1.34)}">${escapeXml(event.lyric)}</text>`);
+    parts.push(`<text class="event-lyric" x="${round(centerX)}" y="${round(fontSize * 1.5)}">${escapeXml(event.lyric)}</text>`);
   }
 
   return `<g class="${className}" data-event-id="${escapeXml(eventId)}" aria-label="${escapeXml(event.sourceText ?? symbol)}">${parts.join("")}</g>`;
+}
+
+function renderDurationLines(
+  positioned: PositionedEvent[],
+  beatDuration: Fraction,
+  fontSize: number,
+): string {
+  const output: string[] = [];
+  let index = 0;
+  while (index < positioned.length) {
+    const first = positioned[index] as PositionedEvent;
+    const level = durationLineCount(first.event, beatDuration);
+    if (level === 0) {
+      index += 1;
+      continue;
+    }
+
+    const group = [first];
+    if (first.event.type === "note") {
+      while (index + group.length < positioned.length) {
+        const next = positioned[index + group.length] as PositionedEvent;
+        const previous = group.at(-1) as PositionedEvent;
+        if (
+          next.event.type !== "note"
+          || durationLineCount(next.event, beatDuration) !== level
+          || !equalFractions(notationDuration(next.event), notationDuration(first.event))
+          || beatIndex(next.startTime, beatDuration) !== beatIndex(first.startTime, beatDuration)
+          || previous.event.type !== "note"
+        ) break;
+        group.push(next);
+      }
+    }
+
+    const startX = group[0]!.centerX - fontSize * 0.34;
+    const endX = group.at(-1)!.centerX + fontSize * 0.34;
+    for (let line = 0; line < level; line += 1) {
+      const y = fontSize * 0.43 + line * 4.5;
+      output.push(`<line class="duration-line" data-group-size="${group.length}" x1="${round(startX)}" y1="${round(y)}" x2="${round(endX)}" y2="${round(y)}"/>`);
+    }
+    index += group.length;
+  }
+  return output.join("");
+}
+
+function renderRelations(
+  positioned: PositionedEvent[],
+  measureWidth: number,
+  fontSize: number,
+): string {
+  const output: string[] = [];
+  output.push(...renderPairedArcs(
+    positioned,
+    (event) => event.type === "note" && event.slurStart === true,
+    (event) => event.type === "note" && event.slurEnd === true,
+    "slur-arc",
+    measureWidth,
+    -fontSize * 1.32,
+    -fontSize * 1.78,
+    fontSize,
+  ));
+  output.push(...renderPairedArcs(
+    positioned,
+    (event) => event.type === "note" && event.tieStart === true,
+    (event) => event.type === "note" && event.tieEnd === true,
+    "tie-arc",
+    measureWidth,
+    -fontSize * 0.62,
+    -fontSize * 0.93,
+    fontSize,
+  ));
+
+  let tupletStart: PositionedEvent | undefined;
+  for (const item of positioned) {
+    if (item.event.type === "extension") continue;
+    if (item.event.tuplet?.position === "start") tupletStart = item;
+    if (item.event.tuplet?.position === "end" && tupletStart) {
+      const x1 = tupletStart.centerX - fontSize * 0.28;
+      const x2 = item.centerX + fontSize * 0.28;
+      const mid = (x1 + x2) / 2;
+      const y = -fontSize * 1.35;
+      const peak = -fontSize * 1.7;
+      output.push(arcPath("tuplet-arc", x1, x2, y, peak));
+      output.push(`<rect class="relation-label-bg" x="${round(mid - fontSize * 0.25)}" y="${round(peak - fontSize * 0.18)}" width="${round(fontSize * 0.5)}" height="${round(fontSize * 0.42)}" rx="3"/>`);
+      output.push(`<text class="tuplet-number" x="${round(mid)}" y="${round(peak + fontSize * 0.03)}">${item.event.tuplet.actual}</text>`);
+      tupletStart = undefined;
+    }
+  }
+  return output.join("");
+}
+
+function renderPairedArcs(
+  positioned: PositionedEvent[],
+  starts: (event: MusicalEvent) => boolean,
+  ends: (event: MusicalEvent) => boolean,
+  className: string,
+  measureWidth: number,
+  y: number,
+  peak: number,
+  fontSize: number,
+): string[] {
+  const output: string[] = [];
+  let open: PositionedEvent | undefined;
+  for (const item of positioned) {
+    if (ends(item.event)) {
+      output.push(arcPath(
+        className,
+        open?.centerX ?? fontSize * 0.15,
+        item.centerX,
+        y,
+        peak,
+      ));
+      open = undefined;
+    }
+    if (starts(item.event)) open = item;
+  }
+  if (open) {
+    output.push(arcPath(className, open.centerX, measureWidth - fontSize * 0.3, y, peak));
+  }
+  return output;
+}
+
+function arcPath(
+  className: string,
+  x1: number,
+  x2: number,
+  y: number,
+  peak: number,
+): string {
+  const mid = (x1 + x2) / 2;
+  return `<path class="relation-arc ${className}" d="M ${round(x1)} ${round(y)} Q ${round(mid)} ${round(peak)} ${round(x2)} ${round(y)}"/>`;
 }
 
 function renderOctaveDots(centerX: number, octaveShift: number, fontSize: number): string {
@@ -255,32 +413,30 @@ function renderOctaveDots(centerX: number, octaveShift: number, fontSize: number
   return output.join("");
 }
 
-function renderDuration(
-  duration: Fraction,
-  dots: number,
-  defaultLength: Fraction,
-  centerX: number,
-  fontSize: number,
-): string {
-  const undotted = removeDots(duration, dots);
-  const ratio = reduceFraction({
-    numerator: undotted.numerator * defaultLength.denominator,
-    denominator: undotted.denominator * defaultLength.numerator,
-  });
-  if (ratio.numerator === ratio.denominator) return "";
+function visualSlotCount(event: MusicalEvent, beatDuration: Fraction): number {
+  if (event.type === "extension") return 1;
+  const ratio = divideFractions(notationDuration(event), beatDuration);
+  return ratio.denominator === 1 && ratio.numerator > 1 ? ratio.numerator : 1;
+}
 
-  if (ratio.numerator === 1 && isPowerOfTwo(ratio.denominator)) {
-    const count = Math.log2(ratio.denominator);
-    return Array.from({ length: count }, (_, index) => {
-      const y = fontSize * 0.42 + index * 4;
-      return `<line class="duration-line" x1="${round(centerX - fontSize * 0.34)}" y1="${round(y)}" x2="${round(centerX + fontSize * 0.34)}" y2="${round(y)}"/>`;
-    }).join("");
+function durationLineCount(event: MusicalEvent, beatDuration: Fraction): number {
+  if (event.type === "extension") return 0;
+  const subdivisions = divideFractions(beatDuration, notationDuration(event));
+  return subdivisions.denominator === 1 && isPowerOfTwo(subdivisions.numerator)
+    ? Math.log2(subdivisions.numerator)
+    : 0;
+}
+
+function notationDuration(event: MusicalEvent): Fraction {
+  if (event.type === "extension") return event.duration;
+  let duration = removeDots(event.duration, event.dots ?? 0);
+  if (event.tuplet) {
+    duration = reduceFraction({
+      numerator: duration.numerator * event.tuplet.actual,
+      denominator: duration.denominator * event.tuplet.normal,
+    });
   }
-
-  const label = ratio.denominator === 1
-    ? `×${ratio.numerator}`
-    : `${ratio.numerator}/${ratio.denominator}`;
-  return `<text class="duration-label" x="${round(centerX)}" y="${round(fontSize * 0.62)}">${label}</text>`;
+  return duration;
 }
 
 function removeDots(duration: Fraction, dots: number): Fraction {
@@ -291,6 +447,32 @@ function removeDots(duration: Fraction, dots: number): Fraction {
     numerator: duration.numerator * dotDenominator,
     denominator: duration.denominator * dotNumerator,
   });
+}
+
+function addFractions(left: Fraction, right: Fraction): Fraction {
+  return reduceFraction({
+    numerator: left.numerator * right.denominator + right.numerator * left.denominator,
+    denominator: left.denominator * right.denominator,
+  });
+}
+
+function divideFractions(left: Fraction, right: Fraction): Fraction {
+  return reduceFraction({
+    numerator: left.numerator * right.denominator,
+    denominator: left.denominator * right.numerator,
+  });
+}
+
+function equalFractions(left: Fraction, right: Fraction): boolean {
+  const reducedLeft = reduceFraction(left);
+  const reducedRight = reduceFraction(right);
+  return reducedLeft.numerator === reducedRight.numerator
+    && reducedLeft.denominator === reducedRight.denominator;
+}
+
+function beatIndex(startTime: Fraction, beatDuration: Fraction): number {
+  const ratio = divideFractions(startTime, beatDuration);
+  return Math.floor(ratio.numerator / ratio.denominator);
 }
 
 function isPowerOfTwo(value: number): boolean {

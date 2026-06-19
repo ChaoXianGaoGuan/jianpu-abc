@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Fixed
+
+- Render long jianpu durations as beat-sized extension dashes instead of multiplier labels.
+- Connect equal short-duration lines within beats and draw slurs, ties, and tuplets as SVG curves.
+- Preserve ABC beaming groups and wrap abcjs staff output across readable systems.
+
 ### Added
 
 - Degree-to-pitch mapping for note names, MIDI, ABC, and MusicXML pitch objects.

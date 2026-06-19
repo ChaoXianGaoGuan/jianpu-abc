@@ -73,7 +73,10 @@ copyAbcButton.addEventListener("click", () => void copyText(currentAbc, "ABC 已
 downloadAbcButton.addEventListener("click", () => downloadText(currentAbc, fileBaseName("abc"), "text/vnd.abc"));
 copyMusicXmlButton.addEventListener("click", () => void copyText(currentMusicXml, "MusicXML 已复制"));
 downloadMusicXmlButton.addEventListener("click", () => downloadText(currentMusicXml, fileBaseName("musicxml"), "application/vnd.recordare.musicxml+xml"));
-window.addEventListener("resize", () => renderPreview(activeEventId));
+window.addEventListener("resize", () => {
+  renderPreview(activeEventId);
+  if (currentScore) void renderStaffPreview(currentScore);
+});
 
 evaluateSource();
 updateControls();
@@ -161,7 +164,13 @@ async function renderStaffPreview(score: Score): Promise<void> {
   try {
     const engine = await loadStaffRendererEngine();
     if (version !== staffRenderVersion || currentScore !== score) return;
-    renderStaff(staffPreview, score, { responsive: true, scale: 0.9 }, engine);
+    const staffWidth = Math.max(480, Math.floor(staffPreview.clientWidth - 28));
+    renderStaff(staffPreview, score, {
+      responsive: true,
+      scale: 1,
+      staffWidth,
+      measuresPerLine: 4,
+    }, engine);
   } catch (error) {
     if (version === staffRenderVersion) showRuntimeError(error);
   }

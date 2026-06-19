@@ -34,8 +34,11 @@ export function toStandardAbc(score: Score): string {
   }
 
   const defaultLength = score.header.defaultNoteLength ?? DEFAULT_NOTE_LENGTH;
+  const beatDuration = score.header.meter
+    ? { numerator: 1, denominator: score.header.meter.denominator }
+    : defaultLength;
   const headers = buildHeaders(score, defaultLength);
-  const body = renderVoices(score, defaultLength);
+  const body = renderVoices(score, defaultLength, beatDuration);
   return [...headers, ...body].join("\n") + "\n";
 }
 
@@ -58,7 +61,11 @@ function buildHeaders(score: Score, defaultLength: Fraction): string[] {
   return lines;
 }
 
-function renderVoices(score: Score, defaultLength: Fraction): string[] {
+function renderVoices(
+  score: Score,
+  defaultLength: Fraction,
+  beatDuration: Fraction,
+): string[] {
   const key = score.header.key;
   if (!key) throw new AbcExportError("MISSING_KEY", "Cannot export ABC without a JABC K: field.");
   const includeVoiceMarkers = score.voices.length > 1;
@@ -66,7 +73,7 @@ function renderVoices(score: Score, defaultLength: Fraction): string[] {
 
   for (const voice of score.voices) {
     if (includeVoiceMarkers) output.push(`V:${voice.id}`);
-    output.push(renderBody(voice, key, defaultLength));
+    output.push(renderBody(voice, key, defaultLength, beatDuration));
     output.push(...renderLyrics(voice));
   }
 
@@ -77,11 +84,12 @@ function renderBody(
   voice: Voice,
   key: NonNullable<Score["header"]["key"]>,
   defaultLength: Fraction,
+  beatDuration: Fraction,
 ): string {
   if (voice.measures.length === 0) return "|";
 
   const measures = voice.measures.map((measure, index) =>
-    renderMeasureWithBars(measure, index, key, defaultLength)
+    renderMeasureWithBars(measure, index, key, defaultLength, beatDuration)
   );
   return measures.join(" ").trimEnd();
 }
@@ -91,8 +99,9 @@ function renderMeasureWithBars(
   measureIndex: number,
   key: NonNullable<Score["header"]["key"]>,
   defaultLength: Fraction,
+  beatDuration: Fraction,
 ): string {
-  const tokens = renderMeasure(measure, measureIndex, key, defaultLength).join(" ");
+  const tokens = renderMeasure(measure, measureIndex, key, defaultLength, beatDuration);
   const left = measure.leftBarline?.sourceText ?? (measureIndex === 0 ? "|" : "");
   const ending = measure.ending?.sourceText ?? "";
   const right = measure.barline?.sourceText ?? "";
@@ -104,7 +113,8 @@ function renderMeasure(
   measureIndex: number,
   key: NonNullable<Score["header"]["key"]>,
   defaultLength: Fraction,
-): string[] {
+  beatDuration: Fraction,
+): string {
   const rendered: RenderableEvent[] = [];
 
   for (const event of measure.events) {
@@ -144,15 +154,53 @@ function renderMeasure(
     });
   }
 
-  return rendered.map((event) => {
+  const tokens = rendered.map((event) => {
     const tupletPrefix = event.tuplet?.position === "start" ? `(${event.tuplet.actual}` : "";
-    const duration = event.tuplet
-      ? { numerator: event.duration.numerator * event.tuplet.actual, denominator: event.duration.denominator * event.tuplet.normal }
-      : event.duration;
+    const duration = notationDuration(event);
     const slurPrefix = event.slurStart ? "(" : "";
     const slurSuffix = event.slurEnd ? ")" : "";
     return `${tupletPrefix}${slurPrefix}${event.token}${durationSuffix(duration, defaultLength)}${event.tieStart ? "-" : ""}${slurSuffix}`;
   });
+  const startTimes: Fraction[] = [];
+  let elapsed: Fraction = { numerator: 0, denominator: 1 };
+  for (const event of rendered) {
+    startTimes.push(elapsed);
+    elapsed = addFractions(elapsed, event.duration);
+  }
+  return tokens.map((token, index) => {
+    if (index === 0) return token;
+    return `${shouldBeamTogether(
+      rendered[index - 1] as RenderableEvent,
+      rendered[index] as RenderableEvent,
+      startTimes[index - 1] as Fraction,
+      startTimes[index] as Fraction,
+      beatDuration,
+    ) ? "" : " "}${token}`;
+  }).join("");
+}
+
+function shouldBeamTogether(
+  previous: RenderableEvent,
+  current: RenderableEvent,
+  previousStart: Fraction,
+  currentStart: Fraction,
+  beatDuration: Fraction,
+): boolean {
+  if (previous.kind !== "note" || current.kind !== "note") return false;
+  const previousDuration = notationDuration(previous);
+  const currentDuration = notationDuration(current);
+  if (!equalFractions(previousDuration, currentDuration)) return false;
+  if (compareFractions(previousDuration, beatDuration) >= 0) return false;
+  return beatIndex(previousStart, beatDuration) === beatIndex(currentStart, beatDuration);
+}
+
+function notationDuration(event: RenderableEvent): Fraction {
+  return event.tuplet
+    ? reduceFraction({
+      numerator: event.duration.numerator * event.tuplet.actual,
+      denominator: event.duration.denominator * event.tuplet.normal,
+    })
+    : event.duration;
 }
 
 function renderNote(
@@ -204,6 +252,21 @@ function addFractions(left: Fraction, right: Fraction): Fraction {
     numerator: left.numerator * right.denominator + right.numerator * left.denominator,
     denominator: left.denominator * right.denominator,
   });
+}
+
+function compareFractions(left: Fraction, right: Fraction): number {
+  return left.numerator * right.denominator - right.numerator * left.denominator;
+}
+
+function equalFractions(left: Fraction, right: Fraction): boolean {
+  return compareFractions(left, right) === 0;
+}
+
+function beatIndex(startTime: Fraction, beatDuration: Fraction): number {
+  return Math.floor(
+    (startTime.numerator * beatDuration.denominator)
+    / (startTime.denominator * beatDuration.numerator),
+  );
 }
 
 function formatFraction(value: Fraction): string {

@@ -49,23 +49,41 @@ describe("renderJianpu", () => {
   it("renders slur marks", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| (1 2 3) |"));
 
-    expect(svg).toContain('class="slur-mark"');
-    expect(svg).toContain(">(</text>");
-    expect(svg).toContain(">)</text>");
+    expect(svg).toContain('class="relation-arc slur-arc"');
+    expect(svg).not.toContain(">(</text>");
   });
 
   it("renders triplet marks", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| (3 1 2 3 |"));
 
-    expect(svg).toContain('class="tuplet-mark"');
-    expect(svg).toContain(">(3</text>");
+    expect(svg).toContain('class="relation-arc tuplet-arc"');
+    expect(svg).toContain('class="tuplet-number"');
+    expect(svg).toContain(">3</text>");
   });
 
   it("renders tie marks", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| 1~ | ~1 |"));
 
-    expect(svg).toContain('class="tie-mark"');
-    expect(svg.match(/>~<\/text>/g)).toHaveLength(2);
+    expect(svg.match(/class="relation-arc tie-arc"/g)).toHaveLength(2);
+    expect(svg).not.toContain(">~</text>");
+  });
+
+  it("renders long notes as beat-sized extension dashes", () => {
+    const quarterBeat = renderJianpu(parse("M:4/4\nL:1/4\nK:C jianpu\n| 5*2 6*3 |"));
+    const eighthBeat = renderJianpu(parse("M:6/8\nL:1/8\nK:C jianpu\n| 5*2 |"));
+
+    expect(quarterBeat.match(/class="duration-extension"/g)).toHaveLength(3);
+    expect(eighthBeat.match(/class="duration-extension"/g)).toHaveLength(1);
+    expect(quarterBeat).not.toContain("×2");
+    expect(quarterBeat).not.toContain("×3");
+  });
+
+  it("connects equal subdivisions within each beat", () => {
+    const eighths = renderJianpu(parse("M:4/4\nL:1/8\nK:C jianpu\n| 1 2 3 4 |"));
+    const sixteenths = renderJianpu(parse("M:4/4\nL:1/16\nK:C jianpu\n| 1 2 3 4 |"));
+
+    expect(eighths.match(/data-group-size="2"/g)).toHaveLength(2);
+    expect(sixteenths.match(/data-group-size="4"/g)).toHaveLength(2);
   });
 
   it("renders repeat barlines and endings", () => {

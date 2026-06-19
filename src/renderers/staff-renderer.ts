@@ -6,6 +6,7 @@ export interface StaffRenderOptions {
   responsive?: boolean;
   scale?: number;
   staffWidth?: number;
+  measuresPerLine?: number;
 }
 
 export interface StaffRendererEngine {
@@ -27,7 +28,14 @@ export function renderStaff(
   const abc = toStaffAbc(score);
   const params: AbcVisualParams = {
     add_classes: true,
-    oneSvgPerLine: false,
+    oneSvgPerLine: true,
+    wrap: {
+      preferredMeasuresPerLine: options.measuresPerLine ?? 4,
+      minSpacing: 1.65,
+      maxSpacing: 2.6,
+      lastLineLimit: 1.4,
+      minSpacingLimit: 1.35,
+    },
     ...(options.responsive === false ? {} : { responsive: "resize" }),
     ...(options.scale === undefined ? {} : { scale: options.scale }),
     ...(options.staffWidth === undefined ? {} : { staffwidth: options.staffWidth }),

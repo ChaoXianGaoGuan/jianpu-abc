@@ -41,6 +41,12 @@ describe("toStandardAbc", () => {
     expect(toStandardAbc(score)).toContain("| C1/2 z z |");
   });
 
+  it("groups equal subdivisions within a beat for staff beaming", () => {
+    const score = parse("M:4/4\nL:1/4\nK:C jianpu\n| 1/2 2/2 3/2 4/2 | 5/4 6/4 7/4 1'/4 |");
+
+    expect(toStandardAbc(score)).toContain("| C1/2D1/2 E1/2F1/2 | G1/4A1/4B1/4c1/4 |");
+  });
+
   it("uses explicit ABC accidentals when a note overrides the key", () => {
     const score = parse("K:D jianpu\n| 3 4 |");
     const events = score.voices[0]?.measures[0]?.events;

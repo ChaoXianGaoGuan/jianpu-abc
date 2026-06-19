@@ -45,10 +45,17 @@ describe("staff renderer adapter", () => {
       "X:1\nL:1/4\nK:C\n| C D E F |\n",
       {
         add_classes: true,
-        oneSvgPerLine: false,
+        oneSvgPerLine: true,
         responsive: "resize",
         scale: 0.9,
         staffwidth: 760,
+        wrap: {
+          preferredMeasuresPerLine: 4,
+          minSpacing: 1.65,
+          maxSpacing: 2.6,
+          lastLineLimit: 1.4,
+          minSpacingLimit: 1.35,
+        },
       },
     );
   });
