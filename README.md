@@ -3,6 +3,9 @@
 JianpuABC is an ABC-style toolkit for numbered musical notation. Its source text
 format is JABC (Jianpu ABC), an ABC-compatible jianpu dialect.
 
+Try the validation UI at
+[https://chaoxiangaoguan.github.io/jianpu-abc/](https://chaoxiangaoguan.github.io/jianpu-abc/).
+
 This repository currently implements Milestones 1 through 6: a
 browser-independent TypeScript AST and parser, normalization, pitch mapping,
 standard ABC export, native MusicXML export, playback event scheduling, Web
@@ -17,6 +20,7 @@ Audio playback, and SVG jianpu/staff rendering.
 - [Playback and Web Audio](docs/playback.md)
 - [SVG jianpu renderer](docs/jianpu-renderer.md)
 - [Staff renderer adapter](docs/staff-renderer.md)
+- [GitHub Pages deployment](docs/deployment.md)
 - [AI handoff guide](AI_HANDOFF.md)
 - [Roadmap](ROADMAP.md)
 - [Design decisions](DECISIONS.md)

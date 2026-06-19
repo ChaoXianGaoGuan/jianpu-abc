@@ -10,7 +10,7 @@
   "bugs": {
     "url": "https://github.com/ChaoXianGaoGuan/jianpu-abc/issues"
   },
-  "homepage": "https://github.com/ChaoXianGaoGuan/jianpu-abc#readme",
+  "homepage": "https://chaoxiangaoguan.github.io/jianpu-abc/",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
