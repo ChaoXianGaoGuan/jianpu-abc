@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
+- Space jianpu events proportionally to their performed durations and place accidentals closer to the upper-left of note numbers.
 - Suppress redundant same-row single barlines and align following repeat/start marks to the shared measure boundary.
 - Enlarge jianpu accidentals and render double-sharp/double-flat as standard `𝄪` / `𝄫` glyphs.
 - Align jianpu measure columns across explicit source rows by default, with an API option and Web UI checkbox to restore per-row natural spacing.

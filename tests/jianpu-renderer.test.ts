@@ -70,6 +70,21 @@ describe("renderJianpu", () => {
     expect(svg).toContain(">♮</text>");
   });
 
+  it("places accidentals close to the upper-left of the note number", () => {
+    const svg = renderJianpu(parse("M:4/4\nL:1/4\nK:C jianpu\n| #4 |"), { fontSize: 40 });
+
+    expect(svg).toContain('class="event-accidental" x="14.8" y="-18"');
+  });
+
+  it("spaces notes within a beat in proportion to their durations", () => {
+    const svg = renderJianpu(parse("M:4/4\nL:1/4\nK:C jianpu\n| 1/2 2/4 3/4 |"), { fontSize: 32 });
+
+    expect(svg).toContain('data-event-id="default:0:0" aria-label="1/2"><rect class="event-bg" x="2.4"');
+    expect(svg).toContain('class="event-symbol" x="12" y="0">1</text>');
+    expect(svg).toContain('class="event-symbol" x="30" y="0">2</text>');
+    expect(svg).toContain('class="event-symbol" x="42" y="0">3</text>');
+  });
+
   it("adds the highlight class to the requested source event", () => {
     const svg = renderJianpu(parse(SCORE), { highlightEventId: "default:0:1" });
 

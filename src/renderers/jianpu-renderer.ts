@@ -30,6 +30,7 @@ interface PositionedEvent {
   eventIndex: number;
   centerX: number;
   slotCount: number;
+  layoutSpan: number;
   startTime: Fraction;
 }
 
@@ -259,7 +260,7 @@ function columnWidths(
 function measureSlotCount(measure: Measure, beatDuration: Fraction): number {
   return Math.max(
     1,
-    measure.events.reduce((total, event) => total + visualSlotCount(event, beatDuration), 0),
+    measure.events.reduce((total, event) => total + eventLayoutSpan(event, beatDuration), 0),
   );
 }
 
@@ -390,14 +391,16 @@ function positionEvents(placed: LayoutMeasure, beatDuration: Fraction): Position
   let startTime: Fraction = { numerator: 0, denominator: 1 };
   return placed.measure.events.map((event, eventIndex) => {
     const slotCount = visualSlotCount(event, beatDuration);
+    const layoutSpan = eventLayoutSpan(event, beatDuration);
     const positioned: PositionedEvent = {
       event,
       eventIndex,
-      centerX: (slotOffset + 0.5) * placed.cellWidth,
+      centerX: (slotOffset + Math.min(layoutSpan, 1) / 2) * placed.cellWidth,
       slotCount,
+      layoutSpan,
       startTime,
     };
-    slotOffset += slotCount;
+    slotOffset += layoutSpan;
     if (event.type !== "key-change") startTime = addFractions(startTime, event.duration);
     return positioned;
   });
@@ -411,16 +414,17 @@ function renderEvent(
   showLyrics: boolean,
   highlighted: boolean,
 ): string {
-  const { event, centerX, slotCount } = positioned;
+  const { event, centerX, slotCount, layoutSpan } = positioned;
   const symbol = event.type === "note"
     ? String(event.degree)
     : event.type === "rest" ? "0" : event.type === "extension" ? "−" : `1=${event.key.tonic}`;
   const className = highlighted ? "jabc-event is-highlighted" : "jabc-event";
   const backgroundHeight = fontSize * (showLyrics ? 2.45 : 1.75);
   const dots = event.type === "note" || event.type === "rest" ? event.dots ?? 0 : 0;
-  const visualWidth = slotCount * cellWidth;
+  const visualWidth = layoutSpan * cellWidth;
+  const visualStartX = centerX - Math.min(layoutSpan, 1) * cellWidth / 2;
   const parts = [
-    `<rect class="event-bg" x="${round(centerX - cellWidth * 0.4)}" y="${round(-fontSize * 1.25)}" width="${round(visualWidth - cellWidth * 0.2)}" height="${round(backgroundHeight)}" rx="7"/>`,
+    `<rect class="event-bg" x="${round(visualStartX + visualWidth * 0.1)}" y="${round(-fontSize * 1.25)}" width="${round(visualWidth * 0.8)}" height="${round(backgroundHeight)}" rx="7"/>`,
     `<text class="${event.type === "key-change" ? "event-key-change" : "event-symbol"}" x="${round(centerX)}" y="0">${symbol}</text>`,
   ];
 
@@ -430,7 +434,7 @@ function renderEvent(
 
   if (event.type === "note") {
     if (event.accidental) {
-      parts.push(`<text class="event-accidental" x="${round(centerX - fontSize * 0.55)}" y="${round(-fontSize * 0.08)}">${ACCIDENTAL_TEXT[event.accidental]}</text>`);
+      parts.push(`<text class="event-accidental" x="${round(centerX - fontSize * 0.38)}" y="${round(-fontSize * 0.45)}">${ACCIDENTAL_TEXT[event.accidental]}</text>`);
     }
     parts.push(renderOctaveDots(centerX, event.octaveShift, fontSize));
   }
@@ -771,6 +775,12 @@ function visualSlotCount(event: MusicalEvent, beatDuration: Fraction): number {
   if (event.type === "extension") return 1;
   const ratio = divideFractions(notationDuration(event), beatDuration);
   return ratio.denominator === 1 && ratio.numerator > 1 ? ratio.numerator : 1;
+}
+
+function eventLayoutSpan(event: MusicalEvent, beatDuration: Fraction): number {
+  if (event.type === "key-change") return 1;
+  const ratio = divideFractions(event.duration, beatDuration);
+  return ratio.numerator / ratio.denominator;
 }
 
 function durationLineCount(event: MusicalEvent, beatDuration: Fraction): number {
