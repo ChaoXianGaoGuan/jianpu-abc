@@ -53,6 +53,7 @@ const PITCH_CLASSES = new Set<PitchClass>([
 const NOTE_TOKEN_PATTERN = /^(\()?(~)?(#{1,2}|b{1,2}|=)?([1-7])('+|,+)?(?:(\/)(\d*)|\*(\d+))?(\.{0,2})(~)?(\))?$/;
 const REST_TOKEN_PATTERN = /^(0|z)(?:(\/)(\d*)|\*(\d+))?(\.{0,2})$/;
 const INLINE_VOICE_PATTERN = /^\[V:([^\]\s]+)\]$/;
+const INLINE_KEY_PATTERN = /^\[K:(.+)\]$/;
 const ENDING_TOKEN_PATTERN = /^\[(\d+)$/;
 const TUPLET_TOKEN_PATTERN = /^\(3$/;
 
@@ -120,6 +121,22 @@ export function parseJabc(source: string): ParseResult<Score> {
       touchedVoices.add(currentVoice);
 
       const location = { line: lineNumber, column: token.column };
+      const inlineKey = INLINE_KEY_PATTERN.exec(token.text);
+      if (inlineKey) {
+        const key = parseJianpuKey((inlineKey[1] as string).trim());
+        if (key) {
+          currentVoice.currentEvents.push({
+            type: "key-change",
+            key,
+            sourceText: token.text as `[K:${string}]`,
+            location,
+          });
+        } else {
+          errors.push(invalidInlineKeyError(token, lineNumber, rawLine));
+        }
+        continue;
+      }
+
       const ending = parseEndingToken(token.text, location);
       if (ending) {
         if (currentVoice.currentEvents.length > 0) {
@@ -376,7 +393,7 @@ function ensureVoice(id: string, voices: Map<string, VoiceDraft>, order: string[
 
 function applyTuplet(voice: VoiceDraft, event: MusicalEvent): MusicalEvent {
   const state = voice.pendingTuplet;
-  if (!state || event.type === "extension") return event;
+  if (!state || event.type === "extension" || event.type === "key-change") return event;
 
   const position: Tuplet["position"] = state.remaining === state.actual
     ? "start"
@@ -480,6 +497,15 @@ function tokenizeBody(line: string): BodyToken[] {
       continue;
     }
 
+    if (line.startsWith("[K:", index)) {
+      const closeIndex = line.indexOf("]", index);
+      if (closeIndex !== -1) {
+        tokens.push({ text: line.slice(index, closeIndex + 1), column: index + 1 });
+        index = closeIndex + 1;
+        continue;
+      }
+    }
+
     const symbolic = symbolicTokens.find((candidate) => line.startsWith(candidate, index));
     if (symbolic) {
       tokens.push({ text: symbolic, column: index + 1 });
@@ -528,6 +554,18 @@ function invalidFieldError(
     context,
     token: value,
     suggestion,
+  };
+}
+
+function invalidInlineKeyError(token: BodyToken, line: number, context: string): ParseError {
+  return {
+    type: "ParseError",
+    message: `Invalid inline K: key change "${token.text}".`,
+    line,
+    column: token.column,
+    context,
+    token: token.text,
+    suggestion: "Use an inline jianpu key such as [K:G jianpu].",
   };
 }
 

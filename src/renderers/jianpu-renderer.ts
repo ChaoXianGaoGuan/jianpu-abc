@@ -120,6 +120,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     .ending-number{font:700 ${fontSize * 0.45}px Georgia,'Songti SC',serif;fill:#33483f}
     .event-bg{fill:transparent;transition:fill .12s ease}
     .event-symbol,.duration-extension{font:600 ${fontSize}px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#1f332a;text-anchor:middle}
+    .event-key-change{font:700 ${fontSize * 0.48}px Inter,'Microsoft YaHei',sans-serif;fill:#a4522c;text-anchor:middle}
     .event-accidental{font:700 ${fontSize * 0.8}px 'Bravura','Noto Music','Segoe UI Symbol',Georgia,serif;fill:#1f332a;text-anchor:middle;dominant-baseline:middle}
     .octave-dot,.duration-dot{fill:#1f332a}
     .duration-line{stroke:#1f332a;stroke-width:1.7;stroke-linecap:round}
@@ -380,7 +381,7 @@ function positionEvents(placed: LayoutMeasure, beatDuration: Fraction): Position
       startTime,
     };
     slotOffset += slotCount;
-    startTime = addFractions(startTime, event.duration);
+    if (event.type !== "key-change") startTime = addFractions(startTime, event.duration);
     return positioned;
   });
 }
@@ -394,14 +395,16 @@ function renderEvent(
   highlighted: boolean,
 ): string {
   const { event, centerX, slotCount } = positioned;
-  const symbol = event.type === "note" ? String(event.degree) : event.type === "rest" ? "0" : "−";
+  const symbol = event.type === "note"
+    ? String(event.degree)
+    : event.type === "rest" ? "0" : event.type === "extension" ? "−" : `1=${event.key.tonic}`;
   const className = highlighted ? "jabc-event is-highlighted" : "jabc-event";
   const backgroundHeight = fontSize * (showLyrics ? 2.45 : 1.75);
-  const dots = event.type === "extension" ? 0 : event.dots ?? 0;
+  const dots = event.type === "note" || event.type === "rest" ? event.dots ?? 0 : 0;
   const visualWidth = slotCount * cellWidth;
   const parts = [
     `<rect class="event-bg" x="${round(centerX - cellWidth * 0.4)}" y="${round(-fontSize * 1.25)}" width="${round(visualWidth - cellWidth * 0.2)}" height="${round(backgroundHeight)}" rx="7"/>`,
-    `<text class="event-symbol" x="${round(centerX)}" y="0">${symbol}</text>`,
+    `<text class="${event.type === "key-change" ? "event-key-change" : "event-symbol"}" x="${round(centerX)}" y="0">${symbol}</text>`,
   ];
 
   for (let index = 1; index < slotCount; index += 1) {
@@ -447,11 +450,11 @@ function renderDurationLines(
       }
 
       const group = [first];
-      if (first.event.type === "note") {
+      if (isDurationLineJoinable(first)) {
         while (index + group.length < positioned.length) {
           const next = positioned[index + group.length] as PositionedEvent;
           if (
-            next.event.type !== "note"
+            !isDurationLineJoinable(next)
             || !hasDurationLine(next, beatDuration, lineLevel)
             || beatIndex(next.startTime, beatDuration) !== beatIndex(first.startTime, beatDuration)
           ) break;
@@ -472,6 +475,10 @@ function hasDurationLine(
   lineLevel: number,
 ): boolean {
   return durationLineCount(item.event, beatDuration) >= lineLevel;
+}
+
+function isDurationLineJoinable(item: PositionedEvent): boolean {
+  return item.event.type === "note" || item.event.type === "rest";
 }
 
 function renderDurationLine(
@@ -504,7 +511,7 @@ function renderRelations(
 
   let tupletStart: PositionedEvent | undefined;
   for (const item of positioned) {
-    if (item.event.type === "extension") continue;
+    if (item.event.type === "extension" || item.event.type === "key-change") continue;
     if (item.event.tuplet?.position === "start") tupletStart = item;
     if (item.event.tuplet?.position === "end" && tupletStart) {
       output.push(renderTupletArc(
@@ -743,13 +750,14 @@ function renderOctaveDots(centerX: number, octaveShift: number, fontSize: number
 }
 
 function visualSlotCount(event: MusicalEvent, beatDuration: Fraction): number {
+  if (event.type === "key-change") return 1;
   if (event.type === "extension") return 1;
   const ratio = divideFractions(notationDuration(event), beatDuration);
   return ratio.denominator === 1 && ratio.numerator > 1 ? ratio.numerator : 1;
 }
 
 function durationLineCount(event: MusicalEvent, beatDuration: Fraction): number {
-  if (event.type === "extension") return 0;
+  if (event.type === "key-change" || event.type === "extension") return 0;
   const subdivisions = divideFractions(beatDuration, notationDuration(event));
   return subdivisions.denominator === 1 && isPowerOfTwo(subdivisions.numerator)
     ? Math.log2(subdivisions.numerator)
@@ -757,6 +765,7 @@ function durationLineCount(event: MusicalEvent, beatDuration: Fraction): number 
 }
 
 function notationDuration(event: MusicalEvent): Fraction {
+  if (event.type === "key-change") return { numerator: 0, denominator: 1 };
   if (event.type === "extension") return event.duration;
   let duration = removeDots(event.duration, event.dots ?? 0);
   if (event.tuplet) {

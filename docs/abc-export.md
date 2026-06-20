@@ -19,6 +19,7 @@ if (result.success) {
 
 - 缺少 `X:` 时输出 `X:1`。
 - 保留 `T:`、`C:`、`M:`、`L:`、`Q:`，并把 `K:C jianpu` 转为 `K:C`。
+- 将正文中的 `[K:G jianpu]` 导出为 inline ABC key change `[K:G]`，并从该位置开始按新主音映射后续音级。
 - 多声部时在 header 中写出 `V:` 声明，并在正文中按声部输出 `V:` 段落。
 - 保留复小节线、反复小节线和 `[1` / `[2` ending 标记。
 - 按 `Measure.systemBreakAfter` 保留 JABC 音乐正文的物理行结构。

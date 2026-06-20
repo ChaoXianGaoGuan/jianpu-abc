@@ -54,6 +54,14 @@ w: 两 只 老 虎`);
     expect(xml).toContain("<step>C</step>\n          <alter>1</alter>\n          <octave>5</octave>");
   });
 
+  it("exports inline key changes as MusicXML key attributes", () => {
+    const xml = toMusicXml(parse("K:C jianpu\n| 1 [K:G jianpu] 1 |"));
+
+    expect(xml.match(/<fifths>0<\/fifths>/g)).toHaveLength(1);
+    expect(xml.match(/<fifths>1<\/fifths>/g)).toHaveLength(1);
+    expect(xml).toContain("<step>G</step>");
+  });
+
   it("exports rests, durations, dots, and extensions", () => {
     const score = parse("L:1/4\nK:C jianpu\n| 1 - 0/2 3. |");
     const xml = toMusicXml(score);

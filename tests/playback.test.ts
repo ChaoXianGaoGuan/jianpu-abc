@@ -73,6 +73,15 @@ describe("scoreToPlaybackEvents", () => {
     expect(events[0]?.duration).toBe(2);
   });
 
+  it("applies inline key changes during playback", () => {
+    const events = scoreToPlaybackEvents(parse("L:1/4\nQ:1/4=120\nK:C jianpu\n| 1 [K:G jianpu] 1 |"));
+
+    expect(events).toMatchObject([
+      { midi: 60, startTime: 0, duration: 0.5 },
+      { midi: 67, startTime: 0.5, duration: 0.5 },
+    ]);
+  });
+
   it("plays parsed octave, accidental, and dotted duration syntax", () => {
     const events = scoreToPlaybackEvents(parse("L:1/4\nQ:1/4=120\nK:C jianpu\n| 1' #4 1, 3. |"));
 
@@ -170,7 +179,7 @@ describe("WebAudioPlayer", () => {
       resume: vi.fn(async () => undefined),
       close: vi.fn(async () => undefined),
     } as unknown as AudioContext;
-    const player = new WebAudioPlayer(context, { scheduleAheadSeconds: 0 });
+    const player = new WebAudioPlayer(context, { instrument: "synth", scheduleAheadSeconds: 0 });
     const event = {
       id: "playback-1",
       type: "note" as const,
@@ -194,6 +203,63 @@ describe("WebAudioPlayer", () => {
     player.stop();
     expect(player.playbackState).toBe("idle");
     expect(player.currentTime).toBe(0);
+  });
+
+  it("waits for audio readiness before scheduling notes and highlights", async () => {
+    let resumeContext: (() => void) | undefined;
+    const resumePromise = new Promise<void>((resolve) => {
+      resumeContext = resolve;
+    });
+    const oscillator = {
+      type: "sine" as OscillatorType,
+      frequency: { setValueAtTime: vi.fn() },
+      detune: { setValueAtTime: vi.fn() },
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+      addEventListener: vi.fn(),
+    };
+    const gain = {
+      gain: {
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+      },
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    };
+    const context = {
+      currentTime: 10,
+      state: "suspended",
+      destination: {},
+      createOscillator: vi.fn(() => oscillator),
+      createGain: vi.fn(() => gain),
+      resume: vi.fn(() => resumePromise),
+      close: vi.fn(async () => undefined),
+    } as unknown as AudioContext;
+    const onEventStart = vi.fn();
+    const player = new WebAudioPlayer(context, {
+      instrument: "synth",
+      scheduleAheadSeconds: 0,
+      onEventStart,
+    });
+    const event = {
+      id: "playback-1",
+      type: "note" as const,
+      midi: 69,
+      startTime: 0,
+      duration: 1,
+      velocity: 100,
+    };
+
+    player.play([event]);
+    expect(player.playbackState).toBe("loading");
+    expect(context.createOscillator).not.toHaveBeenCalled();
+    expect(onEventStart).not.toHaveBeenCalled();
+
+    resumeContext?.();
+    await vi.waitFor(() => expect(context.createOscillator).toHaveBeenCalled());
+    expect(player.playbackState).toBe("playing");
   });
 
   it("uses decoded samples when they are available", async () => {

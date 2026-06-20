@@ -1,4 +1,4 @@
-import type { Barline, Ending, Fraction, Measure, NoteEvent, RestEvent, Score, Tempo, Voice } from "../core/ast";
+import type { Barline, Ending, Fraction, JianpuKey, KeyChangeEvent, Measure, NoteEvent, RestEvent, Score, Tempo, Voice } from "../core/ast";
 import { DEFAULT_NOTE_LENGTH, reduceFraction } from "../core/fraction";
 import { degreeToPitch, type MusicXmlPitch } from "../core/pitch";
 
@@ -32,7 +32,18 @@ interface RenderableRest {
   duration: Fraction;
 }
 
-type RenderableEvent = RenderableNote | RenderableRest;
+interface RenderableKeyChange {
+  kind: "key-change";
+  source: KeyChangeEvent;
+  key: JianpuKey;
+}
+
+interface RenderableMeasure {
+  events: RenderableEvent[];
+  key: JianpuKey;
+}
+
+type RenderableEvent = RenderableNote | RenderableRest | RenderableKeyChange;
 
 const DEFAULT_DIVISIONS = 480;
 const MAJOR_KEY_FIFTHS: Record<string, number> = {
@@ -87,15 +98,22 @@ function renderScorePart(voice: Voice, index: number): string[] {
 }
 
 function renderPart(score: Score, voice: Voice, voiceIndex: number, divisions: number): string {
-  const measures = voice.measures.map((measure, measureIndex) =>
-    renderMeasure(
+  const initialKey = score.header.key;
+  if (!initialKey) throw new MusicXmlExportError("MISSING_KEY", "Cannot export MusicXML without a JABC K: field.");
+
+  let currentKey = initialKey;
+  const measures = voice.measures.map((measure, measureIndex) => {
+    const rendered = renderMeasure(
       score,
       measure,
       measureIndex,
       divisions,
       measureIndex > 0 && voice.measures[measureIndex - 1]?.systemBreakAfter === true,
-    )
-  );
+      currentKey,
+    );
+    currentKey = rendered.key;
+    return rendered.text;
+  });
   return [
     `  <part id=\"${partIdentifier(voiceIndex)}\">`,
     ...measures,
@@ -109,8 +127,9 @@ function renderMeasure(
   measureIndex: number,
   divisions: number,
   startsSystem: boolean,
-): string {
-  const renderable = toRenderableEvents(score, measure, measureIndex);
+  initialKey: JianpuKey,
+): { text: string; key: JianpuKey } {
+  const renderable = toRenderableEvents(measure, measureIndex, initialKey);
   const lines = [`    <measure number=\"${measureIndex + 1}\">`];
 
   if (startsSystem) lines.push('      <print new-system="yes" />');
@@ -126,8 +145,9 @@ function renderMeasure(
     lines.push(...renderMusicXmlBarline(undefined, "left", measure.ending));
   }
 
-  for (const event of renderable) {
-    lines.push(...renderNoteElement(event, divisions));
+  for (const event of renderable.events) {
+    if (event.kind === "key-change") lines.push(...renderKeyAttributes(event.key));
+    else lines.push(...renderNoteElement(event, divisions));
   }
 
   if (measure.barline) {
@@ -135,7 +155,7 @@ function renderMeasure(
   }
 
   lines.push("    </measure>");
-  return lines.join("\n");
+  return { text: lines.join("\n"), key: renderable.key };
 }
 
 function renderMusicXmlBarline(
@@ -164,15 +184,12 @@ function barlineStyle(barline: Barline | undefined): string | undefined {
 
 function renderAttributes(score: Score, divisions: number): string[] {
   const header = score.header;
-  const fifths = header.key ? (MAJOR_KEY_FIFTHS[header.key.tonic] ?? 0) : 0;
   const meter = header.meter ?? { numerator: 4, denominator: 4 };
 
   return [
     "      <attributes>",
     `        <divisions>${divisions}</divisions>`,
-    "        <key>",
-    `          <fifths>${fifths}</fifths>`,
-    "        </key>",
+    ...renderKeyAttributeLines(header.key),
     "        <time>",
     `          <beats>${meter.numerator}</beats>`,
     `          <beat-type>${meter.denominator}</beat-type>`,
@@ -182,6 +199,23 @@ function renderAttributes(score: Score, divisions: number): string[] {
     "          <line>2</line>",
     "        </clef>",
     "      </attributes>",
+  ];
+}
+
+function renderKeyAttributes(key: JianpuKey): string[] {
+  return [
+    "      <attributes>",
+    ...renderKeyAttributeLines(key),
+    "      </attributes>",
+  ];
+}
+
+function renderKeyAttributeLines(key: JianpuKey | undefined): string[] {
+  const fifths = key ? (MAJOR_KEY_FIFTHS[key.tonic] ?? 0) : 0;
+  return [
+    "        <key>",
+    `          <fifths>${fifths}</fifths>`,
+    "        </key>",
   ];
 }
 
@@ -199,12 +233,19 @@ function renderTempo(tempo: Tempo): string[] {
   ];
 }
 
-function toRenderableEvents(score: Score, measure: Measure, measureIndex: number): RenderableEvent[] {
-  const key = score.header.key;
-  if (!key) throw new MusicXmlExportError("MISSING_KEY", "Cannot export MusicXML without a JABC K: field.");
-
+function toRenderableEvents(
+  measure: Measure,
+  measureIndex: number,
+  initialKey: JianpuKey,
+): RenderableMeasure {
+  let currentKey = initialKey;
   const rendered: RenderableEvent[] = [];
   for (const event of measure.events) {
+    if (event.type === "key-change") {
+      currentKey = event.key;
+      rendered.push({ kind: "key-change", source: event, key: event.key });
+      continue;
+    }
     if (event.type === "extension") {
       const previous = rendered.at(-1);
       if (!previous || previous.kind !== "note") {
@@ -227,7 +268,7 @@ function toRenderableEvents(score: Score, measure: Measure, measureIndex: number
 
     try {
       const pitch = degreeToPitch({
-        key,
+        key: currentKey,
         degree: event.degree,
         ...(event.accidental === undefined ? {} : { accidental: event.accidental }),
         octaveShift: event.octaveShift,
@@ -244,10 +285,10 @@ function toRenderableEvents(score: Score, measure: Measure, measureIndex: number
       throw new MusicXmlExportError("UNSUPPORTED_PITCH", message);
     }
   }
-  return rendered;
+  return { events: rendered, key: currentKey };
 }
 
-function renderNoteElement(event: RenderableEvent, divisions: number): string[] {
+function renderNoteElement(event: RenderableNote | RenderableRest, divisions: number): string[] {
   const duration = durationToDivisions(event.duration, divisions);
   const lines = ["      <note>"];
   if (event.kind === "rest") {
@@ -304,6 +345,7 @@ function chooseDivisions(voices: Voice[]): number {
   for (const voice of voices) {
     for (const measure of voice.measures) {
       for (const event of measure.events) {
+        if (event.type === "key-change") continue;
         const quarterDuration = reduceFraction({
           numerator: event.duration.numerator * 4,
           denominator: event.duration.denominator,

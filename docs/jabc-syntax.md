@@ -36,6 +36,8 @@ K:C jianpu % 行内注释
 
 `V:` 会结束当前声部正在收集的小节，并切换到指定声部。声部 ID 是 `V:` 后的第一个非空白 token；后续属性暂不解释。音乐正文中也可以使用 inline voice marker，例如 `[V:melody]`。
 
+音乐正文中可以使用 inline key change，例如 `[K:G jianpu]`。该事件不占时值，从当前位置开始把后续音级按新的 `1=G` 映射；ABC、MusicXML、播放和渲染都会沿用新的当前调，直到再次遇到 key change。
+
 其他字段按出现顺序保存在 `header.extraFields`，不参与音乐语义。
 
 ## 多声部
@@ -63,8 +65,9 @@ K:C jianpu
 ## 音乐正文
 
 ```text
-body        = { voice | tuplet | note | rest | extension | barline } ;
+body        = { voice | key-change | tuplet | note | rest | extension | barline } ;
 voice       = "[V:", voice-id, "]" ;
+key-change  = "[K:", key-field-value, "]" ;
 tuplet      = "(3" ;
 note        = [ slur-start ], [ tie-end ], [ accidental ], degree, [ octave ], [ duration ], [ dots ], [ tie-start ], [ slur-end ] ;
 rest        = ( "0" | "z" ), [ duration ], [ dots ] ;
@@ -84,6 +87,7 @@ ending      = "[", positive-integer ;
 
 修饰符必须按“变音、音级、八度、时值、附点”的顺序书写，例如 `#4'/2.`。各规则如下：
 
+- `[K:G jianpu]` 在正文中改变后续音符的当前调，不占时值，也不消耗歌词。
 - `1'`、`1''` 分别升高一个、两个八度；`1,`、`1,,` 同理降低。
 - `#4`、`b7`、`=3` 表示升、降、还原；`##4`、`bb7` 表示双升、双降。
 - `/` 等同 `/2`；`1/4` 是默认时值的四分之一。

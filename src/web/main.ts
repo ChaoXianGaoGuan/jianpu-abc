@@ -24,11 +24,13 @@ K:C jianpu
 | 5 6 5 4 | 3 1 - - |
 w: 两 只 老 虎 两 只 老 虎 跑 得 快 跑 得 快`;
 
+type NotationMode = "jianpu" | "staff";
+
 const editor = element<HTMLTextAreaElement>("jabc-editor");
-const abcOutput = element<HTMLTextAreaElement>("abc-output");
-const musicXmlOutput = element<HTMLTextAreaElement>("musicxml-output");
 const jianpuPreview = element<HTMLDivElement>("jianpu-preview");
 const staffPreview = element<HTMLDivElement>("staff-preview");
+const notationSelect = element<HTMLSelectElement>("notation-select");
+const previewKindIndicator = element<HTMLSpanElement>("preview-kind-indicator");
 const alignMeasuresToggle = element<HTMLInputElement>("align-measures-toggle");
 const parseStatus = element<HTMLDivElement>("parse-status");
 const parseErrors = element<HTMLPreElement>("parse-errors");
@@ -72,15 +74,13 @@ pauseButton.addEventListener("click", () => player?.pause());
 resumeButton.addEventListener("click", () => player?.resume());
 stopButton.addEventListener("click", () => player?.stop());
 instrumentSelect.addEventListener("change", () => player?.setInstrument(selectedInstrument()));
-alignMeasuresToggle.addEventListener("change", () => renderPreview(activeEventId));
+notationSelect.addEventListener("change", () => renderActivePreview(activeEventId));
+alignMeasuresToggle.addEventListener("change", () => renderActivePreview(activeEventId));
 copyAbcButton.addEventListener("click", () => void copyText(currentAbc, "ABC 已复制"));
 downloadAbcButton.addEventListener("click", () => downloadText(currentAbc, fileBaseName("abc"), "text/vnd.abc"));
 copyMusicXmlButton.addEventListener("click", () => void copyText(currentMusicXml, "MusicXML 已复制"));
 downloadMusicXmlButton.addEventListener("click", () => downloadText(currentMusicXml, fileBaseName("musicxml"), "application/vnd.recordare.musicxml+xml"));
-window.addEventListener("resize", () => {
-  renderPreview(activeEventId);
-  if (currentScore) void renderStaffPreview(currentScore);
-});
+window.addEventListener("resize", () => renderActivePreview(activeEventId));
 
 evaluateSource();
 updateControls();
@@ -94,8 +94,6 @@ function evaluateSource(): void {
     staffRenderVersion += 1;
     currentAbc = "";
     currentMusicXml = "";
-    abcOutput.value = "";
-    musicXmlOutput.value = "";
     jianpuPreview.replaceChildren();
     staffPreview.replaceChildren();
     parseStatus.textContent = `解析失败：${result.errors.length} 个错误`;
@@ -111,13 +109,10 @@ function evaluateSource(): void {
   try {
     currentScore = result.value;
     activeEventId = undefined;
-    renderPreview();
-    void renderStaffPreview(result.value);
     events = scoreToPlaybackEvents(result.value);
     currentAbc = toStandardAbc(result.value);
     currentMusicXml = toMusicXml(result.value);
-    abcOutput.value = currentAbc;
-    musicXmlOutput.value = currentMusicXml;
+    renderActivePreview();
     const measureCount = result.value.voices[0]?.measures.length ?? 0;
     parseStatus.textContent = `解析成功：${measureCount} 个小节`;
     parseStatus.className = "status success-status";
@@ -127,8 +122,6 @@ function evaluateSource(): void {
     events = [];
     currentAbc = "";
     currentMusicXml = "";
-    abcOutput.value = "";
-    musicXmlOutput.value = "";
     showRuntimeError(error);
   }
   updateControls();
@@ -153,7 +146,23 @@ function getPlayer(): WebAudioPlayer {
   return player;
 }
 
-function renderPreview(highlightEventId?: string): void {
+function renderActivePreview(highlightEventId?: string): void {
+  if (!currentScore) return;
+  const mode = selectedNotation();
+  const showJianpu = mode === "jianpu";
+  jianpuPreview.classList.toggle("hidden", !showJianpu);
+  staffPreview.classList.toggle("hidden", showJianpu);
+  alignMeasuresToggle.disabled = !showJianpu;
+  previewKindIndicator.textContent = showJianpu ? "SVG" : "ABCJS";
+
+  if (showJianpu) {
+    renderJianpuPreview(highlightEventId);
+  } else {
+    void renderStaffPreview(currentScore);
+  }
+}
+
+function renderJianpuPreview(highlightEventId?: string): void {
   if (!currentScore) return;
   const width = Math.max(320, Math.floor(jianpuPreview.clientWidth || 900));
   jianpuPreview.innerHTML = renderJianpu(currentScore, {
@@ -182,7 +191,7 @@ async function renderStaffPreview(score: Score): Promise<void> {
   staffPreview.replaceChildren();
   try {
     const engine = await loadStaffRendererEngine();
-    if (version !== staffRenderVersion || currentScore !== score) return;
+    if (version !== staffRenderVersion || currentScore !== score || selectedNotation() !== "staff") return;
     const staffWidth = Math.max(480, Math.floor(staffPreview.clientWidth - 28));
     renderStaff(staffPreview, score, {
       responsive: true,
@@ -196,7 +205,7 @@ async function renderStaffPreview(score: Score): Promise<void> {
 }
 
 function updateControls(): void {
-  playButton.disabled = events.length === 0;
+  playButton.disabled = events.length === 0 || playerState === "loading";
   pauseButton.disabled = playerState !== "playing";
   resumeButton.disabled = playerState !== "paused";
   stopButton.disabled = playerState === "idle";
@@ -247,6 +256,7 @@ function fileBaseName(extension: "abc" | "musicxml"): string {
 }
 
 function stateLabel(state: PlaybackState): string {
+  if (state === "loading") return "加载音源中";
   if (state === "playing") return "播放中";
   if (state === "paused") return "已暂停";
   return "空闲";
@@ -254,8 +264,12 @@ function stateLabel(state: PlaybackState): string {
 
 function selectedInstrument(): InstrumentId {
   const value = instrumentSelect.value;
-  if (value === "piano" || value === "guitar") return value;
-  return "synth";
+  if (value === "piano" || value === "synth") return value;
+  return "guitar";
+}
+
+function selectedNotation(): NotationMode {
+  return notationSelect.value === "staff" ? "staff" : "jianpu";
 }
 
 function element<T extends HTMLElement>(id: string): T {

@@ -45,6 +45,13 @@ describe("renderJianpu", () => {
     expect(svg).toContain(">低</text>");
   });
 
+  it("renders inline key change markers", () => {
+    const svg = renderJianpu(parse("K:C jianpu\n| 1 [K:G jianpu] 1 |"));
+
+    expect(svg).toContain("event-key-change");
+    expect(svg).toContain("1=G");
+  });
+
   it("places larger duration dots beside the vertical center of the number", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| 1. |"), { fontSize: 32 });
 
@@ -132,6 +139,12 @@ describe("renderJianpu", () => {
 
     expect(svg.match(/data-line-level="1" data-group-size="2"/g)).toHaveLength(2);
     expect(svg.match(/data-line-level="2" data-group-size="1"/g)).toHaveLength(2);
+  });
+
+  it("connects short rests with notes inside the same beat", () => {
+    const svg = renderJianpu(parse("M:4/4\nL:1/8\nK:C jianpu\n| 0 1 0 2 |"));
+
+    expect(svg.match(/data-line-level="1" data-group-size="2"/g)).toHaveLength(2);
   });
 
   it("renders repeat barlines and endings", () => {

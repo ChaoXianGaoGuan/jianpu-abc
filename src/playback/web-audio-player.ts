@@ -1,6 +1,6 @@
 import type { PlaybackEvent } from "./events";
 
-export type PlaybackState = "idle" | "playing" | "paused";
+export type PlaybackState = "idle" | "loading" | "playing" | "paused";
 export type InstrumentId = "synth" | "piano" | "guitar";
 
 export interface WebAudioPlayerOptions {
@@ -82,7 +82,7 @@ export class WebAudioPlayer {
     this.options = {
       masterGain: options.masterGain ?? 0.2,
       oscillatorType: options.oscillatorType ?? "sine",
-      instrument: options.instrument ?? "synth",
+      instrument: options.instrument ?? "guitar",
       sampleBaseUrl: options.sampleBaseUrl ?? DEFAULT_SAMPLE_BASE_URL,
       scheduleAheadSeconds: options.scheduleAheadSeconds ?? 0.03,
       ...(options.onEventStart ? { onEventStart: options.onEventStart } : {}),
@@ -135,10 +135,19 @@ export class WebAudioPlayer {
       return;
     }
 
-    if (this.context.state === "suspended") void this.context.resume();
+    const resume = this.context.state === "suspended" ? this.context.resume() : undefined;
     const preparation = this.prepareInstrument(this.options.instrument);
-    if (preparation) {
-      void preparation.finally(() => {
+    const readiness: Array<Promise<unknown>> = [];
+    if (resume) readiness.push(resume);
+    if (preparation) readiness.push(preparation);
+    if (readiness.length > 0) {
+      this.setState("loading");
+      void Promise.allSettled(readiness).then((results) => {
+        for (const result of results) {
+          if (result.status === "rejected") {
+            console.warn("Could not prepare Web Audio playback before scheduling.", result.reason);
+          }
+        }
         if (generation === this.playGeneration && this.events.length > 0) this.scheduleFrom(0);
       });
       return;

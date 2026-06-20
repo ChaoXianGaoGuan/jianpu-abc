@@ -1,4 +1,4 @@
-import type { Fraction, Measure, NoteEvent, Score, Tuplet, Voice } from "../core/ast";
+import type { Fraction, JianpuKey, Measure, NoteEvent, Score, Tuplet, Voice } from "../core/ast";
 import { DEFAULT_NOTE_LENGTH, reduceFraction } from "../core/fraction";
 import { degreeToPitch, toAbcPitchToken } from "../core/pitch";
 
@@ -25,6 +25,17 @@ interface RenderableEvent {
   slurStart?: boolean;
   slurEnd?: boolean;
   tuplet?: Tuplet;
+}
+
+interface RenderedToken {
+  token: string;
+  event?: RenderableEvent;
+  startTime?: Fraction;
+}
+
+interface RenderMeasureResult {
+  text: string;
+  key: JianpuKey;
 }
 
 export function toStandardAbc(score: Score): string {
@@ -82,15 +93,20 @@ function renderVoices(
 
 function renderBody(
   voice: Voice,
-  key: NonNullable<Score["header"]["key"]>,
+  initialKey: JianpuKey,
   defaultLength: Fraction,
   beatDuration: Fraction,
 ): string {
   if (voice.measures.length === 0) return "|";
 
-  const measures = voice.measures.map((measure, index) =>
-    renderMeasureWithBars(measure, index, key, defaultLength, beatDuration)
-  );
+  const measures: string[] = [];
+  let currentKey = initialKey;
+  for (const [index, measure] of voice.measures.entries()) {
+    const rendered = renderMeasureWithBars(measure, index, currentKey, defaultLength, beatDuration);
+    measures.push(rendered.text);
+    currentKey = rendered.key;
+  }
+
   const systems: string[] = [];
   let currentSystem: string[] = [];
   for (const [index, rendered] of measures.entries()) {
@@ -114,30 +130,41 @@ function formatSystem(measures: string[], continuation: boolean): string {
 function renderMeasureWithBars(
   measure: Measure,
   measureIndex: number,
-  key: NonNullable<Score["header"]["key"]>,
+  key: JianpuKey,
   defaultLength: Fraction,
   beatDuration: Fraction,
-): string {
-  const tokens = renderMeasure(measure, measureIndex, key, defaultLength, beatDuration);
+): RenderMeasureResult {
+  const rendered = renderMeasure(measure, measureIndex, key, defaultLength, beatDuration);
   const left = measure.leftBarline?.sourceText ?? (measureIndex === 0 ? "|" : "");
   const ending = measure.ending?.sourceText ?? "";
   const right = measure.barline?.sourceText ?? "";
-  return [left, ending, tokens, right].filter((part) => part !== "").join(" ");
+  return {
+    text: [left, ending, rendered.text, right].filter((part) => part !== "").join(" "),
+    key: rendered.key,
+  };
 }
 
 function renderMeasure(
   measure: Measure,
   measureIndex: number,
-  key: NonNullable<Score["header"]["key"]>,
+  initialKey: JianpuKey,
   defaultLength: Fraction,
   beatDuration: Fraction,
-): string {
-  const rendered: RenderableEvent[] = [];
+): RenderMeasureResult {
+  const tokens: RenderedToken[] = [];
+  let currentKey = initialKey;
+  let previousRenderable: RenderableEvent | undefined;
+  let elapsed: Fraction = { numerator: 0, denominator: 1 };
 
   for (const event of measure.events) {
+    if (event.type === "key-change") {
+      currentKey = event.key;
+      tokens.push({ token: `[K:${event.key.tonic}]` });
+      continue;
+    }
+
     if (event.type === "extension") {
-      const previous = rendered.at(-1);
-      if (!previous || previous.kind !== "note") {
+      if (!previousRenderable || previousRenderable.kind !== "note") {
         const location = event.location
           ? ` at line ${event.location.line}, column ${event.location.column}`
           : ` in measure ${measureIndex + 1}`;
@@ -146,54 +173,59 @@ function renderMeasure(
           `Extension "-" must follow a note${location}.`,
         );
       }
-      previous.duration = addFractions(previous.duration, event.duration);
+      previousRenderable.duration = addFractions(previousRenderable.duration, event.duration);
+      elapsed = addFractions(elapsed, event.duration);
       continue;
     }
 
-    if (event.type === "rest") {
-      rendered.push({
+    const renderable: RenderableEvent = event.type === "rest"
+      ? {
         kind: "rest",
         token: "z",
         duration: { ...event.duration },
         ...(event.tuplet ? { tuplet: event.tuplet } : {}),
-      });
-      continue;
-    }
-
-    rendered.push({
-      kind: "note",
-      token: renderNote(event, key),
-      duration: { ...event.duration },
-      ...(event.tieStart ? { tieStart: true } : {}),
-      ...(event.slurStart ? { slurStart: true } : {}),
-      ...(event.slurEnd ? { slurEnd: true } : {}),
-      ...(event.tuplet ? { tuplet: event.tuplet } : {}),
-    });
-  }
-
-  const tokens = rendered.map((event) => {
-    const tupletPrefix = event.tuplet?.position === "start" ? `(${event.tuplet.actual}` : "";
-    const duration = notationDuration(event);
-    const slurPrefix = event.slurStart ? "(" : "";
-    const slurSuffix = event.slurEnd ? ")" : "";
-    return `${tupletPrefix}${slurPrefix}${event.token}${durationSuffix(duration, defaultLength)}${event.tieStart ? "-" : ""}${slurSuffix}`;
-  });
-  const startTimes: Fraction[] = [];
-  let elapsed: Fraction = { numerator: 0, denominator: 1 };
-  for (const event of rendered) {
-    startTimes.push(elapsed);
+      }
+      : {
+        kind: "note",
+        token: renderNote(event, currentKey),
+        duration: { ...event.duration },
+        ...(event.tieStart ? { tieStart: true } : {}),
+        ...(event.slurStart ? { slurStart: true } : {}),
+        ...(event.slurEnd ? { slurEnd: true } : {}),
+        ...(event.tuplet ? { tuplet: event.tuplet } : {}),
+      };
+    tokens.push({ event: renderable, startTime: elapsed, token: "" });
+    previousRenderable = renderable;
     elapsed = addFractions(elapsed, event.duration);
   }
-  return tokens.map((token, index) => {
-    if (index === 0) return token;
-    return `${shouldBeamTogether(
-      rendered[index - 1] as RenderableEvent,
-      rendered[index] as RenderableEvent,
-      startTimes[index - 1] as Fraction,
-      startTimes[index] as Fraction,
-      beatDuration,
-    ) ? "" : " "}${token}`;
-  }).join("");
+
+  const formatted = tokens.map((entry) => ({
+    ...entry,
+    token: entry.event ? renderToken(entry.event, defaultLength) : entry.token,
+  }));
+
+  return {
+    text: formatted.map((entry, index) => {
+      if (index === 0) return entry.token;
+      const previous = formatted[index - 1] as RenderedToken;
+      const join = previous.event !== undefined
+        && entry.event !== undefined
+        && previous.startTime !== undefined
+        && entry.startTime !== undefined
+        ? shouldBeamTogether(previous.event, entry.event, previous.startTime, entry.startTime, beatDuration)
+        : false;
+      return `${join ? "" : " "}${entry.token}`;
+    }).join(""),
+    key: currentKey,
+  };
+}
+
+function renderToken(event: RenderableEvent, defaultLength: Fraction): string {
+  const tupletPrefix = event.tuplet?.position === "start" ? `(${event.tuplet.actual}` : "";
+  const duration = notationDuration(event);
+  const slurPrefix = event.slurStart ? "(" : "";
+  const slurSuffix = event.slurEnd ? ")" : "";
+  return `${tupletPrefix}${slurPrefix}${event.token}${durationSuffix(duration, defaultLength)}${event.tieStart ? "-" : ""}${slurSuffix}`;
 }
 
 function shouldBeamTogether(
@@ -222,7 +254,7 @@ function notationDuration(event: RenderableEvent): Fraction {
 
 function renderNote(
   note: NoteEvent,
-  key: NonNullable<Score["header"]["key"]>,
+  key: JianpuKey,
 ): string {
   try {
     const pitch = degreeToPitch({

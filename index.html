@@ -29,9 +29,9 @@
           <label class="instrument-control" for="instrument-select">
             <span>音源</span>
             <select id="instrument-select">
-              <option value="synth">合成器</option>
+              <option value="guitar" selected>吉他</option>
               <option value="piano">钢琴</option>
-              <option value="guitar">吉他</option>
+              <option value="synth">合成器</option>
             </select>
           </label>
         </div>
@@ -41,32 +41,29 @@
         </div>
       </section>
 
-      <section class="panel preview-panel" aria-labelledby="jianpu-preview-title">
+      <section class="panel preview-panel" aria-labelledby="score-preview-title">
         <div class="panel-heading">
           <div>
             <p class="section-label">实时乐谱</p>
-            <h2 id="jianpu-preview-title">简谱预览</h2>
+            <h2 id="score-preview-title">乐谱预览</h2>
           </div>
           <div class="preview-actions">
+            <label class="notation-control" for="notation-select">
+              <span>显示</span>
+              <select id="notation-select">
+                <option value="jianpu" selected>简谱</option>
+                <option value="staff">五线谱</option>
+              </select>
+            </label>
             <label class="toggle-control" title="开启后，上下行同一列的小节宽度保持一致">
               <input id="align-measures-toggle" type="checkbox" checked />
               <span>小节列对齐</span>
             </label>
-            <span class="live-indicator">SVG</span>
+            <span id="preview-kind-indicator" class="live-indicator">SVG</span>
           </div>
         </div>
         <div id="jianpu-preview" class="jianpu-preview" aria-live="polite"></div>
-      </section>
-
-      <section class="panel preview-panel" aria-labelledby="staff-preview-title">
-        <div class="panel-heading">
-          <div>
-            <p class="section-label">同步乐谱</p>
-            <h2 id="staff-preview-title">五线谱预览</h2>
-          </div>
-          <span class="live-indicator">ABCJS</span>
-        </div>
-        <div id="staff-preview" class="staff-preview" aria-live="polite"></div>
+        <div id="staff-preview" class="staff-preview hidden" aria-live="polite"></div>
       </section>
 
       <section class="workspace">
@@ -88,31 +85,31 @@
           <div class="panel-heading">
             <div>
               <p class="section-label">转换结果</p>
-              <h2>标准 ABC</h2>
+              <h2>导出</h2>
             </div>
             <span id="event-count" class="counter">0 个音符</span>
           </div>
-          <div class="export-actions">
-            <button id="copy-abc-button" type="button">复制 ABC</button>
-            <button id="download-abc-button" type="button">下载 ABC</button>
-          </div>
-          <label class="sr-only" for="abc-output">标准 ABC 输出</label>
-          <textarea id="abc-output" class="export-output" readonly spellcheck="false"></textarea>
-
-          <div class="panel-heading compact-heading">
+          <div class="export-card">
             <div>
-              <p class="section-label">导出文件</p>
-              <h2>MusicXML</h2>
+              <h3>标准 ABC</h3>
+              <p>复制到 ABC 工具，或下载为 .abc 文件。</p>
             </div>
-            <span class="live-indicator">.musicxml</span>
+            <div class="export-actions">
+              <button id="copy-abc-button" type="button">复制 ABC</button>
+              <button id="download-abc-button" type="button">下载 ABC</button>
+            </div>
           </div>
-          <div class="export-actions">
-            <button id="copy-musicxml-button" type="button">复制 MusicXML</button>
-            <button id="download-musicxml-button" type="button">下载 MusicXML</button>
+          <div class="export-card">
+            <div>
+              <h3>MusicXML</h3>
+              <p>复制 XML 内容，或下载为 .musicxml 文件。</p>
+            </div>
+            <div class="export-actions">
+              <button id="copy-musicxml-button" type="button">复制 MusicXML</button>
+              <button id="download-musicxml-button" type="button">下载 MusicXML</button>
+            </div>
           </div>
-          <label class="sr-only" for="musicxml-output">MusicXML 输出</label>
-          <textarea id="musicxml-output" class="export-output" readonly spellcheck="false"></textarea>
-          <p class="hint">支持组合语法：#4、b7、1'、1,、1/2、1*2、1.、#4'/2.。修改左侧文本后再次点击播放即可验收。</p>
+          <p class="hint">支持组合语法：#4、b7、1'、1,、1/2、1*2、1.、#4'/2.，以及正文转调 [K:G jianpu]。修改左侧文本后再次点击播放即可验收。</p>
         </article>
       </section>
     </main>

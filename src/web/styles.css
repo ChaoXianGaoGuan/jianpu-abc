@@ -138,14 +138,18 @@ main {
   gap: 9px;
 }
 
-.instrument-control {
+.instrument-control,
+.notation-control {
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  margin-top: 12px;
   color: #52635d;
   font-size: 0.88rem;
   font-weight: 700;
+}
+
+.instrument-control {
+  margin-top: 12px;
 }
 
 select {
@@ -181,7 +185,8 @@ button.primary {
   background: #254f40;
 }
 
-button:disabled {
+button:disabled,
+.toggle-control:has(input:disabled) {
   cursor: not-allowed;
   opacity: 0.42;
 }
@@ -275,21 +280,45 @@ textarea:focus {
   box-shadow: 0 0 0 3px rgb(61 104 83 / 12%);
 }
 
-#abc-output,
-#musicxml-output {
-  color: #475951;
-  background: #f3f5ef;
+.hidden {
+  display: none !important;
 }
 
-.export-output {
-  min-height: 250px;
+.export-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid #d2dacf;
+  border-radius: 14px;
+  padding: 16px;
+  background: rgb(255 255 252 / 58%);
+}
+
+.export-card + .export-card {
+  margin-top: 12px;
+}
+
+.export-card h3 {
+  margin: 0 0 5px;
+  color: #263a32;
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 1.05rem;
+}
+
+.export-card p {
+  margin: 0;
+  color: #718078;
+  font-size: 0.84rem;
+  line-height: 1.45;
 }
 
 .export-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 9px;
-  margin: -4px 0 12px;
+  justify-content: flex-end;
+  margin: 0;
 }
 
 .compact-heading {
@@ -344,8 +373,13 @@ textarea:focus {
     flex-direction: column;
   }
 
-  .workspace {
+  .workspace,
+  .export-card {
     grid-template-columns: 1fr;
+  }
+
+  .export-actions {
+    justify-content: flex-start;
   }
 
   .playback-readout {

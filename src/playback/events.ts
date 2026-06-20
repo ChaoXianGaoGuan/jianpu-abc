@@ -74,6 +74,7 @@ function buildVoiceEvents(
   }
 
   const output: PlaybackEvent[] = [];
+  let currentKey = key;
   let cursor = 0;
   let pendingTie: { event: PlaybackEvent; midi: number } | undefined;
 
@@ -84,6 +85,10 @@ function buildVoiceEvents(
 
     for (const [eventIndex, event] of measure.events.entries()) {
       const sourceEventId = `${voice.id}:${measureIndex}:${eventIndex}`;
+      if (event.type === "key-change") {
+        currentKey = event.key;
+        continue;
+      }
       const duration = durationToSeconds(event.duration, tempo);
 
       if (event.type === "extension") {
@@ -112,7 +117,7 @@ function buildVoiceEvents(
         continue;
       }
 
-      const midi = resolveMidi(event, key);
+      const midi = resolveMidi(event, currentKey);
       if (event.tieEnd) {
         if (!pendingTie) {
           throw playbackEventError(

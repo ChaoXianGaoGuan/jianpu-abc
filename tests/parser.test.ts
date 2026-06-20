@@ -218,6 +218,18 @@ describe("parseJabc", () => {
     expect(result.value.voices[1]?.measures[0]?.events).toMatchObject([{ degree: 3 }, { degree: 4 }]);
   });
 
+  it("parses inline key changes with spaces", () => {
+    const result = parseJabc("K:C jianpu\n| 1 [K:G jianpu] 1 |");
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.value.voices[0]?.measures[0]?.events).toMatchObject([
+      { type: "note", degree: 1 },
+      { type: "key-change", key: { tonic: "G", notation: "jianpu" }, sourceText: "[K:G jianpu]" },
+      { type: "note", degree: 1 },
+    ]);
+  });
+
   it("rejects empty V fields", () => {
     const result = parseJabc("K:C jianpu\nV:\n| 1 |");
 
@@ -235,6 +247,21 @@ describe("parseJabc", () => {
       message: 'Invalid K: field value "E# jianpu".',
       token: "E# jianpu",
     });
+  });
+
+  it("rejects invalid inline key changes", () => {
+    const result = parseJabc("K:C jianpu\n| 1 [K:E# jianpu] 2 |");
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.errors[0]).toMatchObject({
+      message: 'Invalid inline K: key change "[K:E# jianpu]".',
+      line: 2,
+      column: 5,
+      token: "[K:E# jianpu]",
+      context: "| 1 [K:E# jianpu] 2 |",
+    });
+    expect(result.errors[0]?.suggestion).toContain("[K:G jianpu]");
   });
 
   it("returns structured errors with source location and a suggestion", () => {

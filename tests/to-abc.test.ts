@@ -67,6 +67,12 @@ describe("toStandardAbc", () => {
     expect(toStandardAbc(score)).toContain("| =F ^G |");
   });
 
+  it("exports inline key changes and maps following degrees with the new tonic", () => {
+    const score = parse("K:C jianpu\n| 1 [K:G jianpu] 1 | 2 |");
+
+    expect(toStandardAbc(score)).toBe("X:1\nL:1/4\nK:C\n| C [K:G] G | A |\n");
+  });
+
   it("exports parsed octave, accidental, duration, and dot syntax", () => {
     const score = parse("L:1/4\nK:C jianpu\n| 1' 1, #4 b7 =3 1/2 2*2 3. |");
 

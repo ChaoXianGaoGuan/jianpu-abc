@@ -100,7 +100,14 @@ export interface ExtensionEvent {
   location?: SourceLocation;
 }
 
-export type MusicalEvent = NoteEvent | RestEvent | ExtensionEvent;
+export interface KeyChangeEvent {
+  type: "key-change";
+  key: JianpuKey;
+  sourceText: `[K:${string}]`;
+  location?: SourceLocation;
+}
+
+export type MusicalEvent = NoteEvent | RestEvent | ExtensionEvent | KeyChangeEvent;
 
 export type BarlineType =
   | "single"

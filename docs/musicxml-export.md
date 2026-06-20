@@ -21,6 +21,7 @@ if (result.success) {
 - 保留标题为 `<work-title>`。
 - 保留 `C:` 为 composer creator。
 - 输出 `divisions`、大调 key fifths、拍号、G 谱号。
+- 将正文中的 `[K:G jianpu]` 输出为后续位置的 MusicXML `<attributes><key>` 变更。
 - 多声部时为每个声部输出独立 `<score-part>` 和 `<part>`。
 - 输出复小节线、反复方向和 `[1` / `[2` ending 标记。
 - 在下一小节输出 `<print new-system="yes" />`，保留 JABC 音乐行结构。
