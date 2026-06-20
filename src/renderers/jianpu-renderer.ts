@@ -432,40 +432,57 @@ function renderDurationLines(
   fontSize: number,
 ): string {
   const output: string[] = [];
-  let index = 0;
-  while (index < positioned.length) {
-    const first = positioned[index] as PositionedEvent;
-    const level = durationLineCount(first.event, beatDuration);
-    if (level === 0) {
-      index += 1;
-      continue;
-    }
+  const maxLevel = positioned.reduce(
+    (level, item) => Math.max(level, durationLineCount(item.event, beatDuration)),
+    0,
+  );
 
-    const group = [first];
-    if (first.event.type === "note") {
-      while (index + group.length < positioned.length) {
-        const next = positioned[index + group.length] as PositionedEvent;
-        const previous = group.at(-1) as PositionedEvent;
-        if (
-          next.event.type !== "note"
-          || durationLineCount(next.event, beatDuration) !== level
-          || !equalFractions(notationDuration(next.event), notationDuration(first.event))
-          || beatIndex(next.startTime, beatDuration) !== beatIndex(first.startTime, beatDuration)
-          || previous.event.type !== "note"
-        ) break;
-        group.push(next);
+  for (let lineLevel = 1; lineLevel <= maxLevel; lineLevel += 1) {
+    let index = 0;
+    while (index < positioned.length) {
+      const first = positioned[index] as PositionedEvent;
+      if (!hasDurationLine(first, beatDuration, lineLevel)) {
+        index += 1;
+        continue;
       }
-    }
 
-    const startX = group[0]!.centerX - fontSize * 0.34;
-    const endX = group.at(-1)!.centerX + fontSize * 0.34;
-    for (let line = 0; line < level; line += 1) {
-      const y = fontSize * 0.43 + line * 4.5;
-      output.push(`<line class="duration-line" data-group-size="${group.length}" x1="${round(startX)}" y1="${round(y)}" x2="${round(endX)}" y2="${round(y)}"/>`);
+      const group = [first];
+      if (first.event.type === "note") {
+        while (index + group.length < positioned.length) {
+          const next = positioned[index + group.length] as PositionedEvent;
+          if (
+            next.event.type !== "note"
+            || !hasDurationLine(next, beatDuration, lineLevel)
+            || beatIndex(next.startTime, beatDuration) !== beatIndex(first.startTime, beatDuration)
+          ) break;
+          group.push(next);
+        }
+      }
+
+      output.push(renderDurationLine(group, lineLevel, fontSize));
+      index += group.length;
     }
-    index += group.length;
   }
   return output.join("");
+}
+
+function hasDurationLine(
+  item: PositionedEvent,
+  beatDuration: Fraction,
+  lineLevel: number,
+): boolean {
+  return durationLineCount(item.event, beatDuration) >= lineLevel;
+}
+
+function renderDurationLine(
+  group: PositionedEvent[],
+  lineLevel: number,
+  fontSize: number,
+): string {
+  const startX = group[0]!.centerX - fontSize * 0.34;
+  const endX = group.at(-1)!.centerX + fontSize * 0.34;
+  const y = fontSize * 0.43 + (lineLevel - 1) * 4.5;
+  return `<line class="duration-line" data-line-level="${lineLevel}" data-group-size="${group.length}" x1="${round(startX)}" y1="${round(y)}" x2="${round(endX)}" y2="${round(y)}"/>`;
 }
 
 function renderRelations(
@@ -773,13 +790,6 @@ function divideFractions(left: Fraction, right: Fraction): Fraction {
     numerator: left.numerator * right.denominator,
     denominator: left.denominator * right.numerator,
   });
-}
-
-function equalFractions(left: Fraction, right: Fraction): boolean {
-  const reducedLeft = reduceFraction(left);
-  const reducedRight = reduceFraction(right);
-  return reducedLeft.numerator === reducedRight.numerator
-    && reducedLeft.denominator === reducedRight.denominator;
 }
 
 function beatIndex(startTime: Fraction, beatDuration: Fraction): number {

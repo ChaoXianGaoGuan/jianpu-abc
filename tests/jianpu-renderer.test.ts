@@ -127,6 +127,13 @@ describe("renderJianpu", () => {
     expect(sixteenths.match(/data-group-size="4"/g)).toHaveLength(2);
   });
 
+  it("connects shared underline levels for mixed eighth and sixteenth notes", () => {
+    const svg = renderJianpu(parse("M:4/4\nL:1/4\nK:C jianpu\n| 1/4 2/ | 3/ 4/4 |"));
+
+    expect(svg.match(/data-line-level="1" data-group-size="2"/g)).toHaveLength(2);
+    expect(svg.match(/data-line-level="2" data-group-size="1"/g)).toHaveLength(2);
+  });
+
   it("renders repeat barlines and endings", () => {
     const svg = renderJianpu(parse("K:C jianpu\n|: 1 :| [1 2 || [2 3 |]"));
 
