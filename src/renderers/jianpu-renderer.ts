@@ -106,7 +106,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     .octave-dot,.duration-dot{fill:#1f332a}
     .duration-line{stroke:#1f332a;stroke-width:1.7;stroke-linecap:round}
     .relation-arc{fill:none;stroke:#35483f;stroke-width:1.8;stroke-linecap:round}
-    .tie-arc{stroke-width:1.65}
+    .tie-arc{stroke-width:1.45}
     .tuplet-number{font:700 ${fontSize * 0.48}px Georgia,serif;fill:#35483f;text-anchor:middle;dominant-baseline:middle}
     .relation-label-bg{fill:#fffef9}
     .event-lyric{font:15px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#4f6259;text-anchor:middle}
@@ -430,16 +430,7 @@ function renderRelations(
     -fontSize * 1.78,
     fontSize,
   ));
-  output.push(...renderPairedArcs(
-    positioned,
-    (event) => event.type === "note" && event.tieStart === true,
-    (event) => event.type === "note" && event.tieEnd === true,
-    "tie-arc",
-    measureWidth,
-    -fontSize * 0.62,
-    -fontSize * 0.93,
-    fontSize,
-  ));
+  output.push(...renderTieArcs(positioned, measureWidth, fontSize));
 
   let tupletStart: PositionedEvent | undefined;
   for (const item of positioned) {
@@ -458,6 +449,59 @@ function renderRelations(
     }
   }
   return output.join("");
+}
+
+function renderTieArcs(
+  positioned: PositionedEvent[],
+  measureWidth: number,
+  fontSize: number,
+): string[] {
+  const output: string[] = [];
+  const y = -fontSize * 0.82;
+  const peak = -fontSize * 1.04;
+  const preferredInset = fontSize * 0.28;
+  let open: PositionedEvent | undefined;
+
+  for (const item of positioned) {
+    if (item.event.type !== "note") continue;
+    if (item.event.tieEnd) {
+      if (open) {
+        const availableInset = Math.max(
+          0,
+          (item.centerX - open.centerX) / 2 - fontSize * 0.08,
+        );
+        const inset = Math.min(preferredInset, availableInset);
+        output.push(arcPath(
+          "tie-arc",
+          open.centerX + inset,
+          item.centerX - inset,
+          y,
+          peak,
+        ));
+      } else {
+        output.push(arcPath(
+          "tie-arc",
+          fontSize * 0.08,
+          Math.max(fontSize * 0.14, item.centerX - preferredInset),
+          y,
+          peak,
+        ));
+      }
+      open = undefined;
+    }
+    if (item.event.tieStart) open = item;
+  }
+
+  if (open) {
+    output.push(arcPath(
+      "tie-arc",
+      open.centerX + preferredInset,
+      Math.max(open.centerX + preferredInset + fontSize * 0.12, measureWidth - fontSize * 0.65),
+      y,
+      peak,
+    ));
+  }
+  return output;
 }
 
 function renderPairedArcs(

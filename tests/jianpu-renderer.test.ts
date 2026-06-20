@@ -75,6 +75,12 @@ describe("renderJianpu", () => {
     expect(svg).not.toContain(">~</text>");
   });
 
+  it("draws same-measure ties between number edges instead of through centers", () => {
+    const svg = renderJianpu(parse("K:C jianpu\n| 3~ ~3 |"), { fontSize: 32 });
+
+    expect(svg).toContain('class="relation-arc tie-arc" d="M 32.96 -26.24 Q 48 -33.28 63.04 -26.24"');
+  });
+
   it("renders long notes as beat-sized extension dashes", () => {
     const quarterBeat = renderJianpu(parse("M:4/4\nL:1/4\nK:C jianpu\n| 5*2 6*3 |"));
     const eighthBeat = renderJianpu(parse("M:6/8\nL:1/8\nK:C jianpu\n| 5*2 |"));

@@ -24,7 +24,7 @@ const svg = renderJianpu(score, {
 - 以拍号分母为一拍：长时值展开为延音横线，短时值使用底线，同一拍内相同时值的底线相连。
 - SVG 粗细竖线与圆点形式的反复/终止线，以及带水平括号的编号 ending。
 - 单小节线、复小节线、歌词、声部标签和按小节自动换行。
-- SVG 曲线路径形式的圆滑线、延音线，以及中间带数字的三连音弧线。
+- SVG 曲线路径形式的圆滑线、从数字边缘起止并避让小节线的延音线，以及中间带数字的三连音弧线。
 
 每个事件组包含 `data-event-id="voiceId:measureIndex:eventIndex"`。传入相同的 `highlightEventId` 会添加 `is-highlighted` class；该 ID 与 `PlaybackEvent.sourceEventId` 一致，因此播放层无需维护第二套映射。
 
