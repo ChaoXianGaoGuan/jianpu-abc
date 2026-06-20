@@ -210,26 +210,33 @@ function layoutMeasures(
     const alignedColumnWidths = alignMeasuresAcrossSystems
       ? columnWidths(systemMetrics)
       : [];
+    const alignedReadableColumnWidths = alignMeasuresAcrossSystems
+      ? columnReadableWidths(systemMetrics, minCellWidth, beatGap, barSpace)
+      : [];
 
     let systemY = musicTop;
     for (const [systemIndex, system] of systems.entries()) {
       const metrics = systemMetrics[systemIndex] ?? [];
       const naturalWidths = alignMeasuresAcrossSystems
-        ? metrics.map((_, index) => alignedColumnWidths[index] ?? 0)
+        ? metrics.map((metric, index) => alignedColumnWidths[index] ?? metric.naturalWidth)
         : metrics.map((metric) => metric.naturalWidth);
+      const readableWidths = alignMeasuresAcrossSystems
+        ? metrics.map((metric, index) => alignedReadableColumnWidths[index] ?? readableMeasureWidth(metric, minCellWidth, beatGap, barSpace))
+        : metrics.map((metric) => readableMeasureWidth(metric, minCellWidth, beatGap, barSpace));
       const naturalTotal = naturalWidths.reduce((sum, measureWidth) => sum + measureWidth, 0)
         + Math.max(0, system.length - 1) * measureGap;
-      const scale = Math.min(1, availableWidth / naturalTotal);
+      const scale = alignMeasuresAcrossSystems ? 1 : Math.min(1, availableWidth / naturalTotal);
       const scaledGap = measureGap * scale;
       let systemX = padding;
       for (const [index, item] of system.entries()) {
         const metric = metrics[index] as MeasureLayoutMetric;
         const naturalWidth = naturalWidths[index] ?? metric.naturalWidth;
+        const readableWidth = readableWidths[index] ?? readableMeasureWidth(metric, minCellWidth, beatGap, barSpace);
         const scaledBarSpace = barSpace * scale;
         const scaledBeatGap = beatGap * scale;
         const measureWidth = Math.max(
           naturalWidth * scale,
-          readableMeasureWidth(metric, minCellWidth, scaledBeatGap, scaledBarSpace),
+          alignMeasuresAcrossSystems ? readableWidth : readableMeasureWidth(metric, minCellWidth, scaledBeatGap, scaledBarSpace),
         );
         const cellWidth = Math.max(
           minCellWidth,
@@ -298,6 +305,24 @@ function columnWidths(
   for (const metrics of systemMetrics) {
     for (const [index, metric] of metrics.entries()) {
       output[index] = Math.max(output[index] ?? 0, metric.naturalWidth);
+    }
+  }
+  return output;
+}
+
+function columnReadableWidths(
+  systemMetrics: MeasureLayoutMetric[][],
+  minCellWidth: number,
+  beatGap: number,
+  barSpace: number,
+): number[] {
+  const output: number[] = [];
+  for (const metrics of systemMetrics) {
+    for (const [index, metric] of metrics.entries()) {
+      output[index] = Math.max(
+        output[index] ?? 0,
+        readableMeasureWidth(metric, minCellWidth, beatGap, barSpace),
+      );
     }
   }
   return output;

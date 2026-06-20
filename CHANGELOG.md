@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. The format 
 ### Fixed
 
 - Preserve readable jianpu spacing on narrow previews by scaling a wider SVG viewBox instead of over-compressing notes.
+- Keep aligned jianpu measure columns consistent when narrow-screen readable widths expand individual measures.
 - Keep duration dots close to jianpu note numbers while preserving dotted-rhythm spacing.
 - Add explicit spacing between complete jianpu beats while keeping duration lines grouped within each beat.
 - Remove redundant standard ABC barlines before same-system repeat/start marks so abcjs renders one shared staff boundary.

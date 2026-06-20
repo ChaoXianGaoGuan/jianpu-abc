@@ -312,6 +312,17 @@ describe("renderJianpu", () => {
     expect(transforms[2]?.y).toBe(transforms[3]?.y);
   });
 
+  it("keeps aligned columns when narrow scaling preserves readable widths", () => {
+    const score = parse("M:4/4\nK:C jianpu\n| 1s 2s 3s 4s 5s 6s 7s 1' | 1 |\n| 1 | 1s 2s 3s 4s 5s 6s 7s 1' |");
+    const svg = renderJianpu(score, { width: 320 });
+    const transforms = measureTransforms(svg);
+
+    expect(transforms).toHaveLength(4);
+    expect(transforms[0]?.x).toBe(transforms[2]?.x);
+    expect(transforms[1]?.x).toBe(transforms[3]?.x);
+    expect(viewBoxWidth(svg)).toBeGreaterThan(320);
+  });
+
   it("can disable cross-row measure alignment", () => {
     const score = parse("K:C jianpu\n| 1 2 3 4 | 1 |\n| 1 | 1 2 3 4 |");
     const svg = renderJianpu(score, { width: 620, alignMeasuresAcrossSystems: false });
