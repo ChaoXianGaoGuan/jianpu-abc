@@ -251,6 +251,28 @@ describe("renderJianpu", () => {
     expect(transforms[3]!.x + localBarlines[3]!).toBeCloseTo(expectedRightBoundary, 1);
   });
 
+  it("fills automatically wrapped rows when measure column alignment is disabled", () => {
+    const width = 420;
+    const fontSize = 32;
+    const svg = renderJianpu(parse(
+      "K:C jianpu\n| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 1 | 2 | 3 |",
+    ), { width, fontSize, alignMeasuresAcrossSystems: false });
+    const transforms = numericMeasureTransforms(svg);
+    const localBarlines = singleBarlineXs(svg);
+    const expectedRightBoundary = width - fontSize - fontSize * 0.22;
+    const rows = new Map<number, number[]>();
+    for (const [index, transform] of transforms.entries()) {
+      rows.set(transform.y, [...(rows.get(transform.y) ?? []), index]);
+    }
+
+    expect(rows.size).toBeGreaterThan(1);
+    for (const indexes of rows.values()) {
+      const lastIndex = indexes.at(-1)!;
+      expect(Math.abs(transforms[lastIndex]!.x + localBarlines[lastIndex]! - expectedRightBoundary))
+        .toBeLessThan(0.5);
+    }
+  });
+
   it("adds the highlight class to the requested source event", () => {
     const svg = renderJianpu(parse(SCORE), { highlightEventId: "default:0:1" });
 

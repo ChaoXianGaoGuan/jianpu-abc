@@ -260,8 +260,19 @@ function layoutMeasures(
     return output;
   }
 
-  let x = padding;
-  let y = musicTop;
+  const rows: Array<Array<{
+    measure: Measure;
+    measureIndex: number;
+    metric: MeasureLayoutMetric;
+    measureWidth: number;
+  }>> = [];
+  let currentRow: Array<{
+    measure: Measure;
+    measureIndex: number;
+    metric: MeasureLayoutMetric;
+    measureWidth: number;
+  }> = [];
+  let currentRowWidth = 0;
 
   for (const [measureIndex, measure] of voice.measures.entries()) {
     const metric = measureLayoutMetric(
@@ -271,21 +282,53 @@ function layoutMeasures(
       baseCellWidth,
       barSpace,
     );
-    const { slotCount, naturalWidth, beatGapCount } = metric;
     const measureWidth = Math.max(
-      Math.min(availableWidth, naturalWidth),
+      Math.min(availableWidth, metric.naturalWidth),
       readableMeasureWidth(metric, minCellWidth, beatGap, barSpace),
     );
-    const cellWidth = Math.max(
-      minCellWidth,
-      (measureWidth - barSpace - beatGapCount * beatGap) / slotCount,
-    );
-    if (x > padding && x + measureWidth > width - padding) {
-      x = padding;
-      y += lineHeight;
+    const nextRowWidth = currentRowWidth
+      + (currentRow.length === 0 ? 0 : measureGap)
+      + measureWidth;
+    if (currentRow.length > 0 && nextRowWidth > availableWidth) {
+      rows.push(currentRow);
+      currentRow = [];
+      currentRowWidth = 0;
     }
-    output.push({ measure, measureIndex, x, y, width: measureWidth, cellWidth, beatGap });
-    x += measureWidth + measureGap;
+    currentRow.push({ measure, measureIndex, metric, measureWidth });
+    currentRowWidth += (currentRow.length === 1 ? 0 : measureGap) + measureWidth;
+  }
+  if (currentRow.length > 0) rows.push(currentRow);
+
+  let y = musicTop;
+  for (const row of rows) {
+    const naturalTotal = row.reduce((sum, item) => sum + item.measureWidth, 0)
+      + Math.max(0, row.length - 1) * measureGap;
+    const scale = alignMeasuresAcrossSystems || naturalTotal <= 0
+      ? 1
+      : availableWidth / naturalTotal;
+    const scaledGap = measureGap * scale;
+    const scaledBarSpace = barSpace * scale;
+    const scaledBeatGap = beatGap * scale;
+    let x = padding;
+    for (const item of row) {
+      const measureWidth = item.measureWidth * scale;
+      const cellWidth = Math.max(
+        minCellWidth,
+        (measureWidth - scaledBarSpace - item.metric.beatGapCount * scaledBeatGap)
+          / item.metric.slotCount,
+      );
+      output.push({
+        measure: item.measure,
+        measureIndex: item.measureIndex,
+        x,
+        y,
+        width: measureWidth,
+        cellWidth,
+        beatGap: scaledBeatGap,
+      });
+      x += measureWidth + scaledGap;
+    }
+    y += lineHeight;
   }
   return output;
 }
