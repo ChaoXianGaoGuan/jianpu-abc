@@ -39,7 +39,13 @@
             <p class="section-label">实时乐谱</p>
             <h2 id="jianpu-preview-title">简谱预览</h2>
           </div>
-          <span class="live-indicator">SVG</span>
+          <div class="preview-actions">
+            <label class="toggle-control" title="开启后，上下行同一列的小节宽度保持一致">
+              <input id="align-measures-toggle" type="checkbox" checked />
+              <span>小节列对齐</span>
+            </label>
+            <span class="live-indicator">SVG</span>
+          </div>
         </div>
         <div id="jianpu-preview" class="jianpu-preview" aria-live="polite"></div>
       </section>

@@ -29,6 +29,7 @@ const abcOutput = element<HTMLTextAreaElement>("abc-output");
 const musicXmlOutput = element<HTMLTextAreaElement>("musicxml-output");
 const jianpuPreview = element<HTMLDivElement>("jianpu-preview");
 const staffPreview = element<HTMLDivElement>("staff-preview");
+const alignMeasuresToggle = element<HTMLInputElement>("align-measures-toggle");
 const parseStatus = element<HTMLDivElement>("parse-status");
 const parseErrors = element<HTMLPreElement>("parse-errors");
 const eventCount = element<HTMLSpanElement>("event-count");
@@ -69,6 +70,7 @@ playButton.addEventListener("click", () => {
 pauseButton.addEventListener("click", () => player?.pause());
 resumeButton.addEventListener("click", () => player?.resume());
 stopButton.addEventListener("click", () => player?.stop());
+alignMeasuresToggle.addEventListener("change", () => renderPreview(activeEventId));
 copyAbcButton.addEventListener("click", () => void copyText(currentAbc, "ABC 已复制"));
 downloadAbcButton.addEventListener("click", () => downloadText(currentAbc, fileBaseName("abc"), "text/vnd.abc"));
 copyMusicXmlButton.addEventListener("click", () => void copyText(currentMusicXml, "MusicXML 已复制"));
@@ -154,6 +156,7 @@ function renderPreview(highlightEventId?: string): void {
   jianpuPreview.innerHTML = renderJianpu(currentScore, {
     width,
     showLyrics: true,
+    alignMeasuresAcrossSystems: alignMeasuresToggle.checked,
     ...(highlightEventId === undefined ? {} : { highlightEventId }),
   });
 }

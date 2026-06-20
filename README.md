@@ -169,8 +169,8 @@ The pure renderer outputs an SVG string with metadata, numbered notes,
 larger accidentals, standard double-sharp/double-flat glyphs, octave and
 duration marks, rests, extensions, lyrics, aligned source-row measure columns,
 measure wrapping, multi-voice labels, and optional event highlighting. The
-validation UI displays this SVG and follows playback through matching source
-event IDs.
+validation UI displays this SVG, includes a checkbox for toggling aligned
+jianpu measure columns, and follows playback through matching source event IDs.
 
 ## Staff rendering
 
