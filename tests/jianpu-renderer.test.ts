@@ -71,8 +71,17 @@ describe("renderJianpu", () => {
   it("renders tie marks", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| 1~ | ~1 |"));
 
-    expect(svg.match(/class="relation-arc tie-arc"/g)).toHaveLength(2);
+    expect(svg.match(/class="relation-arc tie-arc/g)).toHaveLength(1);
+    expect(svg).toContain("cross-measure-tie");
+    expect(svg.match(/cross-measure-tie" d="[^"]* Q [^"]* Q /)).not.toBeNull();
     expect(svg).not.toContain(">~</text>");
+  });
+
+  it("splits cross-measure ties when the measures are on different rows", () => {
+    const svg = renderJianpu(parse("K:C jianpu\n| 1~ |\n| ~1 |"));
+
+    expect(svg.match(/class="relation-arc tie-arc/g)).toHaveLength(2);
+    expect(svg).not.toContain("cross-measure-tie");
   });
 
   it("draws same-measure ties between number edges instead of through centers", () => {

@@ -32,6 +32,12 @@ interface PositionedEvent {
   startTime: Fraction;
 }
 
+interface CrossMeasureTie {
+  boundaryIndex: number;
+  start: PositionedEvent;
+  end: PositionedEvent;
+}
+
 const ACCIDENTAL_TEXT: Record<Accidental, string> = {
   sharp: "♯",
   flat: "♭",
@@ -70,14 +76,23 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
       fontSize,
       beatDuration,
     );
-    renderedVoices.push(...layout.map((placed) => renderMeasure(
+    const positionedByMeasure = layout.map((placed) => positionEvents(placed, beatDuration));
+    const crossMeasureTies = findCrossMeasureTies(layout, positionedByMeasure);
+    const connectedBoundaries = new Set(
+      crossMeasureTies.map((connection) => connection.boundaryIndex),
+    );
+    renderedVoices.push(...layout.map((placed, measureIndex) => renderMeasure(
       voice,
       placed,
+      positionedByMeasure[measureIndex] ?? [],
       beatDuration,
       fontSize,
       showLyrics,
       options.highlightEventId,
+      connectedBoundaries.has(measureIndex - 1),
+      connectedBoundaries.has(measureIndex),
     )));
+    renderedVoices.push(renderCrossMeasureTies(crossMeasureTies, layout, fontSize));
     const lastLineY = layout.at(-1)?.y ?? cursorY;
     cursorY = lastLineY + lineHeight + (voiceIndex === score.voices.length - 1 ? 0 : fontSize * 0.9);
   }
@@ -232,12 +247,14 @@ function renderHeader(
 function renderMeasure(
   voice: Voice,
   placed: LayoutMeasure,
+  positioned: PositionedEvent[],
   beatDuration: Fraction,
   fontSize: number,
   showLyrics: boolean,
   highlightEventId: string | undefined,
+  suppressIncomingTie: boolean,
+  suppressOutgoingTie: boolean,
 ): string {
-  const positioned = positionEvents(placed, beatDuration);
   const events = positioned.map((item) => {
     const eventId = `${voice.id}:${placed.measureIndex}:${item.eventIndex}`;
     return renderEvent(
@@ -250,7 +267,13 @@ function renderMeasure(
     );
   }).join("");
   const durationLines = renderDurationLines(positioned, beatDuration, fontSize);
-  const relations = renderRelations(positioned, placed.width, fontSize);
+  const relations = renderRelations(
+    positioned,
+    placed.width,
+    fontSize,
+    suppressIncomingTie,
+    suppressOutgoingTie,
+  );
   const leftBarline = placed.measure.leftBarline
     ? renderBarline(placed.measure.leftBarline, "left", placed.width, fontSize)
     : "";
@@ -418,6 +441,8 @@ function renderRelations(
   positioned: PositionedEvent[],
   measureWidth: number,
   fontSize: number,
+  suppressIncomingTie: boolean,
+  suppressOutgoingTie: boolean,
 ): string {
   const output: string[] = [];
   output.push(...renderPairedArcs(
@@ -430,7 +455,13 @@ function renderRelations(
     -fontSize * 1.78,
     fontSize,
   ));
-  output.push(...renderTieArcs(positioned, measureWidth, fontSize));
+  output.push(...renderTieArcs(
+    positioned,
+    measureWidth,
+    fontSize,
+    suppressIncomingTie,
+    suppressOutgoingTie,
+  ));
 
   let tupletStart: PositionedEvent | undefined;
   for (const item of positioned) {
@@ -455,6 +486,8 @@ function renderTieArcs(
   positioned: PositionedEvent[],
   measureWidth: number,
   fontSize: number,
+  suppressIncoming: boolean,
+  suppressOutgoing: boolean,
 ): string[] {
   const output: string[] = [];
   const y = -fontSize * 0.82;
@@ -478,7 +511,7 @@ function renderTieArcs(
           y,
           peak,
         ));
-      } else {
+      } else if (!suppressIncoming) {
         output.push(arcPath(
           "tie-arc",
           fontSize * 0.08,
@@ -492,7 +525,7 @@ function renderTieArcs(
     if (item.event.tieStart) open = item;
   }
 
-  if (open) {
+  if (open && !suppressOutgoing) {
     output.push(arcPath(
       "tie-arc",
       open.centerX + preferredInset,
@@ -502,6 +535,75 @@ function renderTieArcs(
     ));
   }
   return output;
+}
+
+function findCrossMeasureTies(
+  layout: LayoutMeasure[],
+  positionedByMeasure: PositionedEvent[][],
+): CrossMeasureTie[] {
+  const output: CrossMeasureTie[] = [];
+  for (let boundaryIndex = 0; boundaryIndex < layout.length - 1; boundaryIndex += 1) {
+    const currentLayout = layout[boundaryIndex] as LayoutMeasure;
+    const nextLayout = layout[boundaryIndex + 1] as LayoutMeasure;
+    if (currentLayout.y !== nextLayout.y) continue;
+    const start = unmatchedTieStart(positionedByMeasure[boundaryIndex] ?? []);
+    const end = unmatchedTieEnd(positionedByMeasure[boundaryIndex + 1] ?? []);
+    if (start && end) output.push({ boundaryIndex, start, end });
+  }
+  return output;
+}
+
+function unmatchedTieStart(positioned: PositionedEvent[]): PositionedEvent | undefined {
+  let open: PositionedEvent | undefined;
+  for (const item of positioned) {
+    if (item.event.type !== "note") continue;
+    if (item.event.tieEnd) open = undefined;
+    if (item.event.tieStart) open = item;
+  }
+  return open;
+}
+
+function unmatchedTieEnd(positioned: PositionedEvent[]): PositionedEvent | undefined {
+  let hasLocalStart = false;
+  for (const item of positioned) {
+    if (item.event.type !== "note") continue;
+    if (item.event.tieEnd) {
+      if (!hasLocalStart) return item;
+      hasLocalStart = false;
+    }
+    if (item.event.tieStart) hasLocalStart = true;
+  }
+  return undefined;
+}
+
+function renderCrossMeasureTies(
+  ties: CrossMeasureTie[],
+  layout: LayoutMeasure[],
+  fontSize: number,
+): string {
+  return ties.map((tie) => {
+    const currentLayout = layout[tie.boundaryIndex] as LayoutMeasure;
+    const nextLayout = layout[tie.boundaryIndex + 1] as LayoutMeasure;
+    return crossMeasureTiePath(
+      currentLayout.x + tie.start.centerX + fontSize * 0.28,
+      currentLayout.x + currentLayout.width - fontSize * 0.22,
+      nextLayout.x + tie.end.centerX - fontSize * 0.28,
+      currentLayout.y - fontSize * 0.82,
+      currentLayout.y - fontSize * 1.18,
+    );
+  }).join("");
+}
+
+function crossMeasureTiePath(
+  x1: number,
+  barlineX: number,
+  x2: number,
+  y: number,
+  peak: number,
+): string {
+  const firstControlX = (x1 + barlineX) / 2;
+  const secondControlX = (barlineX + x2) / 2;
+  return `<path class="relation-arc tie-arc cross-measure-tie" d="M ${round(x1)} ${round(y)} Q ${round(firstControlX)} ${round(peak)} ${round(barlineX)} ${round(peak)} Q ${round(secondControlX)} ${round(peak)} ${round(x2)} ${round(y)}"/>`;
 }
 
 function renderPairedArcs(
