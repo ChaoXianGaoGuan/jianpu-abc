@@ -464,7 +464,10 @@ describe("WebAudioPlayer", () => {
 
   it("schedules accented metronome clicks and adjusts both output buses live", () => {
     const frequencies: Array<{ setValueAtTime: ReturnType<typeof vi.fn> }> = [];
-    const oscillators: Array<{ stop: ReturnType<typeof vi.fn> }> = [];
+    const oscillators: Array<{
+      start: ReturnType<typeof vi.fn>;
+      stop: ReturnType<typeof vi.fn>;
+    }> = [];
     const createOscillator = vi.fn(() => {
       const frequency = { setValueAtTime: vi.fn() };
       const oscillator = {
@@ -537,6 +540,9 @@ describe("WebAudioPlayer", () => {
 
     expect(frequencies.map((frequency) => frequency.setValueAtTime.mock.calls[0]?.[0]))
       .toEqual([440, 1500, 1000]);
+    expect(oscillators[0]?.start).toHaveBeenCalledWith(4);
+    expect(oscillators[1]?.start).toHaveBeenCalledWith(4);
+    expect(oscillators[2]?.start).toHaveBeenCalledWith(4.5);
     player.stop();
     expect(oscillators.every((oscillator) => oscillator.stop.mock.calls.length > 0)).toBe(true);
   });
