@@ -250,8 +250,8 @@ function shouldBeamTogether(
   if (previous.kind !== "note" || current.kind !== "note") return false;
   const previousDuration = notationDuration(previous);
   const currentDuration = notationDuration(current);
-  if (!equalFractions(previousDuration, currentDuration)) return false;
   if (compareFractions(previousDuration, beatDuration) >= 0) return false;
+  if (compareFractions(currentDuration, beatDuration) >= 0) return false;
   return beatIndex(previousStart, beatDuration) === beatIndex(currentStart, beatDuration);
 }
 
@@ -317,10 +317,6 @@ function addFractions(left: Fraction, right: Fraction): Fraction {
 
 function compareFractions(left: Fraction, right: Fraction): number {
   return left.numerator * right.denominator - right.numerator * left.denominator;
-}
-
-function equalFractions(left: Fraction, right: Fraction): boolean {
-  return compareFractions(left, right) === 0;
 }
 
 function beatIndex(startTime: Fraction, beatDuration: Fraction): number {

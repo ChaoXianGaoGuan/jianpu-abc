@@ -55,6 +55,12 @@ describe("toStandardAbc", () => {
     expect(toStandardAbc(score)).toContain("| C1/2D1/2 E1/2F1/2 | G1/4A1/4B1/4c1/4 |");
   });
 
+  it("groups mixed short notes within each beat for staff beaming", () => {
+    const score = parse("M:4/4\nL:1/4\nK:C jianpu\n| 1e 2s 3s 4e 5e | 6e 7s 1's 2'e 3'e |");
+
+    expect(toStandardAbc(score)).toContain("| C1/2D1/4E1/4 F1/2G1/2 | A1/2B1/4c1/4 d1/2e1/2 |");
+  });
+
   it("uses explicit ABC accidentals when a note overrides the key", () => {
     const score = parse("K:D jianpu\n| 3 4 |");
     const events = score.voices[0]?.measures[0]?.events;
@@ -82,7 +88,7 @@ describe("toStandardAbc", () => {
   it("exports absolute duration letters as ABC relative durations", () => {
     const score = parse("L:1/4\nK:C jianpu\n| 1w 2h 3q 4e 5s 0e zq. |");
 
-    expect(toStandardAbc(score)).toContain("| C4 D2 E F1/2 G1/4 z1/2 z3/2 |");
+    expect(toStandardAbc(score)).toContain("| C4 D2 E F1/2G1/4 z1/2 z3/2 |");
   });
 
   it("exports slurs using standard ABC slur syntax", () => {
