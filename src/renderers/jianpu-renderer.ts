@@ -49,6 +49,7 @@ interface MeasureLayoutMetric {
   slotCount: number;
   naturalWidth: number;
   beatGapCount: number;
+  cellWidth: number;
 }
 
 const ACCIDENTAL_TEXT: Record<Accidental, string> = {
@@ -73,8 +74,10 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
   const metaY = score.header.title ? padding + 34 : padding;
   const musicTop = metaY + 64;
   const lineHeight = fontSize * (showLyrics ? 3.35 : 2.55);
+  const minCellWidth = fontSize * 0.62;
   const title = score.header.title ?? "JABC score";
   const renderedVoices: string[] = [];
+  let renderedWidth = width;
   let cursorY = musicTop;
 
   for (const [voiceIndex, voice] of score.voices.entries()) {
@@ -90,7 +93,9 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
       fontSize,
       beatDuration,
       alignMeasuresAcrossSystems,
+      minCellWidth,
     );
+    renderedWidth = Math.max(renderedWidth, ...layout.map((placed) => placed.x + placed.width + padding * 0.2));
     const positionedByMeasure = layout.map((placed) => positionEvents(placed, beatDuration, fontSize));
     const crossMeasureTies = findCrossMeasureTies(layout, positionedByMeasure);
     const connectedBoundaries = new Set(
@@ -128,11 +133,12 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
 
   const height = Math.ceil(cursorY + padding * 0.4);
   const content = [
-    renderHeader(score, width, padding, titleY, metaY),
+    renderHeader(score, renderedWidth, padding, titleY, metaY),
     ...renderedVoices,
   ].join("");
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeXml(title)}" viewBox="0 0 ${width} ${height}" width="100%" height="${height}" class="jianpu-score">
+  const svgWidth = renderedWidth > width ? round(renderedWidth) : "100%";
+  return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeXml(title)}" viewBox="0 0 ${round(renderedWidth)} ${height}" width="${svgWidth}" height="${height}" class="jianpu-score">
   <style>
     .score-title{font:600 25px Georgia,'Songti SC',serif;fill:#20332b;text-anchor:middle}
     .score-meta{font:600 14px Inter,'Microsoft YaHei',sans-serif;fill:#52655c}
@@ -173,6 +179,7 @@ function layoutMeasures(
   fontSize: number,
   beatDuration: Fraction,
   alignMeasuresAcrossSystems: boolean,
+  minCellWidth: number,
 ): LayoutMeasure[] {
   const availableWidth = width - padding * 2;
   const baseCellWidth = fontSize * 1.5;
@@ -217,11 +224,14 @@ function layoutMeasures(
       for (const [index, item] of system.entries()) {
         const metric = metrics[index] as MeasureLayoutMetric;
         const naturalWidth = naturalWidths[index] ?? metric.naturalWidth;
-        const measureWidth = naturalWidth * scale;
         const scaledBarSpace = barSpace * scale;
         const scaledBeatGap = beatGap * scale;
+        const measureWidth = Math.max(
+          naturalWidth * scale,
+          readableMeasureWidth(metric, minCellWidth, scaledBeatGap, scaledBarSpace),
+        );
         const cellWidth = Math.max(
-          fontSize * 0.34,
+          minCellWidth,
           (measureWidth - scaledBarSpace - metric.beatGapCount * scaledBeatGap) / metric.slotCount,
         );
         output.push({
@@ -244,16 +254,22 @@ function layoutMeasures(
   let y = musicTop;
 
   for (const [measureIndex, measure] of voice.measures.entries()) {
-    const { slotCount, naturalWidth } = measureLayoutMetric(
+    const metric = measureLayoutMetric(
       measure,
       beatDuration,
       fontSize,
       baseCellWidth,
       barSpace,
     );
-    const measureWidth = Math.min(availableWidth, naturalWidth);
-    const beatGapCount = measureBeatGapCount(slotCount);
-    const cellWidth = (measureWidth - barSpace - beatGapCount * beatGap) / slotCount;
+    const { slotCount, naturalWidth, beatGapCount } = metric;
+    const measureWidth = Math.max(
+      Math.min(availableWidth, naturalWidth),
+      readableMeasureWidth(metric, minCellWidth, beatGap, barSpace),
+    );
+    const cellWidth = Math.max(
+      minCellWidth,
+      (measureWidth - barSpace - beatGapCount * beatGap) / slotCount,
+    );
     if (x > padding && x + measureWidth > width - padding) {
       x = padding;
       y += lineHeight;
@@ -262,6 +278,16 @@ function layoutMeasures(
     x += measureWidth + measureGap;
   }
   return output;
+}
+
+function readableMeasureWidth(
+  metric: MeasureLayoutMetric,
+  minCellWidth: number,
+  beatGap: number,
+  barSpace: number,
+): number {
+  const readableCellWidth = Math.max(minCellWidth, metric.cellWidth * 0.72);
+  return metric.slotCount * readableCellWidth + metric.beatGapCount * beatGap + barSpace;
 }
 
 function columnWidths(
@@ -298,6 +324,7 @@ function measureLayoutMetric(
     slotCount,
     naturalWidth: slotCount * cellWidth + beatGapCount * fontSize * 0.28 + barSpace,
     beatGapCount,
+    cellWidth,
   };
 }
 

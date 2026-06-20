@@ -13,6 +13,11 @@ function measureTransforms(svg: string): Array<{ x: string; y: string }> {
     .map((match) => ({ x: match[1] ?? "", y: match[2] ?? "" }));
 }
 
+function viewBoxWidth(svg: string): number {
+  const match = /viewBox="0 0 ([\d.]+) /.exec(svg);
+  return Number(match?.[1] ?? 0);
+}
+
 const SCORE = `T:渲染测试 <曲>
 C:传统来源
 M:4/4
@@ -101,6 +106,16 @@ describe("renderJianpu", () => {
     expect(svg).toContain('class="event-symbol" x="26.24" y="0">1</text>');
     expect(svg).toContain('class="event-symbol" x="65.6" y="0">2</text>');
     expect(svg).toContain('class="event-symbol" x="91.84" y="0">3</text>');
+  });
+
+  it("preserves readable spacing on narrow previews by allowing horizontal overflow", () => {
+    const svg = renderJianpu(
+      parse("M:4/4\nL:1/16\nK:C jianpu\n| 1 2 3 4 5 6 7 1' 2' 3' 4' 5' 6' 7' 1'' 2'' |"),
+      { width: 320, fontSize: 32 },
+    );
+
+    expect(viewBoxWidth(svg)).toBeGreaterThan(320);
+    expect(svg).not.toContain('width="100%"');
   });
 
   it("keeps two sixteenths in the first half and an eighth in the second half", () => {
