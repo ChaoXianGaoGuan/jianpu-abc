@@ -170,7 +170,9 @@ larger accidentals, standard double-sharp/double-flat glyphs, octave and
 duration marks, rests, extensions, lyrics, aligned source-row measure columns,
 measure wrapping, multi-voice labels, and optional event highlighting. The
 validation UI displays this SVG, includes a checkbox for toggling aligned
-jianpu measure columns, and follows playback through matching source event IDs.
+jianpu measure columns, and follows playback through matching source event IDs
+by toggling existing SVG highlight classes instead of redrawing the whole score
+on every note.
 
 ## Staff rendering
 

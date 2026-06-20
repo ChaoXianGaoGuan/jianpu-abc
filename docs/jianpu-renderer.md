@@ -27,7 +27,7 @@ const svg = renderJianpu(score, {
 - 单小节线、复小节线、歌词、声部标签和按小节自动换行。
 - SVG 曲线路径形式的圆滑线、从数字边缘起止的延音线，以及中央留出数字断口的三连音弧线。圆滑线端点会避开高音点；同一行的跨小节延音线连续绘制，并在与小节线交叉处留出视觉净空，不同行时拆为行尾和行首两段。
 
-每个事件组包含 `data-event-id="voiceId:measureIndex:eventIndex"`。传入相同的 `highlightEventId` 会添加 `is-highlighted` class；该 ID 与 `PlaybackEvent.sourceEventId` 一致，因此播放层无需维护第二套映射。
+每个事件组包含 `data-event-id="voiceId:measureIndex:eventIndex"`。传入相同的 `highlightEventId` 会添加 `is-highlighted` class；该 ID 与 `PlaybackEvent.sourceEventId` 一致，因此播放层无需维护第二套映射。Web 工作台在播放过程中只切换现有 SVG 节点的 `is-highlighted` class，不会为每个音符重新生成整张简谱 SVG。
 
 标题、作者、歌词和属性均经过 XML 转义。调用方可以插入完整的渲染结果，但不应将任意未转义的片段拼入 SVG。
 

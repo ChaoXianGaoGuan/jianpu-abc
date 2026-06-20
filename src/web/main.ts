@@ -139,7 +139,7 @@ function getPlayer(): WebAudioPlayer {
     onEventStart: (event) => {
       activeEventId = event?.sourceEventId;
       currentEvent.textContent = activeEventId ?? "—";
-      renderPreview(activeEventId);
+      highlightJianpuEvent(activeEventId);
     },
     onStateChange: (state) => {
       playerState = state;
@@ -157,8 +157,21 @@ function renderPreview(highlightEventId?: string): void {
     width,
     showLyrics: true,
     alignMeasuresAcrossSystems: alignMeasuresToggle.checked,
-    ...(highlightEventId === undefined ? {} : { highlightEventId }),
   });
+  highlightJianpuEvent(highlightEventId);
+}
+
+function highlightJianpuEvent(eventId?: string): void {
+  for (const item of jianpuPreview.querySelectorAll<SVGGElement>(".jabc-event.is-highlighted")) {
+    item.classList.remove("is-highlighted");
+  }
+  if (eventId === undefined) return;
+  for (const item of jianpuPreview.querySelectorAll<SVGGElement>(".jabc-event")) {
+    if (item.getAttribute("data-event-id") === eventId) {
+      item.classList.add("is-highlighted");
+      return;
+    }
+  }
 }
 
 async function renderStaffPreview(score: Score): Promise<void> {
