@@ -84,17 +84,24 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     const connectedBoundaries = new Set(
       crossMeasureTies.map((connection) => connection.boundaryIndex),
     );
-    renderedVoices.push(...layout.map((placed, measureIndex) => renderMeasure(
-      voice,
-      placed,
-      positionedByMeasure[measureIndex] ?? [],
-      beatDuration,
-      fontSize,
-      showLyrics,
-      options.highlightEventId,
-      connectedBoundaries.has(measureIndex - 1),
-      connectedBoundaries.has(measureIndex),
-    )));
+    renderedVoices.push(...layout.map((placed, measureIndex) => {
+      const next = layout[measureIndex + 1];
+      const suppressRightBarline = placed.measure.barline?.type === "single"
+        && next?.measure.leftBarline !== undefined
+        && next.y === placed.y;
+      return renderMeasure(
+        voice,
+        placed,
+        positionedByMeasure[measureIndex] ?? [],
+        beatDuration,
+        fontSize,
+        showLyrics,
+        options.highlightEventId,
+        connectedBoundaries.has(measureIndex - 1),
+        connectedBoundaries.has(measureIndex),
+        suppressRightBarline,
+      );
+    }));
     renderedVoices.push(renderCrossMeasureTies(crossMeasureTies, layout, fontSize));
     const lastLineY = layout.at(-1)?.y ?? cursorY;
     cursorY = lastLineY + lineHeight + (voiceIndex === score.voices.length - 1 ? 0 : fontSize * 0.9);
@@ -286,6 +293,7 @@ function renderMeasure(
   highlightEventId: string | undefined,
   suppressIncomingTie: boolean,
   suppressOutgoingTie: boolean,
+  suppressRightBarline: boolean,
 ): string {
   const events = positioned.map((item) => {
     const eventId = `${voice.id}:${placed.measureIndex}:${item.eventIndex}`;
@@ -312,7 +320,7 @@ function renderMeasure(
   const ending = placed.measure.ending
     ? renderEnding(placed.measure.ending.number, placed.width, fontSize)
     : "";
-  const barline = placed.measure.barline
+  const barline = placed.measure.barline && !suppressRightBarline
     ? renderBarline(placed.measure.barline, "right", placed.width, fontSize)
     : "";
   return `<g class="measure" data-measure-index="${placed.measureIndex}" transform="translate(${round(placed.x)} ${round(placed.y)})">${leftBarline}${ending}${events}${durationLines}${relations}${barline}</g>`;

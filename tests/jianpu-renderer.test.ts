@@ -162,6 +162,20 @@ describe("renderJianpu", () => {
     expect(svg).not.toContain(">|:</text>");
   });
 
+  it("keeps only the repeat-start barline at a shared same-row boundary", () => {
+    const svg = renderJianpu(parse("K:C jianpu\n| 1 |: 7 |"));
+
+    expect(svg).toContain('class="barline barline-repeat-start"');
+    expect(svg.match(/class="barline barline-single"/g)).toHaveLength(1);
+  });
+
+  it("keeps the preceding barline when a repeat starts on a new row", () => {
+    const svg = renderJianpu(parse("K:C jianpu\n| 1 |\n|: 7 |"));
+
+    expect(svg).toContain('class="barline barline-repeat-start"');
+    expect(svg.match(/class="barline barline-single"/g)).toHaveLength(2);
+  });
+
   it("renders multiple voices with voice labels", () => {
     const svg = renderJianpu(parse(`K:C jianpu\nV:melody\n| 1 2 |\nV:bass\n| 1, 5, |`));
 
