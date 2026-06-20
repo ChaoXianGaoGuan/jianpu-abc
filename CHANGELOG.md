@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
-- Fill automatically wrapped jianpu rows when measure column alignment is disabled.
+- Fill automatically wrapped jianpu rows to the final readable viewBox width when measure column alignment is disabled.
 - Enlarge jianpu header text and separate key, meter, and tempo metadata fields.
 - Fill unaligned jianpu source rows naturally, align shared underline layer edges, and keep underline groups clear of shared repeat-start boundaries.
 - Beam mixed short-note staff groups within each beat by removing ABC spaces between adjacent beaming candidates.

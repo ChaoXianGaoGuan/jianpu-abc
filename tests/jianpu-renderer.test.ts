@@ -273,6 +273,21 @@ describe("renderJianpu", () => {
     }
   });
 
+  it("fills unaligned rows to the expanded readable viewBox width", () => {
+    const width = 320;
+    const fontSize = 32;
+    const svg = renderJianpu(parse(
+      "M:4/4\nL:1/16\nK:C jianpu\n| 1 2 3 4 5 6 7 1' 2' 3' 4' 5' 6' 7' 1'' 2'' |\n| 1 | 2 |",
+    ), { width, fontSize, alignMeasuresAcrossSystems: false });
+    const transforms = numericMeasureTransforms(svg);
+    const localBarlines = singleBarlineXs(svg);
+    const expectedRightBoundary = viewBoxWidth(svg) - fontSize * 0.2 - fontSize * 0.22;
+
+    expect(viewBoxWidth(svg)).toBeGreaterThan(width);
+    expect(transforms[0]!.x + localBarlines[0]!).toBeCloseTo(expectedRightBoundary, 1);
+    expect(transforms[2]!.x + localBarlines[2]!).toBeCloseTo(expectedRightBoundary, 1);
+  });
+
   it("adds the highlight class to the requested source event", () => {
     const svg = renderJianpu(parse(SCORE), { highlightEventId: "default:0:1" });
 

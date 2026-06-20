@@ -214,6 +214,18 @@ function layoutMeasures(
       ? columnReadableWidths(systemMetrics, minCellWidth, beatGap, barSpace)
       : [];
 
+    const targetAvailableWidth = alignMeasuresAcrossSystems
+      ? availableWidth
+      : Math.max(
+        availableWidth,
+        ...systemMetrics.map((metrics) =>
+          metrics.reduce(
+            (sum, metric) => sum + readableMeasureWidth(metric, minCellWidth, beatGap, barSpace),
+            0,
+          ) + Math.max(0, metrics.length - 1) * measureGap
+        ),
+      );
+
     let systemY = musicTop;
     for (const [systemIndex, system] of systems.entries()) {
       const metrics = systemMetrics[systemIndex] ?? [];
@@ -227,7 +239,7 @@ function layoutMeasures(
         + Math.max(0, system.length - 1) * measureGap;
       const scale = alignMeasuresAcrossSystems || naturalTotal <= 0
         ? 1
-        : availableWidth / naturalTotal;
+        : targetAvailableWidth / naturalTotal;
       const scaledGap = measureGap * scale;
       let systemX = padding;
       for (const [index, item] of system.entries()) {
@@ -299,13 +311,23 @@ function layoutMeasures(
   }
   if (currentRow.length > 0) rows.push(currentRow);
 
+  const targetAvailableWidth = alignMeasuresAcrossSystems
+    ? availableWidth
+    : Math.max(
+      availableWidth,
+      ...rows.map((row) =>
+        row.reduce((sum, item) => sum + item.measureWidth, 0)
+        + Math.max(0, row.length - 1) * measureGap
+      ),
+    );
+
   let y = musicTop;
   for (const row of rows) {
     const naturalTotal = row.reduce((sum, item) => sum + item.measureWidth, 0)
       + Math.max(0, row.length - 1) * measureGap;
     const scale = alignMeasuresAcrossSystems || naturalTotal <= 0
       ? 1
-      : availableWidth / naturalTotal;
+      : targetAvailableWidth / naturalTotal;
     const scaledGap = measureGap * scale;
     const scaledBarSpace = barSpace * scale;
     const scaledBeatGap = beatGap * scale;
