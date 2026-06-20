@@ -196,6 +196,74 @@ describe("WebAudioPlayer", () => {
     expect(player.currentTime).toBe(0);
   });
 
+  it("uses decoded samples when they are available", async () => {
+    const originalFetch = globalThis.fetch;
+    const audioBuffer = { duration: 1 } as AudioBuffer;
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      arrayBuffer: vi.fn(async () => new ArrayBuffer(8)),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const bufferSource = {
+      buffer: null as AudioBuffer | null,
+      playbackRate: { setValueAtTime: vi.fn() },
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+      addEventListener: vi.fn(),
+    };
+    const gain = {
+      gain: {
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+      },
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    };
+    const context = {
+      currentTime: 10,
+      state: "running",
+      destination: {},
+      createOscillator: vi.fn(),
+      createBufferSource: vi.fn(() => bufferSource),
+      createGain: vi.fn(() => gain),
+      decodeAudioData: vi.fn(async () => audioBuffer),
+      resume: vi.fn(async () => undefined),
+      close: vi.fn(async () => undefined),
+    } as unknown as AudioContext;
+    const player = new WebAudioPlayer(context, {
+      instrument: "piano",
+      sampleBaseUrl: "https://samples.example.test",
+      scheduleAheadSeconds: 0,
+    });
+    const event = {
+      id: "playback-1",
+      type: "note" as const,
+      midi: 60,
+      startTime: 0,
+      duration: 1,
+      velocity: 100,
+    };
+
+    try {
+      player.play([event]);
+      await vi.waitFor(() => expect(context.createBufferSource).toHaveBeenCalled());
+
+      expect(fetchMock).toHaveBeenCalledWith("https://samples.example.test/piano/C3.mp3");
+      expect(bufferSource.buffer).toBe(audioBuffer);
+      expect(bufferSource.playbackRate.setValueAtTime).toHaveBeenCalledWith(1, 10);
+      expect(context.createOscillator).not.toHaveBeenCalled();
+      player.stop();
+    } finally {
+      if (originalFetch === undefined) {
+        vi.unstubAllGlobals();
+      } else {
+        vi.stubGlobal("fetch", originalFetch);
+      }
+    }
+  });
+
   it("supports piano and guitar instrument presets", () => {
     const oscillators: Array<{ stop: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }> = [];
     const createOscillator = vi.fn(() => {

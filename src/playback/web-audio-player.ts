@@ -7,6 +7,7 @@ export interface WebAudioPlayerOptions {
   masterGain?: number;
   oscillatorType?: OscillatorType;
   instrument?: InstrumentId;
+  sampleBaseUrl?: string;
   scheduleAheadSeconds?: number;
   onEventStart?: (event: PlaybackEvent | null) => void;
   onStateChange?: (state: PlaybackState) => void;
@@ -24,12 +25,45 @@ interface PartialTone {
   detune?: number;
 }
 
+interface SampleManifest {
+  directory: string;
+  notes: string[];
+}
+
+const DEFAULT_SAMPLE_BASE_URL = "https://nbrosowsky.github.io/tonejs-instruments/samples";
+
+const SAMPLE_MANIFESTS: Record<Exclude<InstrumentId, "synth">, SampleManifest> = {
+  piano: {
+    directory: "piano",
+    notes: ["C3", "E3", "G3", "C4", "E4", "G4", "C5", "E5", "G5"],
+  },
+  guitar: {
+    directory: "guitar-acoustic",
+    notes: ["C3", "E3", "G3", "C4", "E4", "G4", "C5"],
+  },
+};
+
+const NOTE_SEMITONES: Record<string, number> = {
+  C: 0,
+  Cs: 1,
+  D: 2,
+  Ds: 3,
+  E: 4,
+  F: 5,
+  Fs: 6,
+  G: 7,
+  Gs: 8,
+  A: 9,
+  As: 10,
+  B: 11,
+};
+
 export class WebAudioPlayer {
   private readonly context: AudioContext;
   private readonly ownsContext: boolean;
   private readonly options: Required<Pick<
     WebAudioPlayerOptions,
-    "masterGain" | "oscillatorType" | "instrument" | "scheduleAheadSeconds"
+    "masterGain" | "oscillatorType" | "instrument" | "sampleBaseUrl" | "scheduleAheadSeconds"
   >> & Pick<WebAudioPlayerOptions, "onEventStart" | "onStateChange">;
   private events: PlaybackEvent[] = [];
   private voices: ScheduledVoice[] = [];
@@ -38,6 +72,9 @@ export class WebAudioPlayer {
   private positionSeconds = 0;
   private anchorContextTime = 0;
   private totalDuration = 0;
+  private playGeneration = 0;
+  private readonly sampleBuffers = new Map<InstrumentId, Map<number, AudioBuffer>>();
+  private readonly sampleLoading = new Map<InstrumentId, Promise<void>>();
 
   constructor(context?: AudioContext, options: WebAudioPlayerOptions = {}) {
     this.context = context ?? createAudioContext();
@@ -46,6 +83,7 @@ export class WebAudioPlayer {
       masterGain: options.masterGain ?? 0.2,
       oscillatorType: options.oscillatorType ?? "sine",
       instrument: options.instrument ?? "synth",
+      sampleBaseUrl: options.sampleBaseUrl ?? DEFAULT_SAMPLE_BASE_URL,
       scheduleAheadSeconds: options.scheduleAheadSeconds ?? 0.03,
       ...(options.onEventStart ? { onEventStart: options.onEventStart } : {}),
       ...(options.onStateChange ? { onStateChange: options.onStateChange } : {}),
@@ -78,10 +116,12 @@ export class WebAudioPlayer {
     if (this.options.instrument === instrument) return;
     this.stop();
     this.options.instrument = instrument;
+    void this.prepareInstrument(instrument);
   }
 
   play(events: PlaybackEvent[]): void {
     this.cancelScheduled();
+    const generation = ++this.playGeneration;
     this.events = [...events].sort((left, right) => left.startTime - right.startTime);
     this.positionSeconds = 0;
     this.totalDuration = this.events.reduce(
@@ -96,6 +136,13 @@ export class WebAudioPlayer {
     }
 
     if (this.context.state === "suspended") void this.context.resume();
+    const preparation = this.prepareInstrument(this.options.instrument);
+    if (preparation) {
+      void preparation.finally(() => {
+        if (generation === this.playGeneration && this.events.length > 0) this.scheduleFrom(0);
+      });
+      return;
+    }
     this.scheduleFrom(0);
   }
 
@@ -118,6 +165,7 @@ export class WebAudioPlayer {
   }
 
   stop(): void {
+    this.playGeneration += 1;
     this.cancelScheduled();
     this.events = [];
     this.positionSeconds = 0;
@@ -171,12 +219,69 @@ export class WebAudioPlayer {
     const frequency = midiToFrequency(event.midi);
     const amplitude = (event.velocity / 127) * this.options.masterGain;
     const duration = Math.max(0.01, end - start);
-    const voice = this.options.instrument === "piano"
-      ? this.schedulePianoVoice(frequency, amplitude, start, duration)
-      : this.options.instrument === "guitar"
-        ? this.scheduleGuitarVoice(frequency, amplitude, start, duration)
-        : this.scheduleSynthVoice(frequency, amplitude, start, duration);
+    const sampledVoice = this.scheduleSampledVoice(
+      this.options.instrument,
+      event.midi,
+      amplitude,
+      start,
+      duration,
+    );
+    const voice = sampledVoice
+      ?? (this.options.instrument === "piano"
+        ? this.schedulePianoVoice(frequency, amplitude, start, duration)
+        : this.options.instrument === "guitar"
+          ? this.scheduleGuitarVoice(frequency, amplitude, start, duration)
+          : this.scheduleSynthVoice(frequency, amplitude, start, duration));
     this.voices.push(voice);
+  }
+
+  private scheduleSampledVoice(
+    instrument: InstrumentId,
+    midi: number,
+    amplitude: number,
+    start: number,
+    duration: number,
+  ): ScheduledVoice | undefined {
+    if (instrument === "synth") return undefined;
+    const samples = this.sampleBuffers.get(instrument);
+    if (!samples || samples.size === 0 || typeof this.context.createBufferSource !== "function") return undefined;
+    const nearest = nearestSample(midi, samples);
+    if (!nearest) return undefined;
+
+    const source = this.context.createBufferSource();
+    const gain = this.context.createGain();
+    const playbackRate = 2 ** ((midi - nearest.midi) / 12);
+    const stopAt = start + Math.max(duration + 0.08, 0.16);
+    const releaseStart = Math.max(start, stopAt - 0.08);
+
+    source.buffer = nearest.buffer;
+    source.playbackRate.setValueAtTime(playbackRate, start);
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(amplitude, start + 0.004);
+    gain.gain.setValueAtTime(amplitude, releaseStart);
+    gain.gain.linearRampToValueAtTime(0, stopAt);
+    source.connect(gain);
+    gain.connect(this.context.destination);
+    source.start(start);
+    source.stop(stopAt);
+    source.addEventListener("ended", () => {
+      safeDisconnect(source);
+      safeDisconnect(gain);
+    }, { once: true });
+
+    return {
+      stop: () => {
+        try {
+          source.stop();
+        } catch {
+          // The source may already have ended.
+        }
+      },
+      disconnect: () => {
+        safeDisconnect(source);
+        safeDisconnect(gain);
+      },
+    };
   }
 
   private scheduleSynthVoice(
@@ -308,6 +413,44 @@ export class WebAudioPlayer {
     };
   }
 
+  private prepareInstrument(instrument: InstrumentId): Promise<void> | undefined {
+    if (instrument === "synth") return undefined;
+    if (this.sampleBuffers.has(instrument)) return undefined;
+    const loading = this.sampleLoading.get(instrument);
+    if (loading) return loading;
+    if (typeof fetch !== "function" || typeof this.context.decodeAudioData !== "function") {
+      return undefined;
+    }
+
+    const promise = this.loadInstrumentSamples(instrument)
+      .catch((error: unknown) => {
+        console.warn(`Could not load ${instrument} samples; using synthesized fallback.`, error);
+      })
+      .finally(() => {
+        this.sampleLoading.delete(instrument);
+      });
+    this.sampleLoading.set(instrument, promise);
+    return promise;
+  }
+
+  private async loadInstrumentSamples(instrument: Exclude<InstrumentId, "synth">): Promise<void> {
+    const manifest = SAMPLE_MANIFESTS[instrument];
+    const buffers = new Map<number, AudioBuffer>();
+    await Promise.all(manifest.notes.map(async (note) => {
+      const midi = noteNameToMidi(note);
+      const url = `${this.options.sampleBaseUrl}/${manifest.directory}/${note}.mp3`;
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status} loading ${url}`);
+        const arrayBuffer = await response.arrayBuffer();
+        buffers.set(midi, await this.context.decodeAudioData(arrayBuffer));
+      } catch (error) {
+        console.warn(`Could not load sample ${note} for ${instrument}.`, error);
+      }
+    }));
+    if (buffers.size > 0) this.sampleBuffers.set(instrument, buffers);
+  }
+
   private cancelScheduled(): void {
     for (const timer of this.timers) clearTimeout(timer);
     this.timers = [];
@@ -328,6 +471,29 @@ export class WebAudioPlayer {
 export function midiToFrequency(midi: number): number {
   if (!Number.isFinite(midi)) throw new RangeError("MIDI pitch must be finite.");
   return 440 * 2 ** ((midi - 69) / 12);
+}
+
+function nearestSample(
+  midi: number,
+  samples: Map<number, AudioBuffer>,
+): { midi: number; buffer: AudioBuffer } | undefined {
+  let best: { midi: number; buffer: AudioBuffer; distance: number } | undefined;
+  for (const [sampleMidi, buffer] of samples.entries()) {
+    const distance = Math.abs(sampleMidi - midi);
+    if (!best || distance < best.distance) best = { midi: sampleMidi, buffer, distance };
+  }
+  return best ? { midi: best.midi, buffer: best.buffer } : undefined;
+}
+
+function noteNameToMidi(note: string): number {
+  const match = /^(C|Cs|D|Ds|E|F|Fs|G|Gs|A|As|B)(\d)$/.exec(note);
+  if (!match) throw new Error(`Unsupported sample note name: ${note}`);
+  const [, step, octaveText] = match;
+  const semitone = NOTE_SEMITONES[step as keyof typeof NOTE_SEMITONES];
+  if (semitone === undefined || octaveText === undefined) {
+    throw new Error(`Unsupported sample note name: ${note}`);
+  }
+  return (Number(octaveText) + 1) * 12 + semitone;
 }
 
 function applyEnvelope(

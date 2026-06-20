@@ -47,9 +47,9 @@ await player.dispose();
 
 浏览器通常要求音频由用户交互启动，因此应在播放按钮的点击处理函数中首次创建 `WebAudioPlayer`。`dispose` 会停止播放；播放器自行创建的 `AudioContext` 也会被关闭。
 
-`instrument` 可选 `"synth"`、`"piano"` 或 `"guitar"`。`synth` 保留原有振荡器音色；`piano` 和 `guitar` 使用无外部资源的多泛音 Web Audio 预设，分别模拟击键衰减和拨弦衰减。运行时可调用 `player.setInstrument("guitar")` 切换音源；切换会停止当前播放并使用新音源重新播放。
+`instrument` 可选 `"synth"`、`"piano"` 或 `"guitar"`。`synth` 保留原有振荡器音色；`piano` 和 `guitar` 会优先从 `sampleBaseUrl` 加载真实 mp3 采样，默认使用 tonejs-instruments 的 `piano` 与 `guitar-acoustic` 目录。播放器会找最近的采样音并通过 `playbackRate` 变调；如果网络或解码失败，会退回多泛音 Web Audio 预设。运行时可调用 `player.setInstrument("guitar")` 切换音源；切换会停止当前播放并使用新音源重新播放。
 
-当前支持多个声部的并行事件调度和基础反复展开。真实采样包、声部分轨音色、循环、复杂嵌套反复和精细 seek 属于后续扩展。
+当前支持多个声部的并行事件调度和基础反复展开。声部分轨音色、离线打包采样、循环、复杂嵌套反复和精细 seek 属于后续扩展。
 
 ## 测试要求
 

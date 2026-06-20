@@ -151,9 +151,9 @@ player.play(events);
 
 The pure scheduler handles tempo, rests, extensions, parsed ties, triplet timing,
 simple repeat expansion, first/second endings, and parallel multi-voice timelines. The browser
-player provides `synth`, `piano`, and `guitar` instrument presets plus `play`,
-`pause`, `resume`, `stop`, and `dispose`; callbacks expose the active source
-event for score highlighting.
+player provides `synth`, sampled `piano`, and sampled `guitar` instrument
+presets plus `play`, `pause`, `resume`, `stop`, and `dispose`; callbacks expose
+the active source event for score highlighting.
 
 ## Jianpu rendering
 
