@@ -32,6 +32,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
+- Add 林俊杰《一千年以后》 to the built-in JABC score library.
 - Repository-backed JABC score library with build-time discovery, search, category filtering, editor loading, and unsaved-change protection.
 - Absolute duration letter suffixes `w`, `h`, `q`, `e`, and `s` for more compact JABC note and rest durations.
 - Guitar-first playback defaults, delayed scheduling until audio readiness, single-view notation preview switching, and copy/download-only ABC/MusicXML exports in the Web UI.

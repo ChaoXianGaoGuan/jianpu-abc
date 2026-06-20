@@ -80,6 +80,12 @@ describe("score library", () => {
     expect(bundledScoreLibrary.errors).toEqual([]);
     expect(bundledScoreLibrary.entries).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "儿歌/two-tigers", title: "两只老虎" }),
+      expect.objectContaining({
+        id: "流行歌曲/yi-qian-nian-yi-hou",
+        category: "流行歌曲",
+        title: "一千年以后",
+        composer: "林俊杰",
+      }),
     ]));
   });
 });
