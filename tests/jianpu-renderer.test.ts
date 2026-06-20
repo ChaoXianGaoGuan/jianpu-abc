@@ -94,6 +94,18 @@ describe("renderJianpu", () => {
     expect(centers[1]! - centers[0]!).toBeGreaterThanOrEqual(32 * 0.82);
   });
 
+  it("adds visible spacing between adjacent beats", () => {
+    const svg = renderJianpu(parse(
+      "M:4/4\nL:1/4\nK:C jianpu\n| 1/4 2/4 3/4 4/4 5/4 6/4 7/4 1'/4 |",
+    ), { fontSize: 32 });
+    const centers = [...svg.matchAll(/class="event-symbol" x="([\d.]+)" y="0">/g)]
+      .map((match) => Number(match[1]));
+
+    expect(centers.slice(0, 5)).toEqual([13.12, 39.36, 65.6, 91.84, 127.04]);
+    expect(centers[4]! - centers[3]!).toBeGreaterThan(centers[3]! - centers[2]!);
+    expect(svg.match(/data-line-level="2" data-group-size="4"/g)).toHaveLength(2);
+  });
+
   it("adds the highlight class to the requested source event", () => {
     const svg = renderJianpu(parse(SCORE), { highlightEventId: "default:0:1" });
 
@@ -137,7 +149,7 @@ describe("renderJianpu", () => {
   it("draws same-measure ties between number edges instead of through centers", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| 3~ ~3 |"), { fontSize: 32 });
 
-    expect(svg).toContain('class="relation-arc tie-arc" d="M 32.96 -26.24 Q 48 -33.28 63.04 -26.24"');
+    expect(svg).toContain('class="relation-arc tie-arc" d="M 32.96 -26.24 Q 52.48 -33.28 72 -26.24"');
   });
 
   it("renders long notes as beat-sized extension dashes", () => {

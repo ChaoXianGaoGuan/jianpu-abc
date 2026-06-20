@@ -23,6 +23,7 @@ interface LayoutMeasure {
   y: number;
   width: number;
   cellWidth: number;
+  beatGap: number;
 }
 
 interface PositionedEvent {
@@ -31,6 +32,7 @@ interface PositionedEvent {
   centerX: number;
   slotCount: number;
   layoutSpan: number;
+  layoutOffset: number;
   startTime: Fraction;
 }
 
@@ -43,6 +45,7 @@ interface CrossMeasureTie {
 interface MeasureLayoutMetric {
   slotCount: number;
   naturalWidth: number;
+  beatGapCount: number;
 }
 
 const ACCIDENTAL_TEXT: Record<Accidental, string> = {
@@ -172,6 +175,7 @@ function layoutMeasures(
   const baseCellWidth = fontSize * 1.5;
   const barSpace = fontSize * 0.55;
   const measureGap = fontSize * 0.35;
+  const beatGap = fontSize * 0.28;
   const output: LayoutMeasure[] = [];
   const hasExplicitSystems = voice.measures
     .slice(0, -1)
@@ -212,9 +216,10 @@ function layoutMeasures(
         const naturalWidth = naturalWidths[index] ?? metric.naturalWidth;
         const measureWidth = naturalWidth * scale;
         const scaledBarSpace = barSpace * scale;
+        const scaledBeatGap = beatGap * scale;
         const cellWidth = Math.max(
           fontSize * 0.34,
-          (measureWidth - scaledBarSpace) / metric.slotCount,
+          (measureWidth - scaledBarSpace - metric.beatGapCount * scaledBeatGap) / metric.slotCount,
         );
         output.push({
           measure: item.measure,
@@ -223,6 +228,7 @@ function layoutMeasures(
           y: systemY,
           width: measureWidth,
           cellWidth,
+          beatGap: scaledBeatGap,
         });
         systemX += measureWidth + scaledGap;
       }
@@ -243,12 +249,13 @@ function layoutMeasures(
       barSpace,
     );
     const measureWidth = Math.min(availableWidth, naturalWidth);
-    const cellWidth = (measureWidth - barSpace) / slotCount;
+    const beatGapCount = measureBeatGapCount(slotCount);
+    const cellWidth = (measureWidth - barSpace - beatGapCount * beatGap) / slotCount;
     if (x > padding && x + measureWidth > width - padding) {
       x = padding;
       y += lineHeight;
     }
-    output.push({ measure, measureIndex, x, y, width: measureWidth, cellWidth });
+    output.push({ measure, measureIndex, x, y, width: measureWidth, cellWidth, beatGap });
     x += measureWidth + measureGap;
   }
   return output;
@@ -274,6 +281,7 @@ function measureLayoutMetric(
   barSpace: number,
 ): MeasureLayoutMetric {
   const slotCount = measureSlotCount(measure, beatDuration);
+  const beatGapCount = measureBeatGapCount(slotCount);
   const cellWidth = measure.events.reduce((requiredWidth, event) => {
     const span = Math.min(1, eventLayoutSpan(event, beatDuration));
     const minimumEventWidth = fontSize * (
@@ -281,7 +289,15 @@ function measureLayoutMetric(
     );
     return Math.max(requiredWidth, minimumEventWidth / span);
   }, baseCellWidth);
-  return { slotCount, naturalWidth: slotCount * cellWidth + barSpace };
+  return {
+    slotCount,
+    naturalWidth: slotCount * cellWidth + beatGapCount * fontSize * 0.28 + barSpace,
+    beatGapCount,
+  };
+}
+
+function measureBeatGapCount(slotCount: number): number {
+  return Math.max(0, Math.ceil(slotCount - 1e-9) - 1);
 }
 
 function measureSlotCount(measure: Measure, beatDuration: Fraction): number {
@@ -337,6 +353,7 @@ function renderMeasure(
       item,
       eventId,
       placed.cellWidth,
+      placed.beatGap,
       fontSize,
       showLyrics,
       eventId === highlightEventId,
@@ -422,9 +439,14 @@ function positionEvents(placed: LayoutMeasure, beatDuration: Fraction): Position
     const positioned: PositionedEvent = {
       event,
       eventIndex,
-      centerX: (slotOffset + Math.min(layoutSpan, 1) / 2) * placed.cellWidth,
+      centerX: layoutXAt(
+        slotOffset + Math.min(layoutSpan, 1) / 2,
+        placed.cellWidth,
+        placed.beatGap,
+      ),
       slotCount,
       layoutSpan,
+      layoutOffset: slotOffset,
       startTime,
     };
     slotOffset += layoutSpan;
@@ -433,30 +455,38 @@ function positionEvents(placed: LayoutMeasure, beatDuration: Fraction): Position
   });
 }
 
+function layoutXAt(offset: number, cellWidth: number, beatGap: number): number {
+  const completedBeats = Math.max(0, Math.floor(offset - 1e-9));
+  return offset * cellWidth + completedBeats * beatGap;
+}
+
 function renderEvent(
   positioned: PositionedEvent,
   eventId: string,
   cellWidth: number,
+  beatGap: number,
   fontSize: number,
   showLyrics: boolean,
   highlighted: boolean,
 ): string {
-  const { event, centerX, slotCount, layoutSpan } = positioned;
+  const { event, centerX, slotCount, layoutSpan, layoutOffset } = positioned;
   const symbol = event.type === "note"
     ? String(event.degree)
     : event.type === "rest" ? "0" : event.type === "extension" ? "−" : `1=${event.key.tonic}`;
   const className = highlighted ? "jabc-event is-highlighted" : "jabc-event";
   const backgroundHeight = fontSize * (showLyrics ? 2.45 : 1.75);
   const dots = event.type === "note" || event.type === "rest" ? event.dots ?? 0 : 0;
-  const visualWidth = layoutSpan * cellWidth;
-  const visualStartX = centerX - Math.min(layoutSpan, 1) * cellWidth / 2;
+  const visualStartX = layoutXAt(layoutOffset, cellWidth, beatGap);
+  const visualEndX = layoutXAt(layoutOffset + layoutSpan, cellWidth, beatGap);
+  const visualWidth = visualEndX - visualStartX;
   const parts = [
     `<rect class="event-bg" x="${round(visualStartX + visualWidth * 0.1)}" y="${round(-fontSize * 1.25)}" width="${round(visualWidth * 0.8)}" height="${round(backgroundHeight)}" rx="7"/>`,
     `<text class="${event.type === "key-change" ? "event-key-change" : "event-symbol"}" x="${round(centerX)}" y="0">${symbol}</text>`,
   ];
 
   for (let index = 1; index < slotCount; index += 1) {
-    parts.push(`<text class="duration-extension" x="${round(centerX + index * cellWidth)}" y="0">−</text>`);
+    const extensionX = layoutXAt(layoutOffset + index + 0.5, cellWidth, beatGap);
+    parts.push(`<text class="duration-extension" x="${round(extensionX)}" y="0">−</text>`);
   }
 
   if (event.type === "note") {
