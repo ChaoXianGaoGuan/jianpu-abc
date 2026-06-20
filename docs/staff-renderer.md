@@ -27,7 +27,7 @@ const tunes = await renderStaffAsync(document.querySelector("#staff")!, score, {
 - 有源码系统断点时保持 JABC 行结构；否则 `measuresPerLine` 默认为 4，通过 abcjs `wrap` 参数控制每行小节数。
 - 返回 abcjs 的 `TuneObjectArray`，供后续光标或交互扩展使用。
 
-`toStaffAbc(score)` 可单独取得 adapter 使用的 ABC 文本。ABC 导出器会去掉同一拍内相同时值短音之间的空格，使 abcjs 生成连梁。`loadStaffRendererEngine()` 延迟加载 abcjs，避免它进入初始网页 chunk。底层 `renderStaff` 接受显式 `StaffRendererEngine`，测试借此注入 mock 验证调用契约，不依赖浏览器 DOM。
+`toStaffAbc(score)` 可单独取得 adapter 使用的 ABC 文本。ABC 导出器会去掉同一拍内相同时值短音之间的空格，使 abcjs 生成连梁；同一系统中起始反复记号会与前一小节共享边界，不会再额外输出普通小节线。`loadStaffRendererEngine()` 延迟加载 abcjs，避免它进入初始网页 chunk。底层 `renderStaff` 接受显式 `StaffRendererEngine`，测试借此注入 mock 验证调用契约，不依赖浏览器 DOM。
 
 ## 依赖与限制
 

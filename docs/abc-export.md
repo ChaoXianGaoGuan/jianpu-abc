@@ -21,7 +21,7 @@ if (result.success) {
 - 保留 `T:`、`C:`、`M:`、`L:`、`Q:`，并把 `K:C jianpu` 转为 `K:C`。
 - 将正文中的 `[K:G jianpu]` 导出为 inline ABC key change `[K:G]`，并从该位置开始按新主音映射后续音级。
 - 多声部时在 header 中写出 `V:` 声明，并在正文中按声部输出 `V:` 段落。
-- 保留复小节线、反复小节线和 `[1` / `[2` ending 标记。
+- 保留复小节线、反复小节线和 `[1` / `[2` ending 标记。同一系统中，下一小节的 `|:` / `[|` 会取代前一小节冗余的普通 `|`；显式换行时两端分别保留。
 - 按 `Measure.systemBreakAfter` 保留 JABC 音乐正文的物理行结构。
 - 将 JABC slur marker `(1` / `3)` 导出为标准 ABC slur，例如 `(C D E)`。
 - 将 JABC tie marker `1~` / `~1` 导出为标准 ABC tie，例如 `C- C`。

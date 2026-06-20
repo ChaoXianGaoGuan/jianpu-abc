@@ -103,6 +103,18 @@ describe("toStandardAbc", () => {
     expect(toStandardAbc(score)).toBe("X:1\nL:1/4\nK:C\n|: C D :| [1 E || [2 F |]\n");
   });
 
+  it("emits only the repeat start at a shared same-system boundary", () => {
+    const score = parse("K:C jianpu\n| 1 |: 7 |");
+
+    expect(toStandardAbc(score)).toBe("X:1\nL:1/4\nK:C\n| C |: B |\n");
+  });
+
+  it("keeps both boundary marks when the repeat starts on a new system", () => {
+    const score = parse("K:C jianpu\n| 1 |\n|: 7 |");
+
+    expect(toStandardAbc(score)).toBe("X:1\nL:1/4\nK:C\n| C |\n|: B |\n");
+  });
+
   it("exports multiple voices with V fields", () => {
     const score = parse(`X:7\nT:双声部\nM:4/4\nL:1/4\nK:C jianpu\nV:melody\n| 1 2 |\nw: 高 音\nV:bass\n| 1, 5, |\nw: 低 音`);
 

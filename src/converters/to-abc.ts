@@ -102,7 +102,18 @@ function renderBody(
   const measures: string[] = [];
   let currentKey = initialKey;
   for (const [index, measure] of voice.measures.entries()) {
-    const rendered = renderMeasureWithBars(measure, index, currentKey, defaultLength, beatDuration);
+    const nextMeasure = voice.measures[index + 1];
+    const suppressRightBarline = measure.barline?.type === "single"
+      && nextMeasure?.leftBarline !== undefined
+      && measure.systemBreakAfter !== true;
+    const rendered = renderMeasureWithBars(
+      measure,
+      index,
+      currentKey,
+      defaultLength,
+      beatDuration,
+      suppressRightBarline,
+    );
     measures.push(rendered.text);
     currentKey = rendered.key;
   }
@@ -133,11 +144,12 @@ function renderMeasureWithBars(
   key: JianpuKey,
   defaultLength: Fraction,
   beatDuration: Fraction,
+  suppressRightBarline: boolean,
 ): RenderMeasureResult {
   const rendered = renderMeasure(measure, measureIndex, key, defaultLength, beatDuration);
   const left = measure.leftBarline?.sourceText ?? (measureIndex === 0 ? "|" : "");
   const ending = measure.ending?.sourceText ?? "";
-  const right = measure.barline?.sourceText ?? "";
+  const right = measure.barline && !suppressRightBarline ? measure.barline.sourceText : "";
   return {
     text: [left, ending, rendered.text, right].filter((part) => part !== "").join(" "),
     key: rendered.key,

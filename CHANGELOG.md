@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
+- Remove redundant standard ABC barlines before same-system repeat/start marks so abcjs renders one shared staff boundary.
 - Space jianpu events proportionally to their performed durations and place accidentals closer to the upper-left of note numbers.
 - Suppress redundant same-row single barlines and align following repeat/start marks to the shared measure boundary.
 - Enlarge jianpu accidentals and render double-sharp/double-flat as standard `𝄪` / `𝄫` glyphs.

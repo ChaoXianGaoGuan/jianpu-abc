@@ -87,6 +87,20 @@ describe("staff renderer adapter", () => {
     expect(renderAbc.mock.calls[0]?.[2]).not.toHaveProperty("wrap");
   });
 
+  it("passes a single shared repeat boundary to abcjs", () => {
+    const score = parse("K:C jianpu\n| 1 |: 7 |");
+    const renderAbc = vi.fn((
+      _target: Selector,
+      _abc: string,
+      _params?: AbcVisualParams,
+    ) => RENDER_RESULT);
+
+    renderStaff({} as Element, score, {}, { renderAbc });
+
+    expect(renderAbc.mock.calls[0]?.[1]).toContain("| C |: B |");
+    expect(renderAbc.mock.calls[0]?.[1]).not.toContain("| C | |: B |");
+  });
+
   it("loads the installed abcjs engine dynamically", async () => {
     const engine = await loadStaffRendererEngine();
 
