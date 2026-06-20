@@ -137,8 +137,9 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     ...renderedVoices,
   ].join("");
 
-  const svgWidth = renderedWidth > width ? round(renderedWidth) : "100%";
-  return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeXml(title)}" viewBox="0 0 ${round(renderedWidth)} ${height}" width="${svgWidth}" height="${height}" class="jianpu-score">
+  const displayScale = Math.min(1, width / renderedWidth);
+  const displayHeight = Math.ceil(height * displayScale);
+  return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeXml(title)}" viewBox="0 0 ${round(renderedWidth)} ${height}" width="100%" height="${displayHeight}" class="jianpu-score">
   <style>
     .score-title{font:600 25px Georgia,'Songti SC',serif;fill:#20332b;text-anchor:middle}
     .score-meta{font:600 14px Inter,'Microsoft YaHei',sans-serif;fill:#52655c}
