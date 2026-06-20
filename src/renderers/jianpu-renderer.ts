@@ -94,8 +94,12 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     .score-meta{font:600 14px Inter,'Microsoft YaHei',sans-serif;fill:#52655c}
     .score-composer{font:13px Inter,'Microsoft YaHei',sans-serif;fill:#718078;text-anchor:end}
     .voice-label{font:700 13px ui-monospace,Consolas,monospace;fill:#a4522c}
-    .measure-barline{stroke:#33483f;stroke-width:1.6}
-    .barline-text,.ending-text{font:700 15px ui-monospace,Consolas,monospace;fill:#33483f;text-anchor:middle}
+    .barline-thin,.barline-thick,.ending-bracket{stroke:#33483f;fill:none}
+    .barline-thin{stroke-width:1.6}
+    .barline-thick{stroke-width:4.2}
+    .repeat-dot{fill:#33483f}
+    .ending-bracket{stroke-width:1.5;stroke-linecap:square;stroke-linejoin:miter}
+    .ending-number{font:700 ${fontSize * 0.45}px Georgia,'Songti SC',serif;fill:#33483f}
     .event-bg{fill:transparent;transition:fill .12s ease}
     .event-symbol,.duration-extension{font:600 ${fontSize}px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#1f332a;text-anchor:middle}
     .event-accidental{font:600 ${fontSize * 0.52}px serif;fill:#1f332a;text-anchor:middle}
@@ -248,17 +252,65 @@ function renderMeasure(
   const durationLines = renderDurationLines(positioned, beatDuration, fontSize);
   const relations = renderRelations(positioned, placed.width, fontSize);
   const leftBarline = placed.measure.leftBarline
-    ? `<text class="barline-text" x="${round(-fontSize * 0.18)}" y="${round(-fontSize * 0.18)}">${escapeXml(placed.measure.leftBarline.sourceText)}</text>`
+    ? renderBarline(placed.measure.leftBarline, "left", placed.width, fontSize)
     : "";
   const ending = placed.measure.ending
-    ? `<text class="ending-text" x="${round(fontSize * 0.34)}" y="${round(-fontSize * 1.65)}">${escapeXml(placed.measure.ending.sourceText)}</text>`
+    ? renderEnding(placed.measure.ending.number, placed.width, fontSize)
     : "";
   const barline = placed.measure.barline
-    ? placed.measure.barline.type === "single"
-      ? `<line class="measure-barline" x1="${placed.width - fontSize * 0.22}" y1="${-fontSize}" x2="${placed.width - fontSize * 0.22}" y2="${fontSize * 0.62}"/>`
-      : `<text class="barline-text" x="${round(placed.width - fontSize * 0.18)}" y="${round(-fontSize * 0.18)}">${escapeXml(placed.measure.barline.sourceText)}</text>`
+    ? renderBarline(placed.measure.barline, "right", placed.width, fontSize)
     : "";
   return `<g class="measure" data-measure-index="${placed.measureIndex}" transform="translate(${round(placed.x)} ${round(placed.y)})">${leftBarline}${ending}${events}${durationLines}${relations}${barline}</g>`;
+}
+
+function renderBarline(
+  barline: NonNullable<Measure["barline"]>,
+  side: "left" | "right",
+  measureWidth: number,
+  fontSize: number,
+): string {
+  const boundary = side === "left" ? 0 : measureWidth - fontSize * 0.22;
+  const top = -fontSize * 1.02;
+  const bottom = fontSize * 0.58;
+  const offset = fontSize * 0.17;
+  const parts: string[] = [];
+  const line = (className: string, x: number) =>
+    `<line class="${className}" x1="${round(x)}" y1="${round(top)}" x2="${round(x)}" y2="${round(bottom)}"/>`;
+
+  if (barline.type === "single") {
+    parts.push(line("barline-thin", boundary));
+  } else if (barline.type === "double") {
+    parts.push(line("barline-thin", boundary - offset));
+    parts.push(line("barline-thin", boundary));
+  } else if (barline.type === "final" || barline.type === "repeat-end") {
+    parts.push(line("barline-thin", boundary - offset));
+    parts.push(line("barline-thick", boundary));
+  } else {
+    parts.push(line("barline-thick", boundary));
+    parts.push(line("barline-thin", boundary + offset));
+  }
+
+  if (barline.type === "repeat-start" || barline.type === "repeat-end") {
+    const dotX = barline.type === "repeat-start"
+      ? boundary + fontSize * 0.34
+      : boundary - fontSize * 0.34;
+    for (const dotY of [-fontSize * 0.5, -fontSize * 0.1]) {
+      parts.push(`<circle class="repeat-dot" cx="${round(dotX)}" cy="${round(dotY)}" r="${round(fontSize * 0.065)}"/>`);
+    }
+  }
+
+  return `<g class="barline barline-${barline.type}" data-barline="${barline.sourceText}">${parts.join("")}</g>`;
+}
+
+function renderEnding(number: string, measureWidth: number, fontSize: number): string {
+  const startX = fontSize * 0.06;
+  const endX = measureWidth - fontSize * 0.3;
+  const top = -fontSize * 1.86;
+  const down = -fontSize * 1.52;
+  return `<g class="ending" data-ending="${escapeXml(number)}">
+    <path class="ending-bracket" d="M ${round(startX)} ${round(down)} L ${round(startX)} ${round(top)} L ${round(endX)} ${round(top)}"/>
+    <text class="ending-number" x="${round(startX + fontSize * 0.2)}" y="${round(-fontSize * 1.48)}">${escapeXml(number)}.</text>
+  </g>`;
 }
 
 function positionEvents(placed: LayoutMeasure, beatDuration: Fraction): PositionedEvent[] {

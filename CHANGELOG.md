@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
+- Draw jianpu repeats, final barlines, and numbered endings with proper SVG lines, dots, and brackets.
 - Preserve JABC music-row breaks through ABC, MusicXML, jianpu, and staff rendering.
 - Center and enlarge jianpu duration dots relative to the note number.
 - Render long jianpu durations as beat-sized extension dashes instead of multiplier labels.

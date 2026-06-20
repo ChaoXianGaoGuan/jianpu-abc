@@ -96,12 +96,16 @@ describe("renderJianpu", () => {
   it("renders repeat barlines and endings", () => {
     const svg = renderJianpu(parse("K:C jianpu\n|: 1 :| [1 2 || [2 3 |]"));
 
-    expect(svg).toContain(">|:</text>");
-    expect(svg).toContain(">:|</text>");
-    expect(svg).toContain(">[1</text>");
-    expect(svg).toContain(">||</text>");
-    expect(svg).toContain(">[2</text>");
-    expect(svg).toContain(">|]</text>");
+    expect(svg).toContain('class="barline barline-repeat-start"');
+    expect(svg).toContain('class="barline barline-repeat-end"');
+    expect(svg).toContain('class="barline barline-double"');
+    expect(svg).toContain('class="barline barline-final"');
+    expect(svg.match(/class="repeat-dot"/g)).toHaveLength(4);
+    expect(svg).toContain('class="ending-bracket"');
+    expect(svg).toContain('class="ending-number"');
+    expect(svg).toContain(">1.</text>");
+    expect(svg).toContain(">2.</text>");
+    expect(svg).not.toContain(">|:</text>");
   });
 
   it("renders multiple voices with voice labels", () => {
