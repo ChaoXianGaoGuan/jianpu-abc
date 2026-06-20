@@ -5,7 +5,7 @@ import { toStandardAbc } from "../converters/to-abc";
 import { toMusicXml } from "../converters/to-musicxml";
 import type { PlaybackEvent } from "../playback/events";
 import { scoreToPlaybackEvents } from "../playback/events";
-import type { PlaybackState } from "../playback/web-audio-player";
+import type { InstrumentId, PlaybackState } from "../playback/web-audio-player";
 import { WebAudioPlayer } from "../playback/web-audio-player";
 import { renderJianpu } from "../renderers/jianpu-renderer";
 import {
@@ -35,6 +35,7 @@ const parseErrors = element<HTMLPreElement>("parse-errors");
 const eventCount = element<HTMLSpanElement>("event-count");
 const playbackState = element<HTMLElement>("playback-state");
 const currentEvent = element<HTMLElement>("current-event");
+const instrumentSelect = element<HTMLSelectElement>("instrument-select");
 const playButton = element<HTMLButtonElement>("play-button");
 const pauseButton = element<HTMLButtonElement>("pause-button");
 const resumeButton = element<HTMLButtonElement>("resume-button");
@@ -70,6 +71,7 @@ playButton.addEventListener("click", () => {
 pauseButton.addEventListener("click", () => player?.pause());
 resumeButton.addEventListener("click", () => player?.resume());
 stopButton.addEventListener("click", () => player?.stop());
+instrumentSelect.addEventListener("change", () => player?.setInstrument(selectedInstrument()));
 alignMeasuresToggle.addEventListener("change", () => renderPreview(activeEventId));
 copyAbcButton.addEventListener("click", () => void copyText(currentAbc, "ABC 已复制"));
 downloadAbcButton.addEventListener("click", () => downloadText(currentAbc, fileBaseName("abc"), "text/vnd.abc"));
@@ -134,8 +136,9 @@ function evaluateSource(): void {
 
 function getPlayer(): WebAudioPlayer {
   player ??= new WebAudioPlayer(undefined, {
-    masterGain: 0.18,
+    masterGain: 0.2,
     oscillatorType: "triangle",
+    instrument: selectedInstrument(),
     onEventStart: (event) => {
       activeEventId = event?.sourceEventId;
       currentEvent.textContent = activeEventId ?? "—";
@@ -247,6 +250,12 @@ function stateLabel(state: PlaybackState): string {
   if (state === "playing") return "播放中";
   if (state === "paused") return "已暂停";
   return "空闲";
+}
+
+function selectedInstrument(): InstrumentId {
+  const value = instrumentSelect.value;
+  if (value === "piano" || value === "guitar") return value;
+  return "synth";
 }
 
 function element<T extends HTMLElement>(id: string): T {

@@ -145,6 +145,7 @@ describe("WebAudioPlayer", () => {
     const oscillator = {
       type: "sine" as OscillatorType,
       frequency,
+      detune: { setValueAtTime: vi.fn() },
       connect: vi.fn(),
       disconnect: vi.fn(),
       start: vi.fn(),
@@ -193,5 +194,60 @@ describe("WebAudioPlayer", () => {
     player.stop();
     expect(player.playbackState).toBe("idle");
     expect(player.currentTime).toBe(0);
+  });
+
+  it("supports piano and guitar instrument presets", () => {
+    const oscillators: Array<{ stop: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }> = [];
+    const createOscillator = vi.fn(() => {
+      const oscillator = {
+        type: "sine" as OscillatorType,
+        frequency: { setValueAtTime: vi.fn() },
+        detune: { setValueAtTime: vi.fn() },
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        start: vi.fn(),
+        stop: vi.fn(),
+        addEventListener: vi.fn(),
+      };
+      oscillators.push(oscillator);
+      return oscillator;
+    });
+    const createGain = vi.fn(() => ({
+      gain: {
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+      },
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    }));
+    const context = {
+      currentTime: 10,
+      state: "running",
+      destination: {},
+      createOscillator,
+      createGain,
+      resume: vi.fn(async () => undefined),
+      close: vi.fn(async () => undefined),
+    } as unknown as AudioContext;
+    const event = {
+      id: "playback-1",
+      type: "note" as const,
+      midi: 69,
+      startTime: 0,
+      duration: 1,
+      velocity: 100,
+    };
+    const player = new WebAudioPlayer(context, { instrument: "piano", scheduleAheadSeconds: 0 });
+
+    player.play([event]);
+    expect(player.currentInstrument).toBe("piano");
+    expect(createOscillator).toHaveBeenCalledTimes(4);
+
+    player.setInstrument("guitar");
+    expect(player.playbackState).toBe("idle");
+    player.play([event]);
+    expect(player.currentInstrument).toBe("guitar");
+    expect(createOscillator).toHaveBeenCalledTimes(7);
+    expect(oscillators.some((oscillator) => oscillator.stop.mock.calls.length > 0)).toBe(true);
   });
 });

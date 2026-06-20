@@ -40,7 +40,7 @@ npm run build
 
 After `npm run dev`, open `http://127.0.0.1:5173`. The validation UI includes
 live JABC parsing, standard ABC output, MusicXML output, copy/download actions,
-playback event counts, and Web Audio play/pause/resume/stop controls. Use
+playback event counts, instrument selection, and Web Audio play/pause/resume/stop controls. Use
 `npm run dev -- --port 4173` to select a different port.
 
 ## Supported syntax
@@ -145,14 +145,15 @@ the ABC exporter.
 import { scoreToPlaybackEvents, WebAudioPlayer } from "./src/index";
 
 const events = scoreToPlaybackEvents(score);
-const player = new WebAudioPlayer(); // Create from a user interaction in browsers.
+const player = new WebAudioPlayer(undefined, { instrument: "piano" }); // Create from a user interaction in browsers.
 player.play(events);
 ```
 
 The pure scheduler handles tempo, rests, extensions, parsed ties, triplet timing,
 simple repeat expansion, first/second endings, and parallel multi-voice timelines. The browser
-player provides `play`, `pause`, `resume`, `stop`, and `dispose`; callbacks
-expose the active source event for score highlighting.
+player provides `synth`, `piano`, and `guitar` instrument presets plus `play`,
+`pause`, `resume`, `stop`, and `dispose`; callbacks expose the active source
+event for score highlighting.
 
 ## Jianpu rendering
 

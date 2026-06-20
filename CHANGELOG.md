@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
+- Web Audio instrument presets and UI selection for synth, piano-like, and guitar-like playback.
 - Degree-to-pitch mapping for note names, MIDI, ABC, and MusicXML pitch objects.
 - Standard ABC export for headers, major-key notes, rests, relative durations, extensions, and lyrics.
 - Golden ABC fixtures and C, D, F key mapping tests for Milestone 2.

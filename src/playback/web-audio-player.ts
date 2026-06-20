@@ -1,18 +1,27 @@
 import type { PlaybackEvent } from "./events";
 
 export type PlaybackState = "idle" | "playing" | "paused";
+export type InstrumentId = "synth" | "piano" | "guitar";
 
 export interface WebAudioPlayerOptions {
   masterGain?: number;
   oscillatorType?: OscillatorType;
+  instrument?: InstrumentId;
   scheduleAheadSeconds?: number;
   onEventStart?: (event: PlaybackEvent | null) => void;
   onStateChange?: (state: PlaybackState) => void;
 }
 
-interface ScheduledNode {
-  oscillator: OscillatorNode;
-  gain: GainNode;
+interface ScheduledVoice {
+  stop(): void;
+  disconnect(): void;
+}
+
+interface PartialTone {
+  ratio: number;
+  gain: number;
+  type: OscillatorType;
+  detune?: number;
 }
 
 export class WebAudioPlayer {
@@ -20,10 +29,10 @@ export class WebAudioPlayer {
   private readonly ownsContext: boolean;
   private readonly options: Required<Pick<
     WebAudioPlayerOptions,
-    "masterGain" | "oscillatorType" | "scheduleAheadSeconds"
+    "masterGain" | "oscillatorType" | "instrument" | "scheduleAheadSeconds"
   >> & Pick<WebAudioPlayerOptions, "onEventStart" | "onStateChange">;
   private events: PlaybackEvent[] = [];
-  private nodes: ScheduledNode[] = [];
+  private voices: ScheduledVoice[] = [];
   private timers: Array<ReturnType<typeof setTimeout>> = [];
   private state: PlaybackState = "idle";
   private positionSeconds = 0;
@@ -36,11 +45,13 @@ export class WebAudioPlayer {
     this.options = {
       masterGain: options.masterGain ?? 0.2,
       oscillatorType: options.oscillatorType ?? "sine",
+      instrument: options.instrument ?? "synth",
       scheduleAheadSeconds: options.scheduleAheadSeconds ?? 0.03,
       ...(options.onEventStart ? { onEventStart: options.onEventStart } : {}),
       ...(options.onStateChange ? { onStateChange: options.onStateChange } : {}),
     };
 
+    validateInstrument(this.options.instrument);
     if (this.options.masterGain < 0 || this.options.masterGain > 1) {
       throw new RangeError("masterGain must be between 0 and 1.");
     }
@@ -53,9 +64,20 @@ export class WebAudioPlayer {
     return this.state;
   }
 
+  get currentInstrument(): InstrumentId {
+    return this.options.instrument;
+  }
+
   get currentTime(): number {
     if (this.state !== "playing") return this.positionSeconds;
     return clamp(this.context.currentTime - this.anchorContextTime, 0, this.totalDuration);
+  }
+
+  setInstrument(instrument: InstrumentId): void {
+    validateInstrument(instrument);
+    if (this.options.instrument === instrument) return;
+    this.stop();
+    this.options.instrument = instrument;
   }
 
   play(events: PlaybackEvent[]): void {
@@ -137,7 +159,7 @@ export class WebAudioPlayer {
       this.anchorContextTime + this.totalDuration - this.context.currentTime,
     ) * 1000;
     this.timers.push(setTimeout(() => {
-      this.nodes = [];
+      this.voices = [];
       this.timers = [];
       this.positionSeconds = this.totalDuration;
       this.setState("idle");
@@ -146,40 +168,154 @@ export class WebAudioPlayer {
   }
 
   private scheduleNote(event: PlaybackEvent, start: number, end: number): void {
-    const oscillator = this.context.createOscillator();
-    const gain = this.context.createGain();
+    const frequency = midiToFrequency(event.midi);
     const amplitude = (event.velocity / 127) * this.options.masterGain;
-    const releaseStart = Math.max(start, end - 0.01);
+    const duration = Math.max(0.01, end - start);
+    const voice = this.options.instrument === "piano"
+      ? this.schedulePianoVoice(frequency, amplitude, start, duration)
+      : this.options.instrument === "guitar"
+        ? this.scheduleGuitarVoice(frequency, amplitude, start, duration)
+        : this.scheduleSynthVoice(frequency, amplitude, start, duration);
+    this.voices.push(voice);
+  }
 
-    oscillator.type = this.options.oscillatorType;
-    oscillator.frequency.setValueAtTime(midiToFrequency(event.midi), start);
-    gain.gain.setValueAtTime(amplitude, start);
-    gain.gain.setValueAtTime(amplitude, releaseStart);
-    gain.gain.linearRampToValueAtTime(0, end);
-    oscillator.connect(gain);
-    gain.connect(this.context.destination);
-    oscillator.start(start);
-    oscillator.stop(end);
-    oscillator.addEventListener("ended", () => {
-      oscillator.disconnect();
-      gain.disconnect();
-    }, { once: true });
-    this.nodes.push({ oscillator, gain });
+  private scheduleSynthVoice(
+    frequency: number,
+    amplitude: number,
+    start: number,
+    duration: number,
+  ): ScheduledVoice {
+    const releaseStart = start + Math.max(0, duration - 0.01);
+    return this.scheduleLayeredVoice({
+      partials: [{ ratio: 1, gain: 1, type: this.options.oscillatorType }],
+      frequency,
+      amplitude,
+      start,
+      stopAt: start + duration,
+      envelope: [
+        { time: start, gain: amplitude },
+        { time: releaseStart, gain: amplitude },
+        { time: start + duration, gain: 0 },
+      ],
+    });
+  }
+
+  private schedulePianoVoice(
+    frequency: number,
+    amplitude: number,
+    start: number,
+    duration: number,
+  ): ScheduledVoice {
+    const stopAt = start + Math.max(duration + 0.08, 0.38);
+    const attackEnd = start + Math.min(0.012, Math.max(0.004, duration * 0.1));
+    const bodyEnd = Math.min(stopAt - 0.02, attackEnd + Math.max(0.08, duration * 0.45));
+    return this.scheduleLayeredVoice({
+      partials: [
+        { ratio: 1, gain: 1, type: "sine" },
+        { ratio: 2.01, gain: 0.22, type: "triangle", detune: -2 },
+        { ratio: 3.02, gain: 0.12, type: "sine", detune: 3 },
+        { ratio: 4, gain: 0.055, type: "triangle" },
+      ],
+      frequency,
+      amplitude: amplitude * 0.9,
+      start,
+      stopAt,
+      envelope: [
+        { time: start, gain: 0 },
+        { time: attackEnd, gain: amplitude * 0.9 },
+        { time: bodyEnd, gain: amplitude * 0.24 },
+        { time: stopAt, gain: 0 },
+      ],
+    });
+  }
+
+  private scheduleGuitarVoice(
+    frequency: number,
+    amplitude: number,
+    start: number,
+    duration: number,
+  ): ScheduledVoice {
+    const stopAt = start + Math.max(duration + 0.04, 0.28);
+    const attackEnd = start + Math.min(0.006, Math.max(0.002, duration * 0.08));
+    const bodyEnd = Math.min(stopAt - 0.018, attackEnd + Math.max(0.045, duration * 0.28));
+    return this.scheduleLayeredVoice({
+      partials: [
+        { ratio: 1, gain: 0.95, type: "triangle" },
+        { ratio: 2, gain: 0.26, type: "sawtooth", detune: -4 },
+        { ratio: 3.01, gain: 0.12, type: "square", detune: 5 },
+      ],
+      frequency,
+      amplitude: amplitude * 0.78,
+      start,
+      stopAt,
+      envelope: [
+        { time: start, gain: 0 },
+        { time: attackEnd, gain: amplitude * 0.78 },
+        { time: bodyEnd, gain: amplitude * 0.18 },
+        { time: stopAt, gain: 0 },
+      ],
+    });
+  }
+
+  private scheduleLayeredVoice(options: {
+    partials: PartialTone[];
+    frequency: number;
+    amplitude: number;
+    start: number;
+    stopAt: number;
+    envelope: Array<{ time: number; gain: number }>;
+  }): ScheduledVoice {
+    const outputGain = this.context.createGain();
+    applyEnvelope(outputGain.gain, options.envelope);
+    outputGain.connect(this.context.destination);
+
+    const oscillators: OscillatorNode[] = [];
+    const partialGains: GainNode[] = [];
+    for (const partial of options.partials) {
+      const oscillator = this.context.createOscillator();
+      const partialGain = this.context.createGain();
+      oscillator.type = partial.type;
+      oscillator.frequency.setValueAtTime(options.frequency * partial.ratio, options.start);
+      if (partial.detune !== undefined) oscillator.detune.setValueAtTime(partial.detune, options.start);
+      partialGain.gain.setValueAtTime(partial.gain, options.start);
+      oscillator.connect(partialGain);
+      partialGain.connect(outputGain);
+      oscillator.start(options.start);
+      oscillator.stop(options.stopAt);
+      oscillator.addEventListener("ended", () => {
+        safeDisconnect(oscillator);
+        safeDisconnect(partialGain);
+      }, { once: true });
+      oscillators.push(oscillator);
+      partialGains.push(partialGain);
+    }
+
+    return {
+      stop: () => {
+        for (const oscillator of oscillators) {
+          try {
+            oscillator.stop();
+          } catch {
+            // The oscillator may already have ended.
+          }
+        }
+      },
+      disconnect: () => {
+        for (const oscillator of oscillators) safeDisconnect(oscillator);
+        for (const partialGain of partialGains) safeDisconnect(partialGain);
+        safeDisconnect(outputGain);
+      },
+    };
   }
 
   private cancelScheduled(): void {
     for (const timer of this.timers) clearTimeout(timer);
     this.timers = [];
-    for (const { oscillator, gain } of this.nodes) {
-      try {
-        oscillator.stop();
-      } catch {
-        // The oscillator may already have ended.
-      }
-      oscillator.disconnect();
-      gain.disconnect();
+    for (const voice of this.voices) {
+      voice.stop();
+      voice.disconnect();
     }
-    this.nodes = [];
+    this.voices = [];
   }
 
   private setState(state: PlaybackState): void {
@@ -194,6 +330,25 @@ export function midiToFrequency(midi: number): number {
   return 440 * 2 ** ((midi - 69) / 12);
 }
 
+function applyEnvelope(
+  gain: AudioParam,
+  points: Array<{ time: number; gain: number }>,
+): void {
+  const ordered = [...points].sort((left, right) => left.time - right.time);
+  const first = ordered[0];
+  if (!first) return;
+  gain.setValueAtTime(first.gain, first.time);
+  for (const point of ordered.slice(1)) {
+    gain.linearRampToValueAtTime(point.gain, point.time);
+  }
+}
+
+function validateInstrument(instrument: InstrumentId): void {
+  if (!["synth", "piano", "guitar"].includes(instrument)) {
+    throw new RangeError(`Unsupported playback instrument: ${instrument}`);
+  }
+}
+
 function createAudioContext(): AudioContext {
   const scope = globalThis as typeof globalThis & {
     webkitAudioContext?: typeof AudioContext;
@@ -203,6 +358,14 @@ function createAudioContext(): AudioContext {
     throw new Error("Web Audio API is not available in this environment.");
   }
   return new AudioContextConstructor();
+}
+
+function safeDisconnect(node: AudioNode): void {
+  try {
+    node.disconnect();
+  } catch {
+    // The node may already be disconnected by the browser.
+  }
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {
