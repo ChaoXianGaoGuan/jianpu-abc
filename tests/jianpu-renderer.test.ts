@@ -59,13 +59,21 @@ describe("renderJianpu", () => {
     expect(svg).toContain('cy="-12.16" r="2.88"');
   });
 
-  it("places a duration dot in its rhythmic extension slot", () => {
+  it("keeps dotted rhythm spacing while placing duration dots near the note", () => {
     const svg = renderJianpu(parse("M:4/4\nL:1/4\nK:C jianpu\n| 6/4 1'/2. |"), { fontSize: 32 });
 
     expect(svg).toContain('class="event-symbol" x="13.12" y="0">6</text>');
-    expect(svg).toContain('class="event-symbol" x="52.48" y="0">1</text>');
-    expect(svg).toContain('class="duration-dot" cx="91.84"');
-    expect(svg).toContain('data-line-level="1" data-group-size="2" x1="2.24" y1="13.76" x2="102.72"');
+    expect(svg).toContain('class="event-symbol" x="39.36" y="0">1</text>');
+    expect(svg).toContain('class="duration-dot" cx="49.6"');
+    expect(svg).toContain('data-line-level="1" data-group-size="2" x1="2.24" y1="13.76" x2="60.48"');
+  });
+
+  it("keeps duration dots close to the note when the dotted note comes first", () => {
+    const svg = renderJianpu(parse("M:4/4\nL:1/4\nK:C jianpu\n| 1'/2. 6/4 |"), { fontSize: 32 });
+
+    expect(svg).toContain('class="event-symbol" x="13.12" y="0">1</text>');
+    expect(svg).toContain('class="duration-dot" cx="23.36"');
+    expect(svg).toContain('class="event-symbol" x="65.6" y="0">6</text>');
   });
 
   it("renders larger accidentals and standard double accidental glyphs", () => {
@@ -92,6 +100,14 @@ describe("renderJianpu", () => {
     expect(svg).toContain('class="event-symbol" x="26.24" y="0">1</text>');
     expect(svg).toContain('class="event-symbol" x="65.6" y="0">2</text>');
     expect(svg).toContain('class="event-symbol" x="91.84" y="0">3</text>');
+  });
+
+  it("keeps two sixteenths in the first half and an eighth in the second half", () => {
+    const svg = renderJianpu(parse("M:4/4\nK:C jianpu\n| 1s 2s 3e |"), { fontSize: 32 });
+
+    expect(svg).toContain('class="event-symbol" x="13.12" y="0">1</text>');
+    expect(svg).toContain('class="event-symbol" x="39.36" y="0">2</text>');
+    expect(svg).toContain('class="event-symbol" x="78.72" y="0">3</text>');
   });
 
   it("expands the beat width enough to keep short-note digits readable", () => {

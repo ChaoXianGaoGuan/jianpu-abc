@@ -3,6 +3,8 @@ import type {
   Fraction,
   Measure,
   MusicalEvent,
+  NoteEvent,
+  RestEvent,
   Score,
   Voice,
 } from "../core/ast";
@@ -89,7 +91,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
       beatDuration,
       alignMeasuresAcrossSystems,
     );
-    const positionedByMeasure = layout.map((placed) => positionEvents(placed, beatDuration));
+    const positionedByMeasure = layout.map((placed) => positionEvents(placed, beatDuration, fontSize));
     const crossMeasureTies = findCrossMeasureTies(layout, positionedByMeasure);
     const connectedBoundaries = new Set(
       crossMeasureTies.map((connection) => connection.boundaryIndex),
@@ -281,10 +283,11 @@ function measureLayoutMetric(
   baseCellWidth: number,
   barSpace: number,
 ): MeasureLayoutMetric {
-  const slotCount = measureSlotCount(measure, beatDuration);
+  const layoutSpans = measureEventLayoutSpans(measure, beatDuration);
+  const slotCount = Math.max(1, layoutSpans.reduce((total, span) => total + span, 0));
   const beatGapCount = measureBeatGapCount(slotCount);
-  const cellWidth = measure.events.reduce((requiredWidth, event) => {
-    const span = Math.min(1, eventLayoutSpan(event, beatDuration));
+  const cellWidth = measure.events.reduce((requiredWidth, event, index) => {
+    const span = Math.min(1, layoutSpans[index] ?? eventLayoutSpan(event, beatDuration));
     const minimumEventWidth = fontSize * (
       event.type === "note" && event.accidental !== undefined ? 1 : 0.82
     );
@@ -299,13 +302,6 @@ function measureLayoutMetric(
 
 function measureBeatGapCount(slotCount: number): number {
   return Math.max(0, Math.ceil(slotCount - 1e-9) - 1);
-}
-
-function measureSlotCount(measure: Measure, beatDuration: Fraction): number {
-  return Math.max(
-    1,
-    measure.events.reduce((total, event) => total + eventLayoutSpan(event, beatDuration), 0),
-  );
 }
 
 function renderHeader(
@@ -431,29 +427,28 @@ function renderEnding(number: string, measureWidth: number, fontSize: number): s
   </g>`;
 }
 
-function positionEvents(placed: LayoutMeasure, beatDuration: Fraction): PositionedEvent[] {
+function positionEvents(placed: LayoutMeasure, beatDuration: Fraction, fontSize: number): PositionedEvent[] {
   let slotOffset = 0;
   let startTime: Fraction = { numerator: 0, denominator: 1 };
+  const layoutSpans = measureEventLayoutSpans(placed.measure, beatDuration);
   return placed.measure.events.map((event, eventIndex) => {
     const slotCount = visualSlotCount(event, beatDuration);
-    const layoutSpan = eventLayoutSpan(event, beatDuration);
-    const undottedSpan = undottedLayoutSpan(event, beatDuration);
+    const layoutSpan = layoutSpans[eventIndex] ?? eventLayoutSpan(event, beatDuration);
     const dots = event.type === "note" || event.type === "rest" ? event.dots ?? 0 : 0;
+    const visualUnitSpan = layoutSpan / (dots + 1);
+    const centerX = layoutXAt(
+      slotOffset + Math.min(visualUnitSpan, 1) / 2,
+      placed.cellWidth,
+      placed.beatGap,
+    );
     const dotXs: number[] = [];
-    let dotOffset = slotOffset + undottedSpan;
     for (let index = 0; index < dots; index += 1) {
-      const dotSpan = undottedSpan / 2 ** (index + 1);
-      dotXs.push(layoutXAt(dotOffset + dotSpan / 2, placed.cellWidth, placed.beatGap));
-      dotOffset += dotSpan;
+      dotXs.push(centerX + fontSize * (0.32 + index * 0.18));
     }
     const positioned: PositionedEvent = {
       event,
       eventIndex,
-      centerX: layoutXAt(
-        slotOffset + Math.min(undottedSpan, 1) / 2,
-        placed.cellWidth,
-        placed.beatGap,
-      ),
+      centerX,
       slotCount,
       layoutSpan,
       layoutOffset: slotOffset,
@@ -850,6 +845,52 @@ function eventLayoutSpan(event: MusicalEvent, beatDuration: Fraction): number {
   if (event.type === "key-change") return 1;
   const ratio = divideFractions(event.duration, beatDuration);
   return ratio.numerator / ratio.denominator;
+}
+
+function measureEventLayoutSpans(measure: Measure, beatDuration: Fraction): number[] {
+  const spans = measure.events.map((event) => eventLayoutSpan(event, beatDuration));
+  const groups = new Map<number, number[]>();
+  let elapsed: Fraction = { numerator: 0, denominator: 1 };
+
+  for (const [index, event] of measure.events.entries()) {
+    if (event.type === "key-change") continue;
+    const indexInBeat = beatIndex(elapsed, beatDuration);
+    const group = groups.get(indexInBeat) ?? [];
+    group.push(index);
+    groups.set(indexInBeat, group);
+    elapsed = addFractions(elapsed, event.duration);
+  }
+
+  for (const indices of groups.values()) {
+    if (indices.length !== 2) continue;
+    const firstIndex = indices[0]!;
+    const secondIndex = indices[1]!;
+    const first = measure.events[firstIndex]!;
+    const second = measure.events[secondIndex]!;
+    if (!isNoteOrRest(first) || !isNoteOrRest(second)) continue;
+    const dottedIndex = (first.dots ?? 0) === 1
+      ? firstIndex
+      : (second.dots ?? 0) === 1 ? secondIndex : undefined;
+    if (dottedIndex === undefined) continue;
+    const plainIndex = dottedIndex === firstIndex ? secondIndex : firstIndex;
+    const dotted = dottedIndex === firstIndex ? first : second;
+    const plain = plainIndex === firstIndex ? first : second;
+    if ((plain.dots ?? 0) !== 0) continue;
+    const dottedBaseSpan = undottedLayoutSpan(dotted, beatDuration);
+    const plainSpan = eventLayoutSpan(plain, beatDuration);
+    const totalSpan = (spans[dottedIndex] ?? 0) + plainSpan;
+    if (
+      Math.abs(totalSpan - 1) > 1e-9
+      || Math.abs(dottedBaseSpan - plainSpan * 2) > 1e-9
+    ) continue;
+    spans[dottedIndex] = 2 / 3;
+    spans[plainIndex] = 1 / 3;
+  }
+  return spans;
+}
+
+function isNoteOrRest(event: MusicalEvent): event is NoteEvent | RestEvent {
+  return event.type === "note" || event.type === "rest";
 }
 
 function undottedLayoutSpan(event: MusicalEvent, beatDuration: Fraction): number {
