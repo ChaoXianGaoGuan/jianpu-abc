@@ -8,6 +8,11 @@ function parse(source: string) {
   return result.value;
 }
 
+function measureTransforms(svg: string): Array<{ x: string; y: string }> {
+  return [...svg.matchAll(/class="measure"[^>]*transform="translate\(([^ ]+) ([^)]+)\)"/g)]
+    .map((match) => ({ x: match[1] ?? "", y: match[2] ?? "" }));
+}
+
 const SCORE = `T:渲染测试 <曲>
 C:传统来源
 M:4/4
@@ -45,6 +50,17 @@ describe("renderJianpu", () => {
 
     expect(svg).toContain('class="duration-dot"');
     expect(svg).toContain('cy="-12.16" r="2.88"');
+  });
+
+  it("renders larger accidentals and standard double accidental glyphs", () => {
+    const svg = renderJianpu(parse("K:C jianpu\n| #4 ##4 b7 bb7 =3 |"), { fontSize: 40 });
+
+    expect(svg).toContain(".event-accidental{font:700 32px");
+    expect(svg).toContain(">♯</text>");
+    expect(svg).toContain(">𝄪</text>");
+    expect(svg).toContain(">♭</text>");
+    expect(svg).toContain(">𝄫</text>");
+    expect(svg).toContain(">♮</text>");
   });
 
   it("adds the highlight class to the requested source event", () => {
@@ -163,5 +179,27 @@ describe("renderJianpu", () => {
     expect(rowPositions[0]).toBe(rowPositions[1]);
     expect(rowPositions[2]).toBe(rowPositions[3]);
     expect(rowPositions[4]).toBe(rowPositions[5]);
+  });
+
+  it("aligns measure columns across source rows by default", () => {
+    const score = parse("K:C jianpu\n| 1 2 3 4 | 1 |\n| 1 | 1 2 3 4 |");
+    const svg = renderJianpu(score, { width: 620 });
+    const transforms = measureTransforms(svg);
+
+    expect(transforms).toHaveLength(4);
+    expect(transforms[0]?.x).toBe(transforms[2]?.x);
+    expect(transforms[1]?.x).toBe(transforms[3]?.x);
+    expect(transforms[0]?.y).toBe(transforms[1]?.y);
+    expect(transforms[2]?.y).toBe(transforms[3]?.y);
+  });
+
+  it("can disable cross-row measure alignment", () => {
+    const score = parse("K:C jianpu\n| 1 2 3 4 | 1 |\n| 1 | 1 2 3 4 |");
+    const svg = renderJianpu(score, { width: 620, alignMeasuresAcrossSystems: false });
+    const transforms = measureTransforms(svg);
+
+    expect(transforms).toHaveLength(4);
+    expect(transforms[0]?.x).toBe(transforms[2]?.x);
+    expect(transforms[1]?.x).not.toBe(transforms[3]?.x);
   });
 });

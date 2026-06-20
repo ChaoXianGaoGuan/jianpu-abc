@@ -13,6 +13,7 @@ export interface RenderOptions {
   fontSize?: number;
   showLyrics?: boolean;
   highlightEventId?: string;
+  alignMeasuresAcrossSystems?: boolean;
 }
 
 interface LayoutMeasure {
@@ -42,14 +43,15 @@ const ACCIDENTAL_TEXT: Record<Accidental, string> = {
   sharp: "♯",
   flat: "♭",
   natural: "♮",
-  "double-sharp": "♯♯",
-  "double-flat": "♭♭",
+  "double-sharp": "𝄪",
+  "double-flat": "𝄫",
 };
 
 export function renderJianpu(score: Score, options: RenderOptions = {}): string {
   const width = Math.max(320, options.width ?? 900);
   const fontSize = Math.max(18, options.fontSize ?? 32);
   const showLyrics = options.showLyrics ?? true;
+  const alignMeasuresAcrossSystems = options.alignMeasuresAcrossSystems ?? true;
   const padding = Math.max(24, fontSize);
   const defaultLength = score.header.defaultNoteLength ?? DEFAULT_NOTE_LENGTH;
   const beatDuration = score.header.meter
@@ -75,6 +77,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
       lineHeight,
       fontSize,
       beatDuration,
+      alignMeasuresAcrossSystems,
     );
     const positionedByMeasure = layout.map((placed) => positionEvents(placed, beatDuration));
     const crossMeasureTies = findCrossMeasureTies(layout, positionedByMeasure);
@@ -117,7 +120,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     .ending-number{font:700 ${fontSize * 0.45}px Georgia,'Songti SC',serif;fill:#33483f}
     .event-bg{fill:transparent;transition:fill .12s ease}
     .event-symbol,.duration-extension{font:600 ${fontSize}px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#1f332a;text-anchor:middle}
-    .event-accidental{font:600 ${fontSize * 0.52}px serif;fill:#1f332a;text-anchor:middle}
+    .event-accidental{font:700 ${fontSize * 0.8}px 'Bravura','Noto Music','Segoe UI Symbol',Georgia,serif;fill:#1f332a;text-anchor:middle;dominant-baseline:middle}
     .octave-dot,.duration-dot{fill:#1f332a}
     .duration-line{stroke:#1f332a;stroke-width:1.7;stroke-linecap:round}
     .relation-arc{fill:none;stroke:#35483f;stroke-width:1.8;stroke-linecap:round}
@@ -142,6 +145,7 @@ function layoutMeasures(
   lineHeight: number,
   fontSize: number,
   beatDuration: Fraction,
+  alignMeasuresAcrossSystems: boolean,
 ): LayoutMeasure[] {
   const availableWidth = width - padding * 2;
   const baseCellWidth = fontSize * 1.5;
@@ -164,21 +168,34 @@ function layoutMeasures(
     }
     if (currentSystem.length > 0) systems.push(currentSystem);
 
+    const systemMetrics = systems.map((system) => system.map(({ measure }) => {
+      const slotCount = measureSlotCount(measure, beatDuration);
+      return { slotCount, naturalWidth: slotCount * baseCellWidth + barSpace };
+    }));
+    const alignedColumnWidths = alignMeasuresAcrossSystems
+      ? columnWidths(systemMetrics)
+      : [];
+
     let systemY = musicTop;
-    for (const system of systems) {
-      const metrics = system.map(({ measure }) => {
-        const slotCount = measureSlotCount(measure, beatDuration);
-        return { slotCount, naturalWidth: slotCount * baseCellWidth + barSpace };
-      });
-      const naturalTotal = metrics.reduce((sum, metric) => sum + metric.naturalWidth, 0)
+    for (const [systemIndex, system] of systems.entries()) {
+      const metrics = systemMetrics[systemIndex] ?? [];
+      const naturalWidths = alignMeasuresAcrossSystems
+        ? metrics.map((_, index) => alignedColumnWidths[index] ?? 0)
+        : metrics.map((metric) => metric.naturalWidth);
+      const naturalTotal = naturalWidths.reduce((sum, measureWidth) => sum + measureWidth, 0)
         + Math.max(0, system.length - 1) * measureGap;
       const scale = Math.min(1, availableWidth / naturalTotal);
       const scaledGap = measureGap * scale;
       let systemX = padding;
       for (const [index, item] of system.entries()) {
         const metric = metrics[index] as { slotCount: number; naturalWidth: number };
-        const measureWidth = metric.naturalWidth * scale;
-        const cellWidth = (measureWidth - barSpace * scale) / metric.slotCount;
+        const naturalWidth = naturalWidths[index] ?? metric.naturalWidth;
+        const measureWidth = naturalWidth * scale;
+        const scaledBarSpace = barSpace * scale;
+        const cellWidth = Math.max(
+          fontSize * 0.34,
+          (measureWidth - scaledBarSpace) / metric.slotCount,
+        );
         output.push({
           measure: item.measure,
           measureIndex: item.measureIndex,
@@ -208,6 +225,18 @@ function layoutMeasures(
     }
     output.push({ measure, measureIndex, x, y, width: measureWidth, cellWidth });
     x += measureWidth + measureGap;
+  }
+  return output;
+}
+
+function columnWidths(
+  systemMetrics: Array<Array<{ slotCount: number; naturalWidth: number }>>,
+): number[] {
+  const output: number[] = [];
+  for (const metrics of systemMetrics) {
+    for (const [index, metric] of metrics.entries()) {
+      output[index] = Math.max(output[index] ?? 0, metric.naturalWidth);
+    }
   }
   return output;
 }

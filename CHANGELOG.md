@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
+- Enlarge jianpu accidentals and render double-sharp/double-flat as standard `𝄪` / `𝄫` glyphs.
+- Align jianpu measure columns across explicit source rows by default, with an option to restore per-row natural spacing.
 - Refine jianpu relation curves: mask same-row tie crossings at barlines, open a clean center gap for tuplet numbers, and keep slurs clear of octave dots.
 - Draw jianpu repeats, final barlines, and numbered endings with proper SVG lines, dots, and brackets.
 - Preserve JABC music-row breaks through ABC, MusicXML, jianpu, and staff rendering.

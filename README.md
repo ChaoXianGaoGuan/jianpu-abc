@@ -159,13 +159,18 @@ expose the active source event for score highlighting.
 ```ts
 import { renderJianpu } from "./src/index";
 
-const svg = renderJianpu(score, { width: 900 });
+const svg = renderJianpu(score, {
+  width: 900,
+  alignMeasuresAcrossSystems: true,
+});
 ```
 
 The pure renderer outputs an SVG string with metadata, numbered notes,
-accidentals, octave and duration marks, rests, extensions, lyrics, measure
-wrapping, multi-voice labels, and optional event highlighting. The validation UI
-displays this SVG and follows playback through matching source event IDs.
+larger accidentals, standard double-sharp/double-flat glyphs, octave and
+duration marks, rests, extensions, lyrics, aligned source-row measure columns,
+measure wrapping, multi-voice labels, and optional event highlighting. The
+validation UI displays this SVG and follows playback through matching source
+event IDs.
 
 ## Staff rendering
 
