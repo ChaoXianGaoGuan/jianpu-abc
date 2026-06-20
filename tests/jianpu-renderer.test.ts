@@ -57,14 +57,16 @@ describe("renderJianpu", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| (1 2 3) |"));
 
     expect(svg).toContain('class="relation-arc slur-arc"');
+    expect(svg).toMatch(/slur-arc" d="M [^"]+ C /);
     expect(svg).not.toContain(">(</text>");
   });
 
   it("renders triplet marks", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| (3 1 2 3 |"));
 
-    expect(svg).toContain('class="relation-arc tuplet-arc"');
+    expect(svg.match(/class="relation-arc tuplet-arc"/g)).toHaveLength(2);
     expect(svg).toContain('class="tuplet-number"');
+    expect(svg).not.toContain("relation-label-bg");
     expect(svg).toContain(">3</text>");
   });
 
@@ -73,7 +75,8 @@ describe("renderJianpu", () => {
 
     expect(svg.match(/class="relation-arc tie-arc/g)).toHaveLength(1);
     expect(svg).toContain("cross-measure-tie");
-    expect(svg.match(/cross-measure-tie" d="[^"]* Q [^"]* Q /)).not.toBeNull();
+    expect(svg).toContain("cross-measure-tie-mask");
+    expect(svg.match(/cross-measure-tie" d="[^"]* C /)).not.toBeNull();
     expect(svg).not.toContain(">~</text>");
   });
 

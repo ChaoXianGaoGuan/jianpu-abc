@@ -121,9 +121,11 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     .octave-dot,.duration-dot{fill:#1f332a}
     .duration-line{stroke:#1f332a;stroke-width:1.7;stroke-linecap:round}
     .relation-arc{fill:none;stroke:#35483f;stroke-width:1.8;stroke-linecap:round}
+    .relation-arc-mask{fill:none;stroke:#fffef9;stroke-width:5.5;stroke-linecap:round}
     .tie-arc{stroke-width:1.45}
+    .slur-arc{stroke-width:1.5}
+    .tuplet-arc{stroke-width:1.4}
     .tuplet-number{font:700 ${fontSize * 0.48}px Georgia,serif;fill:#35483f;text-anchor:middle;dominant-baseline:middle}
-    .relation-label-bg{fill:#fffef9}
     .event-lyric{font:15px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#4f6259;text-anchor:middle}
     .is-highlighted .event-bg{fill:#f7d98b}
     .is-highlighted .event-symbol,.is-highlighted .event-accidental,.is-highlighted .duration-extension{fill:#8d3f23}
@@ -445,16 +447,7 @@ function renderRelations(
   suppressOutgoingTie: boolean,
 ): string {
   const output: string[] = [];
-  output.push(...renderPairedArcs(
-    positioned,
-    (event) => event.type === "note" && event.slurStart === true,
-    (event) => event.type === "note" && event.slurEnd === true,
-    "slur-arc",
-    measureWidth,
-    -fontSize * 1.32,
-    -fontSize * 1.78,
-    fontSize,
-  ));
+  output.push(...renderSlurArcs(positioned, measureWidth, fontSize));
   output.push(...renderTieArcs(
     positioned,
     measureWidth,
@@ -468,18 +461,91 @@ function renderRelations(
     if (item.event.type === "extension") continue;
     if (item.event.tuplet?.position === "start") tupletStart = item;
     if (item.event.tuplet?.position === "end" && tupletStart) {
-      const x1 = tupletStart.centerX - fontSize * 0.28;
-      const x2 = item.centerX + fontSize * 0.28;
-      const mid = (x1 + x2) / 2;
-      const y = -fontSize * 1.35;
-      const peak = -fontSize * 1.7;
-      output.push(arcPath("tuplet-arc", x1, x2, y, peak));
-      output.push(`<rect class="relation-label-bg" x="${round(mid - fontSize * 0.25)}" y="${round(peak - fontSize * 0.18)}" width="${round(fontSize * 0.5)}" height="${round(fontSize * 0.42)}" rx="3"/>`);
-      output.push(`<text class="tuplet-number" x="${round(mid)}" y="${round(peak + fontSize * 0.03)}">${item.event.tuplet.actual}</text>`);
+      output.push(renderTupletArc(
+        tupletStart.centerX,
+        item.centerX,
+        item.event.tuplet.actual,
+        fontSize,
+      ));
       tupletStart = undefined;
     }
   }
   return output.join("");
+}
+
+function renderSlurArcs(
+  positioned: PositionedEvent[],
+  measureWidth: number,
+  fontSize: number,
+): string[] {
+  const output: string[] = [];
+  const inset = fontSize * 0.28;
+  let open: PositionedEvent | undefined;
+  for (const item of positioned) {
+    if (item.event.type !== "note") continue;
+    if (item.event.slurEnd) {
+      const x1 = open ? open.centerX + inset : fontSize * 0.08;
+      const x2 = Math.max(x1 + fontSize * 0.2, item.centerX - inset);
+      const y1 = open ? slurEndpointY(open, fontSize) : -fontSize * 1.02;
+      const y2 = slurEndpointY(item, fontSize);
+      output.push(cubicArcPath("slur-arc", x1, y1, x2, y2, fontSize));
+      open = undefined;
+    }
+    if (item.event.slurStart) open = item;
+  }
+  if (open) {
+    output.push(cubicArcPath(
+      "slur-arc",
+      open.centerX + inset,
+      slurEndpointY(open, fontSize),
+      measureWidth - fontSize * 0.42,
+      -fontSize * 1.02,
+      fontSize,
+    ));
+  }
+  return output;
+}
+
+function slurEndpointY(item: PositionedEvent, fontSize: number): number {
+  return item.event.type === "note" && item.event.octaveShift > 0
+    ? -fontSize * (1.08 + (item.event.octaveShift - 1) * 0.16)
+    : -fontSize * 0.82;
+}
+
+function cubicArcPath(
+  className: string,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  fontSize: number,
+): string {
+  const span = Math.max(fontSize * 0.2, x2 - x1);
+  const archHeight = Math.min(fontSize * 0.52, Math.max(fontSize * 0.26, span * 0.08));
+  const peak = Math.min(y1, y2) - archHeight;
+  const controlInset = span * 0.3;
+  return `<path class="relation-arc ${className}" d="M ${round(x1)} ${round(y1)} C ${round(x1 + controlInset)} ${round(peak)} ${round(x2 - controlInset)} ${round(peak)} ${round(x2)} ${round(y2)}"/>`;
+}
+
+function renderTupletArc(
+  startCenterX: number,
+  endCenterX: number,
+  number: number,
+  fontSize: number,
+): string {
+  const x1 = startCenterX - fontSize * 0.18;
+  const x2 = endCenterX + fontSize * 0.18;
+  const mid = (x1 + x2) / 2;
+  const gap = fontSize * 0.28;
+  const y = -fontSize * 1.18;
+  const peak = -fontSize * 1.48;
+  const leftControl = (x1 + mid - gap) / 2;
+  const rightControl = (mid + gap + x2) / 2;
+  return [
+    `<path class="relation-arc tuplet-arc" d="M ${round(x1)} ${round(y)} Q ${round(leftControl)} ${round(peak)} ${round(mid - gap)} ${round(peak)}"/>`,
+    `<path class="relation-arc tuplet-arc" d="M ${round(mid + gap)} ${round(peak)} Q ${round(rightControl)} ${round(peak)} ${round(x2)} ${round(y)}"/>`,
+    `<text class="tuplet-number" x="${round(mid)}" y="${round(peak + fontSize * 0.02)}">${number}</text>`,
+  ].join("");
 }
 
 function renderTieArcs(
@@ -586,55 +652,24 @@ function renderCrossMeasureTies(
     const nextLayout = layout[tie.boundaryIndex + 1] as LayoutMeasure;
     return crossMeasureTiePath(
       currentLayout.x + tie.start.centerX + fontSize * 0.28,
-      currentLayout.x + currentLayout.width - fontSize * 0.22,
       nextLayout.x + tie.end.centerX - fontSize * 0.28,
       currentLayout.y - fontSize * 0.82,
-      currentLayout.y - fontSize * 1.18,
+      fontSize,
     );
   }).join("");
 }
 
 function crossMeasureTiePath(
   x1: number,
-  barlineX: number,
   x2: number,
   y: number,
-  peak: number,
-): string {
-  const firstControlX = (x1 + barlineX) / 2;
-  const secondControlX = (barlineX + x2) / 2;
-  return `<path class="relation-arc tie-arc cross-measure-tie" d="M ${round(x1)} ${round(y)} Q ${round(firstControlX)} ${round(peak)} ${round(barlineX)} ${round(peak)} Q ${round(secondControlX)} ${round(peak)} ${round(x2)} ${round(y)}"/>`;
-}
-
-function renderPairedArcs(
-  positioned: PositionedEvent[],
-  starts: (event: MusicalEvent) => boolean,
-  ends: (event: MusicalEvent) => boolean,
-  className: string,
-  measureWidth: number,
-  y: number,
-  peak: number,
   fontSize: number,
-): string[] {
-  const output: string[] = [];
-  let open: PositionedEvent | undefined;
-  for (const item of positioned) {
-    if (ends(item.event)) {
-      output.push(arcPath(
-        className,
-        open?.centerX ?? fontSize * 0.15,
-        item.centerX,
-        y,
-        peak,
-      ));
-      open = undefined;
-    }
-    if (starts(item.event)) open = item;
-  }
-  if (open) {
-    output.push(arcPath(className, open.centerX, measureWidth - fontSize * 0.3, y, peak));
-  }
-  return output;
+): string {
+  const span = x2 - x1;
+  const peak = y - Math.min(fontSize * 0.55, Math.max(fontSize * 0.34, span * 0.1));
+  const controlInset = span * 0.32;
+  const d = `M ${round(x1)} ${round(y)} C ${round(x1 + controlInset)} ${round(peak)} ${round(x2 - controlInset)} ${round(peak)} ${round(x2)} ${round(y)}`;
+  return `<path class="relation-arc-mask cross-measure-tie-mask" d="${d}"/><path class="relation-arc tie-arc cross-measure-tie" d="${d}"/>`;
 }
 
 function arcPath(

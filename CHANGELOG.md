@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
-- Anchor jianpu ties at number edges, connect same-row measures continuously, and split only across rows.
+- Refine jianpu relation curves: mask same-row tie crossings at barlines, open a clean center gap for tuplet numbers, and keep slurs clear of octave dots.
 - Draw jianpu repeats, final barlines, and numbered endings with proper SVG lines, dots, and brackets.
 - Preserve JABC music-row breaks through ABC, MusicXML, jianpu, and staff rendering.
 - Center and enlarge jianpu duration dots relative to the note number.
