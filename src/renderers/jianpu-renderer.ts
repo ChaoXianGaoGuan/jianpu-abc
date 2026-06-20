@@ -225,7 +225,9 @@ function layoutMeasures(
         : metrics.map((metric) => readableMeasureWidth(metric, minCellWidth, beatGap, barSpace));
       const naturalTotal = naturalWidths.reduce((sum, measureWidth) => sum + measureWidth, 0)
         + Math.max(0, system.length - 1) * measureGap;
-      const scale = alignMeasuresAcrossSystems ? 1 : Math.min(1, availableWidth / naturalTotal);
+      const scale = alignMeasuresAcrossSystems || naturalTotal <= 0
+        ? 1
+        : availableWidth / naturalTotal;
       const scaledGap = measureGap * scale;
       let systemX = padding;
       for (const [index, item] of system.entries()) {
@@ -410,7 +412,7 @@ function renderMeasure(
       eventId === highlightEventId,
     );
   }).join("");
-  const rightBarlineX = placed.measure.barline && !suppressRightBarline
+  const rightBarlineX = placed.measure.barline
     ? placed.width - fontSize * 0.22
     : undefined;
   const durationLines = renderDurationLines(positioned, beatDuration, fontSize, rightBarlineX);
@@ -627,15 +629,15 @@ function renderDurationLines(
         }
       }
 
-      const previous = closestDurationLineItem(positioned, index - 1, -1, beatDuration, lineLevel);
-      const next = closestDurationLineItem(positioned, index + group.length, 1, beatDuration, lineLevel);
+      const previousBoundary = closestDurationLineItem(positioned, index - 1, -1, beatDuration, 1);
+      const nextBoundary = closestDurationLineItem(positioned, index + group.length, 1, beatDuration, 1);
       const firstBeat = beatIndex(first.startTime, beatDuration);
       const lastBeat = beatIndex(group.at(-1)!.startTime, beatDuration);
-      const startsAfterBeatBoundary = previous !== undefined
-        && beatIndex(previous.startTime, beatDuration) !== firstBeat;
-      const endsBeforeBeatBoundary = next !== undefined
-        && beatIndex(next.startTime, beatDuration) !== lastBeat;
-      const maxEndX = next === undefined && rightBarlineX !== undefined
+      const startsAfterBeatBoundary = previousBoundary !== undefined
+        && beatIndex(previousBoundary.startTime, beatDuration) !== firstBeat;
+      const endsBeforeBeatBoundary = nextBoundary !== undefined
+        && beatIndex(nextBoundary.startTime, beatDuration) !== lastBeat;
+      const maxEndX = nextBoundary === undefined && rightBarlineX !== undefined
         ? rightBarlineX - fontSize * 0.32
         : undefined;
 

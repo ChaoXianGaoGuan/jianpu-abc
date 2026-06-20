@@ -13,6 +13,11 @@ function measureTransforms(svg: string): Array<{ x: string; y: string }> {
     .map((match) => ({ x: match[1] ?? "", y: match[2] ?? "" }));
 }
 
+function numericMeasureTransforms(svg: string): Array<{ x: number; y: number }> {
+  return measureTransforms(svg)
+    .map((transform) => ({ x: Number(transform.x), y: Number(transform.y) }));
+}
+
 function viewBoxWidth(svg: string): number {
   const match = /viewBox="0 0 ([\d.]+) /.exec(svg);
   return Number(match?.[1] ?? 0);
@@ -35,6 +40,16 @@ function durationLineSegments(svg: string): Array<{ level: number; groupSize: nu
 
 function barlineXs(svg: string): number[] {
   return [...svg.matchAll(/class="barline-(?:thin|thick)" x1="([\d.-]+)"/g)]
+    .map((match) => Number(match[1]));
+}
+
+function singleBarlineXs(svg: string): number[] {
+  return [...svg.matchAll(/class="barline barline-single"[^>]*>\s*<line class="barline-thin" x1="([\d.-]+)"/g)]
+    .map((match) => Number(match[1]));
+}
+
+function repeatStartBoundaryXs(svg: string): number[] {
+  return [...svg.matchAll(/class="barline barline-repeat-start"[^>]*>\s*<line class="barline-thick" x1="([\d.-]+)"/g)]
     .map((match) => Number(match[1]));
 }
 
@@ -187,6 +202,44 @@ describe("renderJianpu", () => {
     const rightmostBarline = Math.max(...barlineXs(svg));
 
     expect(rightmostBarline - furthestDurationEnd).toBeGreaterThanOrEqual(10);
+  });
+
+  it("keeps terminal duration lines away from a shared repeat-start boundary", () => {
+    const svg = renderJianpu(parse(
+      "M:4/4\nL:1/4\nK:C jianpu\n| 7s 7s 7s 1s |: 2 1 7 |",
+    ), { fontSize: 32 });
+    const transforms = numericMeasureTransforms(svg);
+    const durationEnd = transforms[0]!.x + Math.max(...durationLineSegments(svg).map((line) => line.x2));
+    const repeatStartX = transforms[1]!.x + repeatStartBoundaryXs(svg)[0]!;
+
+    expect(repeatStartX - durationEnd).toBeGreaterThanOrEqual(10);
+  });
+
+  it("aligns underline levels that share the same beat group edge", () => {
+    const svg = renderJianpu(parse(
+      "M:4/4\nL:1/4\nK:C jianpu\n| 5s 1s 2s 3s 4e 5e |",
+    ), { fontSize: 32 });
+    const firstBeatLines = durationLineSegments(svg)
+      .filter((line) => line.groupSize === 4)
+      .slice(0, 2);
+
+    expect(firstBeatLines).toHaveLength(2);
+    expect(firstBeatLines[0]!.x1).toBe(firstBeatLines[1]!.x1);
+    expect(firstBeatLines[0]!.x2).toBe(firstBeatLines[1]!.x2);
+  });
+
+  it("fills explicit source rows when measure column alignment is disabled", () => {
+    const width = 620;
+    const fontSize = 32;
+    const svg = renderJianpu(parse(
+      "K:C jianpu\n| 1 | 2 |\n| 1 2 3 4 | 5 |",
+    ), { width, fontSize, alignMeasuresAcrossSystems: false });
+    const transforms = numericMeasureTransforms(svg);
+    const localBarlines = singleBarlineXs(svg);
+    const expectedRightBoundary = width - fontSize - fontSize * 0.22;
+
+    expect(transforms[1]!.x + localBarlines[1]!).toBeCloseTo(expectedRightBoundary, 1);
+    expect(transforms[3]!.x + localBarlines[3]!).toBeCloseTo(expectedRightBoundary, 1);
   });
 
   it("adds the highlight class to the requested source event", () => {
