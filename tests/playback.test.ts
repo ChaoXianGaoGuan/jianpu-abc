@@ -67,6 +67,17 @@ describe("scoreToPlaybackEvents", () => {
     expect(scoreToPlaybackEvents(score).map((event) => event.midi)).toEqual([60, 62, 60, 64]);
   });
 
+  it("ends a first-ending-only tie when repeat playback branches to the second ending", () => {
+    const score = parse("L:1/4\nQ:1/4=120\nK:C jianpu\n|: 1~ | [1 ~1 :| [2 2 |]");
+
+    expect(expandMeasureOrder(score.voices[0]?.measures ?? [])).toEqual([0, 1, 0, 2]);
+    expect(scoreToPlaybackEvents(score)).toMatchObject([
+      { midi: 60, startTime: 0, duration: 1 },
+      { midi: 60, startTime: 1, duration: 0.5 },
+      { midi: 62, startTime: 1.5, duration: 0.5 },
+    ]);
+  });
+
   it("uses the tempo beat instead of assuming a quarter-note beat", () => {
     const events = scoreToPlaybackEvents(parse("L:1/4\nQ:1/8=60\nK:C jianpu\n| 1 |"));
 

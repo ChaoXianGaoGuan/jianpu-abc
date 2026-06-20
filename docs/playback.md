@@ -24,6 +24,7 @@ const events = scoreToPlaybackEvents(score, { velocity: 96 });
 - 每个声部使用独立时间轴调度，最终合并为并行播放事件。
 - 简单反复 `|:` / `:|` 会展开播放。
 - 标准一二房子 `[1 ... :| [2 ...` 会在第二遍跳过第一房子并进入第二房子。
+- 共享小节末尾的 tie 只在所进入的房子以 `tieEnd` 开头时继续；跳到不带 `tieEnd` 的另一房子时，该分支按普通音符结束。
 
 `PlaybackBuildError.code` 包括 `MISSING_KEY`、`INVALID_TEMPO`、`INVALID_DURATION`、`ORPHAN_EXTENSION`、`UNMATCHED_TIE`、`TIE_PITCH_MISMATCH` 和 `UNSUPPORTED_PITCH`。
 

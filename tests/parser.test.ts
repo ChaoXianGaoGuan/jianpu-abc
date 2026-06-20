@@ -193,6 +193,28 @@ describe("parseJabc", () => {
     ]);
   });
 
+  it("parses a tie from a triplet across a barline into a first ending", () => {
+    const result = parseJabc(
+      "L:1/4\nK:D jianpu\n| (3 #2'e 1'e 5e~ | [1 ~5e 1'e~ ~1' - - |",
+    );
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.value.voices[0]?.measures[0]?.events.at(-1)).toMatchObject({
+      type: "note",
+      degree: 5,
+      tieStart: true,
+      tuplet: { actual: 3, normal: 2, position: "end" },
+    });
+    const endingMeasure = result.value.voices[0]?.measures[1];
+    expect(endingMeasure?.ending).toMatchObject({ number: "1" });
+    expect(endingMeasure?.events.slice(0, 3)).toMatchObject([
+      { type: "note", degree: 5, tieEnd: true },
+      { type: "note", degree: 1, octaveShift: 1, tieStart: true },
+      { type: "note", degree: 1, octaveShift: 1, tieEnd: true },
+    ]);
+  });
+
   it("parses repeat, final, double barlines, and endings", () => {
     const result = parseJabc("K:C jianpu\n|: 1 2 :| [1 3 || [2 4 |]");
 

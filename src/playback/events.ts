@@ -77,11 +77,15 @@ function buildVoiceEvents(
   let currentKey = key;
   let cursor = 0;
   let pendingTie: { event: PlaybackEvent; midi: number } | undefined;
+  let previousMeasureIndex: number | undefined;
 
   for (const measureIndex of expandMeasureOrder(voice.measures)) {
     const measure = voice.measures[measureIndex];
     if (!measure) continue;
     let extendable: PlaybackEvent | undefined;
+    let mayResetTieAtBranch = previousMeasureIndex !== undefined
+      && measureIndex !== previousMeasureIndex + 1;
+    previousMeasureIndex = measureIndex;
 
     for (const [eventIndex, event] of measure.events.entries()) {
       const sourceEventId = `${voice.id}:${measureIndex}:${eventIndex}`;
@@ -105,6 +109,8 @@ function buildVoiceEvents(
       }
 
       if (event.type === "rest") {
+        if (pendingTie && mayResetTieAtBranch) pendingTie = undefined;
+        mayResetTieAtBranch = false;
         if (pendingTie) {
           throw playbackEventError(
             "UNMATCHED_TIE",
@@ -118,6 +124,8 @@ function buildVoiceEvents(
       }
 
       const midi = resolveMidi(event, currentKey);
+      if (pendingTie && mayResetTieAtBranch && !event.tieEnd) pendingTie = undefined;
+      mayResetTieAtBranch = false;
       if (event.tieEnd) {
         if (!pendingTie) {
           throw playbackEventError(

@@ -1,4 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { toStandardAbc } from "../src/converters/to-abc";
+import { toMusicXml } from "../src/converters/to-musicxml";
+import { parseJabc } from "../src/core/parser";
+import { scoreToPlaybackEvents } from "../src/playback/events";
+import { renderJianpu } from "../src/renderers/jianpu-renderer";
 import {
   bundledScoreLibrary,
   createScoreLibrary,
@@ -87,5 +92,18 @@ describe("score library", () => {
         composer: "林俊杰",
       }),
     ]));
+  });
+
+  it("builds every workbench output for every bundled score", () => {
+    for (const entry of bundledScoreLibrary.entries) {
+      const parsed = parseJabc(entry.source);
+      expect(parsed.success, entry.id).toBe(true);
+      if (!parsed.success) continue;
+
+      expect(() => scoreToPlaybackEvents(parsed.value), entry.id).not.toThrow();
+      expect(() => toStandardAbc(parsed.value), entry.id).not.toThrow();
+      expect(() => toMusicXml(parsed.value), entry.id).not.toThrow();
+      expect(() => renderJianpu(parsed.value), entry.id).not.toThrow();
+    }
   });
 });
