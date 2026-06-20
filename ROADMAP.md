@@ -14,9 +14,12 @@ It is intentionally conservative: prioritize stable syntax, AST semantics, and t
 - Native MusicXML 4.0 partwise export.
 - Pure playback event scheduling.
 - Web Audio playback controls.
+- Sampled guitar and piano playback, synth selection, and synthesized fallback.
 - SVG jianpu rendering.
+- Jianpu duration grouping, graphical repeats/endings, SVG ties/slurs/tuplets, source-row preservation, and optional aligned measure columns.
 - Staff rendering through abcjs.
-- Browser validation UI with ABC/MusicXML copy and download actions.
+- Inline key changes across parsing, export, playback, and rendering.
+- Browser validation UI with notation switching, playback highlighting, instrument selection, and ABC/MusicXML copy and download actions.
 - Documentation for syntax, AST, converters, playback, and renderers.
 - AI handoff and design decision documentation.
 
@@ -77,14 +80,12 @@ Scope:
 - Decide how accidentals interact with non-major modes.
 - Update ABC/MusicXML export expectations.
 
-### 4. Renderer quality improvements
+### 4. Remaining renderer quality improvements
 
 Goal: improve readability without attempting full engraving.
 
 Scope:
 
-- Better slur/tie drawing using SVG paths instead of text marks.
-- Better tuplet bracket placement.
 - Align multi-voice measures more clearly.
 - Optional measure numbers.
 - Better lyrics spacing.

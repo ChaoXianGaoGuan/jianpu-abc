@@ -59,13 +59,14 @@ The current project supports:
 - Tie markers: `1~` and `~1`.
 - Slur markers: `(1` and `3)`.
 - Basic triplets: `(3` applies a 3-in-the-time-of-2 duration ratio to the next three notes/rests.
+- Inline key changes such as `[K:G jianpu]` across export, playback, and rendering.
 - Standard ABC export.
 - Native MusicXML 4.0 partwise export.
 - Pure playback scheduling, including ties, triplets, repeats, first/second endings, rests, extensions, and multiple voices.
-- Web Audio playback.
-- SVG jianpu rendering.
+- Web Audio playback with sampled guitar and piano instruments, a synth preset, and synthesized fallback.
+- SVG jianpu rendering with source-row layout preservation, aligned measure columns, duration grouping, graphical repeats, and SVG relation curves.
 - Staff rendering through `toStandardAbc` and abcjs.
-- Browser validation UI with copy/download actions for ABC and MusicXML.
+- Browser validation UI with a single jianpu/staff preview switch, playback highlighting, instrument selection, and copy/download actions for ABC and MusicXML.
 
 ## Commands to run before committing
 
@@ -81,7 +82,7 @@ Current expected state after the latest development pass:
 
 ```text
 Test files: 8 passed
-Tests: 91 passed
+Tests: 116 passed
 Typecheck: passes
 Build: passes
 ```
@@ -134,7 +135,7 @@ Pick from `ROADMAP.md`. The best next engineering task is usually one of:
 1. Add import support from standard ABC to AST/JABC.
 2. Add import support from MusicXML to AST/JABC.
 3. Implement minor-key and pentatonic pitch semantics.
-4. Improve SVG jianpu engraving and same-measure multi-voice alignment.
+4. Improve same-measure multi-voice alignment, lyric spacing, and optional measure numbering.
 
 Avoid starting with OCR, full publication engraving, or arbitrary MusicXML round-tripping until the AST and importer rules are better defined.
 
