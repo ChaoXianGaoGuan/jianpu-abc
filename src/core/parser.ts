@@ -50,12 +50,19 @@ const PITCH_CLASSES = new Set<PitchClass>([
   "C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#",
   "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B",
 ]);
-const NOTE_TOKEN_PATTERN = /^(\()?(~)?(#{1,2}|b{1,2}|=)?([1-7])('+|,+)?(?:(\/)(\d*)|\*(\d+))?(\.{0,2})(~)?(\))?$/;
-const REST_TOKEN_PATTERN = /^(0|z)(?:(\/)(\d*)|\*(\d+))?(\.{0,2})$/;
+const NOTE_TOKEN_PATTERN = /^(\()?(~)?(#{1,2}|b{1,2}|=)?([1-7])('+|,+)?(?:(\/)(\d*)|\*(\d+)|([whqes]))?(\.{0,2})(~)?(\))?$/;
+const REST_TOKEN_PATTERN = /^(0|z)(?:(\/)(\d*)|\*(\d+)|([whqes]))?(\.{0,2})$/;
 const INLINE_VOICE_PATTERN = /^\[V:([^\]\s]+)\]$/;
 const INLINE_KEY_PATTERN = /^\[K:(.+)\]$/;
 const ENDING_TOKEN_PATTERN = /^\[(\d+)$/;
 const TUPLET_TOKEN_PATTERN = /^\(3$/;
+const ABSOLUTE_DURATION_LETTERS: Record<string, Fraction> = {
+  w: { numerator: 1, denominator: 1 },
+  h: { numerator: 1, denominator: 2 },
+  q: { numerator: 1, denominator: 4 },
+  e: { numerator: 1, denominator: 8 },
+  s: { numerator: 1, denominator: 16 },
+};
 
 export function parseJabc(source: string): ParseResult<Score> {
   const header: ScoreHeader = {};
@@ -210,17 +217,18 @@ function parseMusicToken(
       noteMatch[6],
       noteMatch[7],
       noteMatch[8],
-      noteMatch[9] as string,
+      noteMatch[9],
+      noteMatch[10] as string,
     );
     if (!duration) return undefined;
 
     const accidental = parseAccidental(noteMatch[3]);
     const octaveText = noteMatch[5] ?? "";
-    const dots = (noteMatch[9] as string).length;
+    const dots = (noteMatch[10] as string).length;
     const slurStart = noteMatch[1] === "(";
     const tieEnd = noteMatch[2] === "~";
-    const tieStart = noteMatch[10] === "~";
-    const slurEnd = noteMatch[11] === ")";
+    const tieStart = noteMatch[11] === "~";
+    const slurEnd = noteMatch[12] === ")";
     return {
       type: "note",
       degree: Number(noteMatch[4]) as 1 | 2 | 3 | 4 | 5 | 6 | 7,
@@ -246,11 +254,12 @@ function parseMusicToken(
     restMatch[2],
     restMatch[3],
     restMatch[4],
-    restMatch[5] as string,
+    restMatch[5],
+    restMatch[6] as string,
   );
   if (!duration) return undefined;
 
-  const dots = (restMatch[5] as string).length;
+  const dots = (restMatch[6] as string).length;
   return {
     type: "rest",
     duration,
@@ -265,24 +274,29 @@ function parseTokenDuration(
   slash: string | undefined,
   slashDigits: string | undefined,
   multiplierDigits: string | undefined,
+  durationLetter: string | undefined,
   dotsText: string,
 ): Fraction | undefined {
-  let factor: Fraction = { numerator: 1, denominator: 1 };
+  let duration: Fraction = { ...defaultDuration };
   if (slash !== undefined) {
     const divisor = slashDigits === "" ? 2 : Number(slashDigits);
     if (!Number.isInteger(divisor) || divisor < 1) return undefined;
-    factor = { numerator: 1, denominator: divisor };
+    duration = multiplyFractions(defaultDuration, { numerator: 1, denominator: divisor });
   } else if (multiplierDigits !== undefined) {
     const multiplier = Number(multiplierDigits);
     if (!Number.isInteger(multiplier) || multiplier < 1) return undefined;
-    factor = { numerator: multiplier, denominator: 1 };
+    duration = multiplyFractions(defaultDuration, { numerator: multiplier, denominator: 1 });
+  } else if (durationLetter !== undefined) {
+    const absoluteDuration = ABSOLUTE_DURATION_LETTERS[durationLetter];
+    if (!absoluteDuration) return undefined;
+    duration = { ...absoluteDuration };
   }
 
   const dots = dotsText.length;
   const dotFactor: Fraction = dots === 0
     ? { numerator: 1, denominator: 1 }
     : { numerator: 2 ** (dots + 1) - 1, denominator: 2 ** dots };
-  return multiplyFractions(defaultDuration, multiplyFractions(factor, dotFactor));
+  return multiplyFractions(duration, dotFactor);
 }
 
 function parseAccidental(value: string | undefined): Accidental | undefined {

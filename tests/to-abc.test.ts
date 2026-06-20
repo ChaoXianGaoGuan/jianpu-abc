@@ -79,6 +79,12 @@ describe("toStandardAbc", () => {
     expect(toStandardAbc(score)).toContain("| c C, ^F _B =E C1/2 D2 E3/2 |");
   });
 
+  it("exports absolute duration letters as ABC relative durations", () => {
+    const score = parse("L:1/4\nK:C jianpu\n| 1w 2h 3q 4e 5s 0e zq. |");
+
+    expect(toStandardAbc(score)).toContain("| C4 D2 E F1/2 G1/4 z1/2 z3/2 |");
+  });
+
   it("exports slurs using standard ABC slur syntax", () => {
     const score = parse("K:C jianpu\n| (1 2 3) |");
 

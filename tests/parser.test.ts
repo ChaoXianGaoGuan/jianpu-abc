@@ -108,6 +108,22 @@ describe("parseJabc", () => {
     ]);
   });
 
+  it("parses absolute duration letters", () => {
+    const result = parseJabc("L:1/2\nK:C jianpu\n| 1w 2h 3q 4e 5s 0e zq. |");
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.value.voices[0]?.measures[0]?.events).toMatchObject([
+      { type: "note", duration: { numerator: 1, denominator: 1 }, sourceText: "1w" },
+      { type: "note", duration: { numerator: 1, denominator: 2 }, sourceText: "2h" },
+      { type: "note", duration: { numerator: 1, denominator: 4 }, sourceText: "3q" },
+      { type: "note", duration: { numerator: 1, denominator: 8 }, sourceText: "4e" },
+      { type: "note", duration: { numerator: 1, denominator: 16 }, sourceText: "5s" },
+      { type: "rest", duration: { numerator: 1, denominator: 8 }, sourceText: "0e" },
+      { type: "rest", duration: { numerator: 3, denominator: 8 }, dots: 1, sourceText: "zq." },
+    ]);
+  });
+
   it("combines accidental, octave, duration, and dot modifiers", () => {
     const result = parseJabc("L:1/4\nK:C jianpu\n| #4'/2. |");
 

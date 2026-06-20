@@ -62,7 +62,7 @@ Music tokens support degrees `1` through `7`, rests `0` and `z`, extension `-`,
 single and compound barlines (`|`, `||`, `|]`, `[|`, `|:`, `:|`), and endings
 such as `[1` / `[2`. Notes additionally support accidentals (`#4`, `b7`,
 `=3`, double accidentals), octave suffixes (`1'`, `1,`), duration suffixes
-(`1/2`, `1*2`), up to two dots, and tie markers (`1~` starts a tie, `~1` stops
+(`1e`, `1s`, `1/2`, `1*2`), up to two dots, and tie markers (`1~` starts a tie, `~1` stops
 a tie), slur markers like `(1 2 3)`, and triplets with `(3`. Modifiers compose as `#4'/2.`. Full-line
 and inline `%` comments are ignored. Unknown uppercase header fields are retained in
 `header.extraFields` so later milestones can add semantics without losing data.

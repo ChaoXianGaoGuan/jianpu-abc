@@ -23,6 +23,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
+- Absolute duration letter suffixes `w`, `h`, `q`, `e`, and `s` for more compact JABC note and rest durations.
 - Guitar-first playback defaults, delayed scheduling until audio readiness, single-view notation preview switching, and copy/download-only ABC/MusicXML exports in the Web UI.
 - Inline JABC key changes such as `[K:G jianpu]` across parsing, ABC/MusicXML export, playback, and jianpu rendering.
 - Web Audio instrument presets and UI selection for synth plus sampled piano and guitar playback with synthesized fallback.

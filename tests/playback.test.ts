@@ -73,6 +73,16 @@ describe("scoreToPlaybackEvents", () => {
     expect(events[0]?.duration).toBe(2);
   });
 
+  it("uses absolute duration letters for playback timing", () => {
+    const events = scoreToPlaybackEvents(parse("L:1/2\nQ:1/4=120\nK:C jianpu\n| 1q 2e 3s |"));
+
+    expect(events).toMatchObject([
+      { midi: 60, startTime: 0, duration: 0.5 },
+      { midi: 62, startTime: 0.5, duration: 0.25 },
+      { midi: 64, startTime: 0.75, duration: 0.125 },
+    ]);
+  });
+
   it("applies inline key changes during playback", () => {
     const events = scoreToPlaybackEvents(parse("L:1/4\nQ:1/4=120\nK:C jianpu\n| 1 [K:G jianpu] 1 |"));
 
