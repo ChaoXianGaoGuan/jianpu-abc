@@ -45,11 +45,12 @@ describe("renderJianpu", () => {
     expect(svg).toContain(">低</text>");
   });
 
-  it("renders inline key change markers", () => {
+  it("renders inline key change markers above the melody", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| 1 [K:G jianpu] 1 |"));
 
     expect(svg).toContain("event-key-change");
-    expect(svg).toContain("1=G");
+    expect(svg).toContain('y="-45.44">1=G</text>');
+    expect(svg).not.toContain('y="0">1=G</text>');
   });
 
   it("places larger duration dots beside the vertical center of the number", () => {

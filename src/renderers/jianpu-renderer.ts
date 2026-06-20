@@ -287,6 +287,7 @@ function measureLayoutMetric(
   const slotCount = Math.max(1, layoutSpans.reduce((total, span) => total + span, 0));
   const beatGapCount = measureBeatGapCount(slotCount);
   const cellWidth = measure.events.reduce((requiredWidth, event, index) => {
+    if (event.type === "key-change") return requiredWidth;
     const span = Math.min(1, layoutSpans[index] ?? eventLayoutSpan(event, beatDuration));
     const minimumEventWidth = fontSize * (
       event.type === "note" && event.accidental !== undefined ? 1 : 0.82
@@ -436,8 +437,11 @@ function positionEvents(placed: LayoutMeasure, beatDuration: Fraction, fontSize:
     const layoutSpan = layoutSpans[eventIndex] ?? eventLayoutSpan(event, beatDuration);
     const dots = event.type === "note" || event.type === "rest" ? event.dots ?? 0 : 0;
     const visualUnitSpan = layoutSpan / (dots + 1);
+    const markerSpan = event.type === "key-change"
+      ? nextTimedLayoutSpan(placed.measure.events, layoutSpans, eventIndex, beatDuration)
+      : visualUnitSpan;
     const centerX = layoutXAt(
-      slotOffset + Math.min(visualUnitSpan, 1) / 2,
+      slotOffset + Math.min(markerSpan, 1) / 2,
       placed.cellWidth,
       placed.beatGap,
     );
@@ -455,10 +459,26 @@ function positionEvents(placed: LayoutMeasure, beatDuration: Fraction, fontSize:
       dotXs,
       startTime,
     };
-    slotOffset += layoutSpan;
-    if (event.type !== "key-change") startTime = addFractions(startTime, event.duration);
+    if (event.type !== "key-change") {
+      slotOffset += layoutSpan;
+      startTime = addFractions(startTime, event.duration);
+    }
     return positioned;
   });
+}
+
+function nextTimedLayoutSpan(
+  events: MusicalEvent[],
+  layoutSpans: number[],
+  eventIndex: number,
+  beatDuration: Fraction,
+): number {
+  for (let index = eventIndex + 1; index < events.length; index += 1) {
+    const event = events[index] as MusicalEvent;
+    if (event.type === "key-change") continue;
+    return layoutSpans[index] ?? eventLayoutSpan(event, beatDuration);
+  }
+  return 1;
 }
 
 function layoutXAt(offset: number, cellWidth: number, beatGap: number): number {
@@ -482,12 +502,16 @@ function renderEvent(
   const className = highlighted ? "jabc-event is-highlighted" : "jabc-event";
   const backgroundHeight = fontSize * (showLyrics ? 2.45 : 1.75);
   const dots = event.type === "note" || event.type === "rest" ? event.dots ?? 0 : 0;
+  if (event.type === "key-change") {
+    return `<g class="${className}" data-event-id="${escapeXml(eventId)}" aria-label="${escapeXml(event.sourceText ?? symbol)}"><text class="event-key-change" x="${round(centerX)}" y="${round(-fontSize * 1.42)}">${symbol}</text></g>`;
+  }
+
   const visualStartX = layoutXAt(layoutOffset, cellWidth, beatGap);
   const visualEndX = layoutXAt(layoutOffset + layoutSpan, cellWidth, beatGap);
   const visualWidth = visualEndX - visualStartX;
   const parts = [
     `<rect class="event-bg" x="${round(visualStartX + visualWidth * 0.1)}" y="${round(-fontSize * 1.25)}" width="${round(visualWidth * 0.8)}" height="${round(backgroundHeight)}" rx="7"/>`,
-    `<text class="${event.type === "key-change" ? "event-key-change" : "event-symbol"}" x="${round(centerX)}" y="0">${symbol}</text>`,
+    `<text class="event-symbol" x="${round(centerX)}" y="0">${symbol}</text>`,
   ];
 
   for (let index = 1; index < slotCount; index += 1) {
@@ -841,14 +865,14 @@ function renderOctaveDots(centerX: number, octaveShift: number, fontSize: number
 }
 
 function visualSlotCount(event: MusicalEvent, beatDuration: Fraction): number {
-  if (event.type === "key-change") return 1;
+  if (event.type === "key-change") return 0;
   if (event.type === "extension") return 1;
   const ratio = divideFractions(notationDuration(event), beatDuration);
   return ratio.denominator === 1 && ratio.numerator > 1 ? ratio.numerator : 1;
 }
 
 function eventLayoutSpan(event: MusicalEvent, beatDuration: Fraction): number {
-  if (event.type === "key-change") return 1;
+  if (event.type === "key-change") return 0;
   const ratio = divideFractions(event.duration, beatDuration);
   return ratio.numerator / ratio.denominator;
 }
