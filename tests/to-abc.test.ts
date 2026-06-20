@@ -11,6 +11,14 @@ function parse(source: string) {
 }
 
 describe("toStandardAbc", () => {
+  it("preserves source rows in the ABC body", () => {
+    const score = parse("K:C jianpu\n| 1 | 2 |\n| 3 | 4 |\n| 5 | 6 |");
+
+    expect(toStandardAbc(score)).toBe(
+      "X:1\nL:1/4\nK:C\n| C | D |\n| E | F |\n| G | A |\n",
+    );
+  });
+
   it("matches the two-tigers golden ABC output", () => {
     expect(toStandardAbc(parse(inputGolden))).toBe(expectedGolden);
   });

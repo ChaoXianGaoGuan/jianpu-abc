@@ -37,6 +37,7 @@ interface VoiceDraft {
   pendingLeftBarline?: Barline | undefined;
   pendingEnding?: Ending | undefined;
   pendingTuplet?: TupletState | undefined;
+  pendingSystemBreak?: boolean | undefined;
 }
 
 interface TupletState {
@@ -106,6 +107,7 @@ export function parseJabc(source: string): ParseResult<Score> {
       continue;
     }
 
+    const touchedVoices = new Set<VoiceDraft>();
     for (const token of tokenizeBody(content)) {
       const inlineVoice = INLINE_VOICE_PATTERN.exec(token.text);
       if (inlineVoice) {
@@ -114,6 +116,8 @@ export function parseJabc(source: string): ParseResult<Score> {
         explicitVoiceSeen = true;
         continue;
       }
+
+      touchedVoices.add(currentVoice);
 
       const location = { line: lineNumber, column: token.column };
       const ending = parseEndingToken(token.text, location);
@@ -150,6 +154,7 @@ export function parseJabc(source: string): ParseResult<Score> {
         else errors.push(unknownTokenError(token, lineNumber, rawLine));
       }
     }
+    for (const voice of touchedVoices) markSystemBreak(voice);
   }
 
   for (const voice of voices.values()) finalizeCurrentEvents(voice);
@@ -402,11 +407,22 @@ function finalizeCurrentEvents(voice: VoiceDraft, barline?: Barline): void {
   const measure: Measure = { events: voice.currentEvents };
   if (voice.pendingLeftBarline) measure.leftBarline = voice.pendingLeftBarline;
   if (voice.pendingEnding) measure.ending = voice.pendingEnding;
+  if (voice.pendingSystemBreak) measure.systemBreakAfter = true;
   if (barline) measure.barline = barline;
   voice.measures.push(measure);
   voice.currentEvents = [];
   voice.pendingLeftBarline = undefined;
   voice.pendingEnding = undefined;
+  voice.pendingSystemBreak = undefined;
+}
+
+function markSystemBreak(voice: VoiceDraft): void {
+  if (voice.currentEvents.length > 0) {
+    voice.pendingSystemBreak = true;
+    return;
+  }
+  const lastMeasure = voice.measures.at(-1);
+  if (lastMeasure) lastMeasure.systemBreakAfter = true;
 }
 
 function handleBarline(voice: VoiceDraft, barline: Barline): void {

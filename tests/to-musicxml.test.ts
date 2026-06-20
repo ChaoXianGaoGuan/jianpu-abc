@@ -9,6 +9,14 @@ function parse(source: string) {
 }
 
 describe("toMusicXml", () => {
+  it("preserves source rows as MusicXML system breaks", () => {
+    const xml = toMusicXml(parse("K:C jianpu\n| 1 | 2 |\n| 3 | 4 |\n| 5 | 6 |"));
+
+    expect(xml.match(/<print new-system="yes" \/>/g)).toHaveLength(2);
+    expect(xml).toMatch(/<measure number="3">\n      <print new-system="yes" \/>/);
+    expect(xml).toMatch(/<measure number="5">\n      <print new-system="yes" \/>/);
+  });
+
   it("exports a partwise MusicXML document with metadata and attributes", () => {
     const score = parse(`X:1
 T:两只老虎

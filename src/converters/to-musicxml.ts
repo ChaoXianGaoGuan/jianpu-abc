@@ -88,7 +88,13 @@ function renderScorePart(voice: Voice, index: number): string[] {
 
 function renderPart(score: Score, voice: Voice, voiceIndex: number, divisions: number): string {
   const measures = voice.measures.map((measure, measureIndex) =>
-    renderMeasure(score, measure, measureIndex, divisions)
+    renderMeasure(
+      score,
+      measure,
+      measureIndex,
+      divisions,
+      measureIndex > 0 && voice.measures[measureIndex - 1]?.systemBreakAfter === true,
+    )
   );
   return [
     `  <part id=\"${partIdentifier(voiceIndex)}\">`,
@@ -102,9 +108,12 @@ function renderMeasure(
   measure: Measure,
   measureIndex: number,
   divisions: number,
+  startsSystem: boolean,
 ): string {
   const renderable = toRenderableEvents(score, measure, measureIndex);
   const lines = [`    <measure number=\"${measureIndex + 1}\">`];
+
+  if (startsSystem) lines.push('      <print new-system="yes" />');
 
   if (measureIndex === 0) {
     lines.push(...renderAttributes(score, divisions));

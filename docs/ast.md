@@ -32,7 +32,7 @@ Score
 - `RestEvent`：休止符、最终时值及可选附点数。
 - `ExtensionEvent`：尚未解析的 `-` 延音单位。
 
-结束小节的单小节线存入 `Measure.barline`，不作为独立音乐事件。事件的 `sourceText` 和 `location` 用于错误定位、编辑器映射及未来播放高亮，不应影响音高或时值计算。
+结束小节的单小节线存入 `Measure.barline`，不作为独立音乐事件。音乐源码行末的小节带有 `Measure.systemBreakAfter`；ABC、MusicXML 和渲染器必须使用该标记保持谱面系统结构。事件的 `sourceText` 和 `location` 用于错误定位、编辑器映射及未来播放高亮，不应影响音高或时值计算。
 
 ## 解析与规范化
 

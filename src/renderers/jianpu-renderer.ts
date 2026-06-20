@@ -127,14 +127,57 @@ function layoutMeasures(
   const barSpace = fontSize * 0.55;
   const measureGap = fontSize * 0.35;
   const output: LayoutMeasure[] = [];
+  const hasExplicitSystems = voice.measures
+    .slice(0, -1)
+    .some((measure) => measure.systemBreakAfter);
+
+  if (hasExplicitSystems) {
+    const systems: Array<Array<{ measure: Measure; measureIndex: number }>> = [];
+    let currentSystem: Array<{ measure: Measure; measureIndex: number }> = [];
+    for (const [measureIndex, measure] of voice.measures.entries()) {
+      currentSystem.push({ measure, measureIndex });
+      if (measure.systemBreakAfter) {
+        systems.push(currentSystem);
+        currentSystem = [];
+      }
+    }
+    if (currentSystem.length > 0) systems.push(currentSystem);
+
+    let systemY = musicTop;
+    for (const system of systems) {
+      const metrics = system.map(({ measure }) => {
+        const slotCount = measureSlotCount(measure, beatDuration);
+        return { slotCount, naturalWidth: slotCount * baseCellWidth + barSpace };
+      });
+      const naturalTotal = metrics.reduce((sum, metric) => sum + metric.naturalWidth, 0)
+        + Math.max(0, system.length - 1) * measureGap;
+      const scale = Math.min(1, availableWidth / naturalTotal);
+      const scaledGap = measureGap * scale;
+      let systemX = padding;
+      for (const [index, item] of system.entries()) {
+        const metric = metrics[index] as { slotCount: number; naturalWidth: number };
+        const measureWidth = metric.naturalWidth * scale;
+        const cellWidth = (measureWidth - barSpace * scale) / metric.slotCount;
+        output.push({
+          measure: item.measure,
+          measureIndex: item.measureIndex,
+          x: systemX,
+          y: systemY,
+          width: measureWidth,
+          cellWidth,
+        });
+        systemX += measureWidth + scaledGap;
+      }
+      systemY += lineHeight;
+    }
+    return output;
+  }
+
   let x = padding;
   let y = musicTop;
 
   for (const [measureIndex, measure] of voice.measures.entries()) {
-    const slotCount = Math.max(
-      1,
-      measure.events.reduce((total, event) => total + visualSlotCount(event, beatDuration), 0),
-    );
+    const slotCount = measureSlotCount(measure, beatDuration);
     const naturalWidth = slotCount * baseCellWidth + barSpace;
     const measureWidth = Math.min(availableWidth, naturalWidth);
     const cellWidth = (measureWidth - barSpace) / slotCount;
@@ -146,6 +189,13 @@ function layoutMeasures(
     x += measureWidth + measureGap;
   }
   return output;
+}
+
+function measureSlotCount(measure: Measure, beatDuration: Fraction): number {
+  return Math.max(
+    1,
+    measure.events.reduce((total, event) => total + visualSlotCount(event, beatDuration), 0),
+  );
 }
 
 function renderHeader(
@@ -260,7 +310,7 @@ function renderEvent(
   }
   if (dots > 0) {
     for (let index = 0; index < dots; index += 1) {
-      parts.push(`<circle class="duration-dot" cx="${round(centerX + fontSize * (0.42 + index * 0.18))}" cy="${round(-fontSize * 0.08)}" r="2"/>`);
+      parts.push(`<circle class="duration-dot" cx="${round(centerX + fontSize * (0.48 + index * 0.24))}" cy="${round(-fontSize * 0.38)}" r="${round(fontSize * 0.09)}"/>`);
     }
   }
   if (showLyrics && event.type === "note" && event.lyric) {

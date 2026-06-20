@@ -21,6 +21,7 @@ if (result.success) {
 - 保留 `T:`、`C:`、`M:`、`L:`、`Q:`，并把 `K:C jianpu` 转为 `K:C`。
 - 多声部时在 header 中写出 `V:` 声明，并在正文中按声部输出 `V:` 段落。
 - 保留复小节线、反复小节线和 `[1` / `[2` ending 标记。
+- 按 `Measure.systemBreakAfter` 保留 JABC 音乐正文的物理行结构。
 - 将 JABC slur marker `(1` / `3)` 导出为标准 ABC slur，例如 `(C D E)`。
 - 将 JABC tie marker `1~` / `~1` 导出为标准 ABC tie，例如 `C- C`。
 - 将 `(3` 三连音导出为标准 ABC tuplet 前缀，例如 `(3CDE`。

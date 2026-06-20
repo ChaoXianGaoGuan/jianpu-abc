@@ -23,6 +23,7 @@ if (result.success) {
 - 输出 `divisions`、大调 key fifths、拍号、G 谱号。
 - 多声部时为每个声部输出独立 `<score-part>` 和 `<part>`。
 - 输出复小节线、反复方向和 `[1` / `[2` ending 标记。
+- 在下一小节输出 `<print new-system="yes" />`，保留 JABC 音乐行结构。
 - 输出 slur 为 MusicXML `<slur>` notation。
 - 输出 tie 为 MusicXML `<tie>` 和 `<tied>` 元素。
 - 输出三连音为 `<time-modification>` 和 `<tuplet>` notation。

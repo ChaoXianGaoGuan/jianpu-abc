@@ -40,6 +40,13 @@ describe("renderJianpu", () => {
     expect(svg).toContain(">低</text>");
   });
 
+  it("places larger duration dots beside the vertical center of the number", () => {
+    const svg = renderJianpu(parse("K:C jianpu\n| 1. |"), { fontSize: 32 });
+
+    expect(svg).toContain('class="duration-dot"');
+    expect(svg).toContain('cy="-12.16" r="2.88"');
+  });
+
   it("adds the highlight class to the requested source event", () => {
     const svg = renderJianpu(parse(SCORE), { highlightEventId: "default:0:1" });
 
@@ -122,5 +129,17 @@ describe("renderJianpu", () => {
 
     expect(rowPositions).toHaveLength(4);
     expect(new Set(rowPositions).size).toBeGreaterThan(1);
+  });
+
+  it("preserves source rows at narrow widths instead of adding layout breaks", () => {
+    const score = parse("K:C jianpu\n| 1 | 2 |\n| 3 | 4 |\n| 5 | 6 |");
+    const svg = renderJianpu(score, { width: 320 });
+    const rowPositions = [...svg.matchAll(/class="measure"[^>]*transform="translate\([^ ]+ ([^)]+)\)"/g)]
+      .map((match) => match[1]);
+
+    expect(new Set(rowPositions).size).toBe(3);
+    expect(rowPositions[0]).toBe(rowPositions[1]);
+    expect(rowPositions[2]).toBe(rowPositions[3]);
+    expect(rowPositions[4]).toBe(rowPositions[5]);
   });
 });

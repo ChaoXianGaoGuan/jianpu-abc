@@ -12,6 +12,15 @@ K:C jianpu
 w: 两 只 老 虎 两 只 老 虎`;
 
 describe("parseJabc", () => {
+  it("preserves source music rows as system breaks", () => {
+    const result = parseJabc("K:C jianpu\n| 1 | 2 |\n| 3 | 4 |\n| 5 | 6 |");
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.value.voices[0]?.measures.map((measure) => measure.systemBreakAfter ?? false))
+      .toEqual([false, true, false, true, false, true]);
+  });
+
   it("parses the default example into a Score AST", () => {
     const result = parseJabc(DEFAULT_EXAMPLE);
 

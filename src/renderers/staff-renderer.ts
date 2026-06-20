@@ -26,16 +26,19 @@ export function renderStaff(
   engine: StaffRendererEngine,
 ): TuneObjectArray {
   const abc = toStaffAbc(score);
+  const hasExplicitSystems = score.voices.some((voice) =>
+    voice.measures.slice(0, -1).some((measure) => measure.systemBreakAfter)
+  );
   const params: AbcVisualParams = {
     add_classes: true,
     oneSvgPerLine: true,
-    wrap: {
+    ...(hasExplicitSystems ? {} : { wrap: {
       preferredMeasuresPerLine: options.measuresPerLine ?? 4,
       minSpacing: 1.65,
       maxSpacing: 2.6,
       lastLineLimit: 1.4,
       minSpacingLimit: 1.35,
-    },
+    } }),
     ...(options.responsive === false ? {} : { responsive: "resize" }),
     ...(options.scale === undefined ? {} : { scale: options.scale }),
     ...(options.staffWidth === undefined ? {} : { staffwidth: options.staffWidth }),

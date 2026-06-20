@@ -127,6 +127,7 @@ export interface Measure {
   barline?: Barline;
   leftBarline?: Barline;
   ending?: Ending;
+  systemBreakAfter?: boolean;
 }
 
 export interface LyricLine {

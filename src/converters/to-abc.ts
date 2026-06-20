@@ -91,7 +91,24 @@ function renderBody(
   const measures = voice.measures.map((measure, index) =>
     renderMeasureWithBars(measure, index, key, defaultLength, beatDuration)
   );
-  return measures.join(" ").trimEnd();
+  const systems: string[] = [];
+  let currentSystem: string[] = [];
+  for (const [index, rendered] of measures.entries()) {
+    currentSystem.push(rendered);
+    if (voice.measures[index]?.systemBreakAfter) {
+      systems.push(formatSystem(currentSystem, systems.length > 0));
+      currentSystem = [];
+    }
+  }
+  if (currentSystem.length > 0) {
+    systems.push(formatSystem(currentSystem, systems.length > 0));
+  }
+  return systems.join("\n");
+}
+
+function formatSystem(measures: string[], continuation: boolean): string {
+  const system = measures.join(" ").trimEnd();
+  return continuation && !/^(?:\||\[|:)/.test(system) ? `| ${system}` : system;
 }
 
 function renderMeasureWithBars(
