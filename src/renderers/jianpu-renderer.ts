@@ -71,8 +71,8 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     ? { numerator: 1, denominator: score.header.meter.denominator }
     : defaultLength;
   const titleY = padding;
-  const metaY = score.header.title ? padding + 34 : padding;
-  const musicTop = metaY + 64;
+  const metaY = score.header.title ? padding + fontSize * 1.2 : padding;
+  const musicTop = metaY + fontSize * 2;
   const lineHeight = fontSize * (showLyrics ? 3.35 : 2.55);
   const minCellWidth = fontSize * 0.62;
   const title = score.header.title ?? "JABC score";
@@ -133,7 +133,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
 
   const height = Math.ceil(cursorY + padding * 0.4);
   const content = [
-    renderHeader(score, renderedWidth, padding, titleY, metaY),
+    renderHeader(score, renderedWidth, padding, titleY, metaY, fontSize),
     ...renderedVoices,
   ].join("");
 
@@ -141,9 +141,9 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
   const displayHeight = Math.ceil(height * displayScale);
   return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeXml(title)}" viewBox="0 0 ${round(renderedWidth)} ${height}" width="100%" height="${displayHeight}" class="jianpu-score">
   <style>
-    .score-title{font:600 25px Georgia,'Songti SC',serif;fill:#20332b;text-anchor:middle}
-    .score-meta{font:600 14px Inter,'Microsoft YaHei',sans-serif;fill:#52655c}
-    .score-composer{font:13px Inter,'Microsoft YaHei',sans-serif;fill:#718078;text-anchor:end}
+    .score-title{font:600 ${round(fontSize * 0.95)}px Georgia,'Songti SC',serif;fill:#20332b;text-anchor:middle}
+    .score-meta{font:650 ${round(fontSize * 0.56)}px Inter,'Microsoft YaHei',sans-serif;fill:#52655c}
+    .score-composer{font:600 ${round(fontSize * 0.5)}px Inter,'Microsoft YaHei',sans-serif;fill:#718078;text-anchor:end}
     .voice-label{font:700 13px ui-monospace,Consolas,monospace;fill:#a4522c}
     .barline-thin,.barline-thick,.ending-bracket{stroke:#33483f;fill:none}
     .barline-thin{stroke-width:1.6}
@@ -366,6 +366,7 @@ function renderHeader(
   padding: number,
   titleY: number,
   metaY: number,
+  fontSize: number,
 ): string {
   const lines: string[] = [];
   if (score.header.title) {
@@ -379,7 +380,11 @@ function renderHeader(
       : undefined,
   ].filter((value): value is string => value !== undefined);
   if (meta.length > 0) {
-    lines.push(`<text class="score-meta" x="${padding}" y="${metaY}">${escapeXml(meta.join("   "))}</text>`);
+    const metaGap = fontSize * 0.95;
+    const metaContent = meta.map((value, index) =>
+      `<tspan${index === 0 ? "" : ` dx="${round(metaGap)}"`}>${escapeXml(value)}</tspan>`
+    ).join("");
+    lines.push(`<text class="score-meta" x="${padding}" y="${round(metaY)}">${metaContent}</text>`);
   }
   if (score.header.composer) {
     lines.push(`<text class="score-composer" x="${width - padding}" y="${metaY}">${escapeXml(score.header.composer)}</text>`);

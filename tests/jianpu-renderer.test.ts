@@ -85,6 +85,15 @@ describe("renderJianpu", () => {
     expect(svg).toContain(">低</text>");
   });
 
+  it("renders readable header text with separated metadata fields", () => {
+    const svg = renderJianpu(parse(SCORE), { fontSize: 32 });
+
+    expect(svg).toContain(".score-title{font:600 30.4px");
+    expect(svg).toContain(".score-meta{font:650 17.92px");
+    expect(svg).toContain(".score-composer{font:600 16px");
+    expect(svg).toContain('<text class="score-meta" x="32" y="70.4"><tspan>1=C</tspan><tspan dx="30.4">4/4</tspan><tspan dx="30.4">1/4=120</tspan></text>');
+  });
+
   it("renders inline key change markers above the melody", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| 1 [K:G jianpu] 1 |"));
 
