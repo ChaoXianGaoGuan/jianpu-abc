@@ -1,16 +1,23 @@
-import type { PlaybackEvent } from "./events";
+import type { MetronomeEvent, PlaybackEvent } from "./events";
 
 export type PlaybackState = "idle" | "loading" | "playing" | "paused";
 export type InstrumentId = "synth" | "piano" | "guitar";
 
 export interface WebAudioPlayerOptions {
   masterGain?: number;
+  metronomeGain?: number;
+  metronomeEnabled?: boolean;
   oscillatorType?: OscillatorType;
   instrument?: InstrumentId;
   sampleBaseUrl?: string;
   scheduleAheadSeconds?: number;
   onEventStart?: (event: PlaybackEvent | null) => void;
   onStateChange?: (state: PlaybackState) => void;
+}
+
+export interface WebAudioPlayOptions {
+  metronomeEvents?: MetronomeEvent[];
+  totalDuration?: number;
 }
 
 interface ScheduledVoice {
@@ -63,9 +70,12 @@ export class WebAudioPlayer {
   private readonly ownsContext: boolean;
   private readonly options: Required<Pick<
     WebAudioPlayerOptions,
-    "masterGain" | "oscillatorType" | "instrument" | "sampleBaseUrl" | "scheduleAheadSeconds"
+    "masterGain" | "metronomeGain" | "metronomeEnabled" | "oscillatorType" | "instrument" | "sampleBaseUrl" | "scheduleAheadSeconds"
   >> & Pick<WebAudioPlayerOptions, "onEventStart" | "onStateChange">;
+  private readonly instrumentOutput: GainNode;
+  private readonly metronomeOutput: GainNode;
   private events: PlaybackEvent[] = [];
+  private metronomeEvents: MetronomeEvent[] = [];
   private voices: ScheduledVoice[] = [];
   private timers: Array<ReturnType<typeof setTimeout>> = [];
   private state: PlaybackState = "idle";
@@ -81,6 +91,8 @@ export class WebAudioPlayer {
     this.ownsContext = context === undefined;
     this.options = {
       masterGain: options.masterGain ?? 0.2,
+      metronomeGain: options.metronomeGain ?? 0.3,
+      metronomeEnabled: options.metronomeEnabled ?? true,
       oscillatorType: options.oscillatorType ?? "sine",
       instrument: options.instrument ?? "guitar",
       sampleBaseUrl: options.sampleBaseUrl ?? DEFAULT_SAMPLE_BASE_URL,
@@ -93,9 +105,23 @@ export class WebAudioPlayer {
     if (this.options.masterGain < 0 || this.options.masterGain > 1) {
       throw new RangeError("masterGain must be between 0 and 1.");
     }
+    if (this.options.metronomeGain < 0 || this.options.metronomeGain > 1) {
+      throw new RangeError("metronomeGain must be between 0 and 1.");
+    }
     if (this.options.scheduleAheadSeconds < 0) {
       throw new RangeError("scheduleAheadSeconds cannot be negative.");
     }
+
+    this.instrumentOutput = this.context.createGain();
+    this.metronomeOutput = this.context.createGain();
+    this.instrumentOutput.connect(this.context.destination);
+    this.metronomeOutput.connect(this.context.destination);
+    setGain(this.instrumentOutput.gain, this.options.masterGain, this.context.currentTime);
+    setGain(
+      this.metronomeOutput.gain,
+      this.options.metronomeEnabled ? this.options.metronomeGain : 0,
+      this.context.currentTime,
+    );
   }
 
   get playbackState(): PlaybackState {
@@ -119,24 +145,60 @@ export class WebAudioPlayer {
     void this.prepareInstrument(instrument);
   }
 
-  play(events: PlaybackEvent[]): void {
+  setInstrumentVolume(volume: number): void {
+    validateGain(volume, "Instrument volume");
+    this.options.masterGain = volume;
+    setGain(this.instrumentOutput.gain, volume, this.context.currentTime);
+  }
+
+  setMetronomeVolume(volume: number): void {
+    validateGain(volume, "Metronome volume");
+    this.options.metronomeGain = volume;
+    if (this.options.metronomeEnabled) {
+      setGain(this.metronomeOutput.gain, volume, this.context.currentTime);
+    }
+  }
+
+  setMetronomeEnabled(enabled: boolean): void {
+    this.options.metronomeEnabled = enabled;
+    setGain(
+      this.metronomeOutput.gain,
+      enabled ? this.options.metronomeGain : 0,
+      this.context.currentTime,
+    );
+  }
+
+  play(events: PlaybackEvent[], playbackOptions: WebAudioPlayOptions = {}): void {
     this.cancelScheduled();
     const generation = ++this.playGeneration;
     this.events = [...events].sort((left, right) => left.startTime - right.startTime);
+    this.metronomeEvents = [...(playbackOptions.metronomeEvents ?? [])]
+      .sort((left, right) => left.startTime - right.startTime);
     this.positionSeconds = 0;
-    this.totalDuration = this.events.reduce(
+    const eventDuration = this.events.reduce(
       (latest, event) => Math.max(latest, event.startTime + event.duration),
       0,
     );
+    const metronomeDuration = this.metronomeEvents.reduce(
+      (latest, event) => Math.max(latest, event.startTime + 0.045),
+      0,
+    );
+    this.totalDuration = Math.max(
+      eventDuration,
+      metronomeDuration,
+      playbackOptions.totalDuration ?? 0,
+    );
 
-    if (this.events.length === 0) {
+    if (this.events.length === 0 && this.metronomeEvents.length === 0) {
       this.setState("idle");
       this.options.onEventStart?.(null);
       return;
     }
 
     const resume = this.context.state === "suspended" ? this.context.resume() : undefined;
-    const preparation = this.prepareInstrument(this.options.instrument);
+    const preparation = this.events.length > 0
+      ? this.prepareInstrument(this.options.instrument)
+      : undefined;
     const readiness: Array<Promise<unknown>> = [];
     if (resume) readiness.push(resume);
     if (preparation) readiness.push(preparation);
@@ -148,7 +210,10 @@ export class WebAudioPlayer {
             console.warn("Could not prepare Web Audio playback before scheduling.", result.reason);
           }
         }
-        if (generation === this.playGeneration && this.events.length > 0) this.scheduleFrom(0);
+        if (
+          generation === this.playGeneration
+          && (this.events.length > 0 || this.metronomeEvents.length > 0)
+        ) this.scheduleFrom(0);
       });
       return;
     }
@@ -177,6 +242,7 @@ export class WebAudioPlayer {
     this.playGeneration += 1;
     this.cancelScheduled();
     this.events = [];
+    this.metronomeEvents = [];
     this.positionSeconds = 0;
     this.totalDuration = 0;
     this.setState("idle");
@@ -185,6 +251,8 @@ export class WebAudioPlayer {
 
   async dispose(): Promise<void> {
     this.stop();
+    safeDisconnect(this.instrumentOutput);
+    safeDisconnect(this.metronomeOutput);
     if (this.ownsContext && this.context.state !== "closed") {
       await this.context.close();
     }
@@ -211,6 +279,11 @@ export class WebAudioPlayer {
       this.timers.push(setTimeout(() => this.options.onEventStart?.(null), endDelay));
     }
 
+    for (const event of this.metronomeEvents) {
+      if (event.startTime < position) continue;
+      this.scheduleMetronomeClick(event, this.anchorContextTime + event.startTime);
+    }
+
     const completionDelay = Math.max(
       0,
       this.anchorContextTime + this.totalDuration - this.context.currentTime,
@@ -226,7 +299,7 @@ export class WebAudioPlayer {
 
   private scheduleNote(event: PlaybackEvent, start: number, end: number): void {
     const frequency = midiToFrequency(event.midi);
-    const amplitude = (event.velocity / 127) * this.options.masterGain;
+    const amplitude = event.velocity / 127;
     const duration = Math.max(0.01, end - start);
     const sampledVoice = this.scheduleSampledVoice(
       this.options.instrument,
@@ -242,6 +315,38 @@ export class WebAudioPlayer {
           ? this.scheduleGuitarVoice(frequency, amplitude, start, duration)
           : this.scheduleSynthVoice(frequency, amplitude, start, duration));
     this.voices.push(voice);
+  }
+
+  private scheduleMetronomeClick(event: MetronomeEvent, start: number): void {
+    const oscillator = this.context.createOscillator();
+    const gain = this.context.createGain();
+    const stopAt = start + 0.045;
+    oscillator.type = "square";
+    oscillator.frequency.setValueAtTime(event.accent ? 1500 : 1000, start);
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(event.accent ? 0.75 : 0.5, start + 0.002);
+    gain.gain.exponentialRampToValueAtTime?.(0.0001, stopAt);
+    oscillator.connect(gain);
+    gain.connect(this.metronomeOutput);
+    oscillator.start(start);
+    oscillator.stop(stopAt);
+    oscillator.addEventListener("ended", () => {
+      safeDisconnect(oscillator);
+      safeDisconnect(gain);
+    }, { once: true });
+    this.voices.push({
+      stop: () => {
+        try {
+          oscillator.stop();
+        } catch {
+          // The oscillator may already have ended.
+        }
+      },
+      disconnect: () => {
+        safeDisconnect(oscillator);
+        safeDisconnect(gain);
+      },
+    });
   }
 
   private scheduleSampledVoice(
@@ -270,7 +375,7 @@ export class WebAudioPlayer {
     gain.gain.setValueAtTime(amplitude, releaseStart);
     gain.gain.linearRampToValueAtTime(0, stopAt);
     source.connect(gain);
-    gain.connect(this.context.destination);
+    gain.connect(this.instrumentOutput);
     source.start(start);
     source.stop(stopAt);
     source.addEventListener("ended", () => {
@@ -381,7 +486,7 @@ export class WebAudioPlayer {
   }): ScheduledVoice {
     const outputGain = this.context.createGain();
     applyEnvelope(outputGain.gain, options.envelope);
-    outputGain.connect(this.context.destination);
+    outputGain.connect(this.instrumentOutput);
 
     const oscillators: OscillatorNode[] = [];
     const partialGains: GainNode[] = [];
@@ -480,6 +585,17 @@ export class WebAudioPlayer {
 export function midiToFrequency(midi: number): number {
   if (!Number.isFinite(midi)) throw new RangeError("MIDI pitch must be finite.");
   return 440 * 2 ** ((midi - 69) / 12);
+}
+
+function validateGain(value: number, label: string): void {
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new RangeError(`${label} must be between 0 and 1.`);
+  }
+}
+
+function setGain(param: AudioParam, value: number, time: number): void {
+  if (typeof param.setValueAtTime === "function") param.setValueAtTime(value, time);
+  else param.value = value;
 }
 
 function nearestSample(

@@ -1,6 +1,6 @@
 # 播放与 Web Audio
 
-播放模块分为两层：`scoreToPlaybackEvents` 负责纯时间轴计算，`WebAudioPlayer` 负责浏览器发声和控制。两者均从 `src/index.ts` 导出。
+播放模块分为两层：`scoreToPlaybackEvents` / `scoreToPlaybackPlan` 负责纯时间轴计算，`WebAudioPlayer` 负责浏览器发声和控制。它们均从 `src/index.ts` 导出。
 
 ## 生成播放事件
 
@@ -9,6 +9,8 @@ const events = scoreToPlaybackEvents(score, { velocity: 96 });
 ```
 
 每个 `PlaybackEvent` 包含 MIDI 音高、以秒为单位的开始时间和持续时间、MIDI velocity，以及可用于高亮的 `sourceEventId`。
+
+`scoreToPlaybackPlan` 还返回节拍事件、包含尾部休止的总时长，以及最终使用的拍号和速度。`M:` / `Q:` 优先于 `defaultMeter` / `defaultTempo`。普通拍按分母单位点击；6/8、9/8、12/8 分别按每小节 2、3、4 个附点四分音符主拍点击，每小节首拍标记为重音。反复展开和非完整小节均按实际小节边界重新重音。
 
 时间换算以 `Q:` 的 beat 和 bpm 为准。例如 `Q:1/8=60` 下，一个 `1/4` 音符持续 2 秒。未声明 `Q:` 时使用 `1/4=120`。
 
@@ -33,13 +35,22 @@ const events = scoreToPlaybackEvents(score, { velocity: 96 });
 ```ts
 const player = new WebAudioPlayer(undefined, {
   instrument: "guitar",
+  masterGain: 0.2,
+  metronomeGain: 0.3,
+  metronomeEnabled: true,
   oscillatorType: "sine",
   masterGain: 0.2,
   onEventStart: (event) => highlight(event?.sourceEventId),
   onStateChange: (state) => updateControls(state),
 });
 
-player.play(events);
+player.play(plan.events, {
+  metronomeEvents: plan.metronomeEvents,
+  totalDuration: plan.duration,
+});
+player.setInstrumentVolume(0.5);
+player.setMetronomeVolume(0.25);
+player.setMetronomeEnabled(false);
 player.pause();
 player.resume();
 player.stop();
@@ -49,6 +60,8 @@ await player.dispose();
 浏览器通常要求音频由用户交互启动，因此应在播放按钮的点击处理函数中首次创建 `WebAudioPlayer`。`dispose` 会停止播放；播放器自行创建的 `AudioContext` 也会被关闭。
 
 `instrument` 可选 `"guitar"`、`"piano"` 或 `"synth"`，默认是 `"guitar"`。`synth` 保留原有振荡器音色；`piano` 和 `guitar` 会优先从 `sampleBaseUrl` 加载真实 mp3 采样，默认使用 tonejs-instruments 的 `piano` 与 `guitar-acoustic` 目录。播放器会找最近的采样音并通过 `playbackRate` 变调；如果网络或解码失败，会退回多泛音 Web Audio 预设。运行时可调用 `player.setInstrument("piano")` 切换音源；切换会停止当前播放并使用新音源重新播放。
+
+音源和节拍器使用独立 GainNode。`setInstrumentVolume`、`setMetronomeVolume` 和 `setMetronomeEnabled` 在播放过程中实时生效，不会重新排程时间轴。工作台默认开启节拍器；乐谱缺少 `M:` 或 `Q:` 时提供会话级 `4/4`、`120 BPM` 回退控件，不写入乐谱或本地存储。
 
 播放器在采样加载和浏览器 `AudioContext.resume()` 完成之前会进入 `loading` 状态，不会调度音符或触发高亮回调；这可以避免音源延迟时光标先于声音移动。
 

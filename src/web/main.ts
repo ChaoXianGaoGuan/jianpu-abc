@@ -3,8 +3,8 @@ import type { Score } from "../core/ast";
 import { parseJabc } from "../core/parser";
 import { toStandardAbc } from "../converters/to-abc";
 import { toMusicXml } from "../converters/to-musicxml";
-import type { PlaybackEvent } from "../playback/events";
-import { scoreToPlaybackEvents } from "../playback/events";
+import type { PlaybackEvent, PlaybackPlan } from "../playback/events";
+import { scoreToPlaybackPlan } from "../playback/events";
 import type { InstrumentId, PlaybackState } from "../playback/web-audio-player";
 import { WebAudioPlayer } from "../playback/web-audio-player";
 import { renderJianpu } from "../renderers/jianpu-renderer";
@@ -40,6 +40,15 @@ const eventCount = element<HTMLSpanElement>("event-count");
 const playbackState = element<HTMLElement>("playback-state");
 const currentEvent = element<HTMLElement>("current-event");
 const instrumentSelect = element<HTMLSelectElement>("instrument-select");
+const metronomeToggle = element<HTMLInputElement>("metronome-toggle");
+const meterNumerator = element<HTMLInputElement>("meter-numerator");
+const meterDenominator = element<HTMLInputElement>("meter-denominator");
+const tempoBpm = element<HTMLInputElement>("tempo-bpm");
+const tempoLabel = element<HTMLSpanElement>("tempo-label");
+const instrumentVolume = element<HTMLInputElement>("instrument-volume");
+const instrumentVolumeValue = element<HTMLOutputElement>("instrument-volume-value");
+const metronomeVolume = element<HTMLInputElement>("metronome-volume");
+const metronomeVolumeValue = element<HTMLOutputElement>("metronome-volume-value");
 const playButton = element<HTMLButtonElement>("play-button");
 const pauseButton = element<HTMLButtonElement>("pause-button");
 const resumeButton = element<HTMLButtonElement>("resume-button");
@@ -50,6 +59,7 @@ const copyMusicXmlButton = element<HTMLButtonElement>("copy-musicxml-button");
 const downloadMusicXmlButton = element<HTMLButtonElement>("download-musicxml-button");
 
 let events: PlaybackEvent[] = [];
+let playbackPlan: PlaybackPlan | undefined;
 let currentScore: Score | undefined;
 let currentAbc = "";
 let currentMusicXml = "";
@@ -59,6 +69,8 @@ let player: WebAudioPlayer | undefined;
 let playerState: PlaybackState = "idle";
 let loadedLibraryId: string | undefined;
 let loadedLibrarySource: string | undefined;
+let manualMeter = { numerator: 4, denominator: 4 };
+let manualBpm = 120;
 
 editor.addEventListener("input", () => {
   player?.stop();
@@ -69,9 +81,12 @@ librarySearch.addEventListener("input", renderLibraryList);
 libraryCategory.addEventListener("change", renderLibraryList);
 
 playButton.addEventListener("click", () => {
-  if (events.length === 0) return;
+  if (!playbackPlan || (events.length === 0 && playbackPlan.metronomeEvents.length === 0)) return;
   try {
-    getPlayer().play(events);
+    getPlayer().play(events, {
+      metronomeEvents: playbackPlan.metronomeEvents,
+      totalDuration: playbackPlan.duration,
+    });
   } catch (error) {
     showRuntimeError(error);
   }
@@ -80,6 +95,19 @@ pauseButton.addEventListener("click", () => player?.pause());
 resumeButton.addEventListener("click", () => player?.resume());
 stopButton.addEventListener("click", () => player?.stop());
 instrumentSelect.addEventListener("change", () => player?.setInstrument(selectedInstrument()));
+metronomeToggle.addEventListener("input", () =>
+  player?.setMetronomeEnabled(metronomeToggle.checked));
+instrumentVolume.addEventListener("input", () => {
+  instrumentVolumeValue.value = `${instrumentVolume.value}%`;
+  player?.setInstrumentVolume(sliderGain(instrumentVolume));
+});
+metronomeVolume.addEventListener("input", () => {
+  metronomeVolumeValue.value = `${metronomeVolume.value}%`;
+  player?.setMetronomeVolume(sliderGain(metronomeVolume));
+});
+meterNumerator.addEventListener("input", updateManualTiming);
+meterDenominator.addEventListener("input", updateManualTiming);
+tempoBpm.addEventListener("input", updateManualTiming);
 notationSelect.addEventListener("change", () => renderActivePreview(activeEventId));
 alignMeasuresToggle.addEventListener("change", () => renderActivePreview(activeEventId));
 copyAbcButton.addEventListener("click", () => void copyText(currentAbc, "ABC 已复制"));
@@ -159,6 +187,7 @@ function evaluateSource(): void {
   const result = parseJabc(editor.value);
   if (!result.success) {
     events = [];
+    playbackPlan = undefined;
     currentScore = undefined;
     activeEventId = undefined;
     staffRenderVersion += 1;
@@ -179,7 +208,9 @@ function evaluateSource(): void {
   try {
     currentScore = result.value;
     activeEventId = undefined;
-    events = scoreToPlaybackEvents(result.value);
+    syncTimingControls(result.value);
+    playbackPlan = createPlaybackPlan(result.value);
+    events = playbackPlan.events;
     currentAbc = toStandardAbc(result.value);
     currentMusicXml = toMusicXml(result.value);
     renderActivePreview();
@@ -190,6 +221,7 @@ function evaluateSource(): void {
     eventCount.textContent = `${events.length} 个音符`;
   } catch (error) {
     events = [];
+    playbackPlan = undefined;
     currentAbc = "";
     currentMusicXml = "";
     showRuntimeError(error);
@@ -200,6 +232,8 @@ function evaluateSource(): void {
 function getPlayer(): WebAudioPlayer {
   player ??= new WebAudioPlayer(undefined, {
     masterGain: 0.2,
+    metronomeGain: 0.3,
+    metronomeEnabled: metronomeToggle.checked,
     oscillatorType: "triangle",
     instrument: selectedInstrument(),
     onEventStart: (event) => {
@@ -213,7 +247,69 @@ function getPlayer(): WebAudioPlayer {
       updateControls();
     },
   });
+  player.setInstrumentVolume(sliderGain(instrumentVolume));
+  player.setMetronomeVolume(sliderGain(metronomeVolume));
   return player;
+}
+
+function syncTimingControls(score: Score): void {
+  const meter = score.header.meter ?? manualMeter;
+  meterNumerator.value = String(meter.numerator);
+  meterDenominator.value = String(meter.denominator);
+  meterNumerator.disabled = score.header.meter !== undefined;
+  meterDenominator.disabled = score.header.meter !== undefined;
+
+  const tempo = score.header.tempo;
+  tempoBpm.value = String(tempo?.bpm ?? manualBpm);
+  tempoBpm.disabled = tempo !== undefined;
+  const beat = tempo?.beat ?? playbackPulse(meter);
+  tempoLabel.textContent = `速度（${beat.numerator}/${beat.denominator} BPM）`;
+}
+
+function createPlaybackPlan(score: Score): PlaybackPlan {
+  const meter = score.header.meter ?? manualMeter;
+  return scoreToPlaybackPlan(score, {
+    defaultMeter: manualMeter,
+    defaultTempo: { beat: playbackPulse(meter), bpm: manualBpm },
+  });
+}
+
+function updateManualTiming(): void {
+  if (!currentScore) return;
+  if (!currentScore.header.meter) {
+    const numerator = boundedInteger(Number(meterNumerator.value), 1, 32);
+    const denominator = boundedInteger(Number(meterDenominator.value), 1, 64);
+    if (numerator === undefined || denominator === undefined) return;
+    manualMeter = {
+      numerator,
+      denominator,
+    };
+  }
+  if (!currentScore.header.tempo) {
+    const bpm = boundedInteger(Number(tempoBpm.value), 20, 300);
+    if (bpm === undefined) return;
+    manualBpm = bpm;
+  }
+  player?.stop();
+  syncTimingControls(currentScore);
+  playbackPlan = createPlaybackPlan(currentScore);
+  events = playbackPlan.events;
+  eventCount.textContent = `${events.length} 个音符`;
+  updateControls();
+}
+
+function playbackPulse(meter: { numerator: number; denominator: number }) {
+  return meter.denominator === 8 && [6, 9, 12].includes(meter.numerator)
+    ? { numerator: 3, denominator: 8 }
+    : { numerator: 1, denominator: meter.denominator };
+}
+
+function boundedInteger(value: number, min: number, max: number): number | undefined {
+  return Number.isInteger(value) && value >= min && value <= max ? value : undefined;
+}
+
+function sliderGain(input: HTMLInputElement): number {
+  return Number(input.value) / 100;
 }
 
 function renderActivePreview(highlightEventId?: string): void {
@@ -275,7 +371,11 @@ async function renderStaffPreview(score: Score): Promise<void> {
 }
 
 function updateControls(): void {
-  playButton.disabled = events.length === 0 || playerState === "loading";
+  playButton.disabled = (
+    !playbackPlan
+    || (events.length === 0 && playbackPlan.metronomeEvents.length === 0)
+    || playerState === "loading"
+  );
   pauseButton.disabled = playerState !== "playing";
   resumeButton.disabled = playerState !== "paused";
   stopButton.disabled = playerState === "idle";

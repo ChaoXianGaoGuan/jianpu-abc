@@ -4,6 +4,7 @@ import {
   expandMeasureOrder,
   PlaybackBuildError,
   scoreToPlaybackEvents,
+  scoreToPlaybackPlan,
 } from "../src/playback/events";
 import { midiToFrequency, WebAudioPlayer } from "../src/playback/web-audio-player";
 
@@ -14,6 +15,61 @@ function parse(source: string) {
 }
 
 describe("scoreToPlaybackEvents", () => {
+  it("builds accented metronome pulses and preserves trailing-rest duration", () => {
+    const plan = scoreToPlaybackPlan(parse(
+      "M:4/4\nL:1/4\nQ:1/4=120\nK:C jianpu\n| 1 2 3 4 | 1 0 0 0 |",
+    ));
+
+    expect(plan.metronomeEvents).toEqual([
+      { startTime: 0, accent: true },
+      { startTime: 0.5, accent: false },
+      { startTime: 1, accent: false },
+      { startTime: 1.5, accent: false },
+      { startTime: 2, accent: true },
+      { startTime: 2.5, accent: false },
+      { startTime: 3, accent: false },
+      { startTime: 3.5, accent: false },
+    ]);
+    expect(plan.duration).toBe(4);
+    expect(Math.max(...plan.events.map((event) => event.startTime + event.duration))).toBe(2.5);
+  });
+
+  it.each([
+    ["6/8", 2],
+    ["9/8", 3],
+    ["12/8", 4],
+  ])("uses compound main beats for %s", (meter, expectedClicks) => {
+    const numerator = Number(meter.split("/")[0]);
+    const notes = Array.from({ length: numerator }, () => "1e").join(" ");
+    const plan = scoreToPlaybackPlan(parse(
+      `M:${meter}\nL:1/8\nQ:3/8=60\nK:C jianpu\n| ${notes} |`,
+    ));
+
+    expect(plan.metronomeEvents).toHaveLength(expectedClicks);
+    expect(plan.metronomeEvents[0]).toEqual({ startTime: 0, accent: true });
+    expect(plan.metronomeEvents.slice(1).every((event) => !event.accent)).toBe(true);
+  });
+
+  it("uses manual meter and tempo fallbacks when headers are absent", () => {
+    const plan = scoreToPlaybackPlan(parse("L:1/4\nK:C jianpu\n| 1 2 3 |"), {
+      defaultMeter: { numerator: 3, denominator: 4 },
+      defaultTempo: { beat: { numerator: 1, denominator: 4 }, bpm: 90 },
+    });
+
+    expect(plan.meter).toEqual({ numerator: 3, denominator: 4 });
+    expect(plan.tempo).toEqual({ beat: { numerator: 1, denominator: 4 }, bpm: 90 });
+    expect(plan.metronomeEvents).toHaveLength(3);
+  });
+
+  it("restarts the metronome accent at repeated and pickup measure boundaries", () => {
+    const plan = scoreToPlaybackPlan(parse(
+      "M:4/4\nL:1/4\nQ:1/4=120\nK:C jianpu\n|: 1 | 1 2 3 4 :|",
+    ));
+
+    expect(plan.metronomeEvents.filter((event) => event.accent).map((event) => event.startTime))
+      .toEqual([0, 0.5, 2.5, 3]);
+  });
+
   it("maps pitch, start time, duration, and velocity", () => {
     const events = scoreToPlaybackEvents(
       parse("L:1/4\nQ:1/4=120\nK:D jianpu\n| 1 2 3 |"),
@@ -404,5 +460,84 @@ describe("WebAudioPlayer", () => {
     expect(player.currentInstrument).toBe("guitar");
     expect(createOscillator).toHaveBeenCalledTimes(7);
     expect(oscillators.some((oscillator) => oscillator.stop.mock.calls.length > 0)).toBe(true);
+  });
+
+  it("schedules accented metronome clicks and adjusts both output buses live", () => {
+    const frequencies: Array<{ setValueAtTime: ReturnType<typeof vi.fn> }> = [];
+    const oscillators: Array<{ stop: ReturnType<typeof vi.fn> }> = [];
+    const createOscillator = vi.fn(() => {
+      const frequency = { setValueAtTime: vi.fn() };
+      const oscillator = {
+        type: "sine" as OscillatorType,
+        frequency,
+        detune: { setValueAtTime: vi.fn() },
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        start: vi.fn(),
+        stop: vi.fn(),
+        addEventListener: vi.fn(),
+      };
+      frequencies.push(frequency);
+      oscillators.push(oscillator);
+      return oscillator;
+    });
+    const gainParams: Array<{
+      setValueAtTime: ReturnType<typeof vi.fn>;
+      linearRampToValueAtTime: ReturnType<typeof vi.fn>;
+      exponentialRampToValueAtTime: ReturnType<typeof vi.fn>;
+    }> = [];
+    const createGain = vi.fn(() => {
+      const gain = {
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+        exponentialRampToValueAtTime: vi.fn(),
+      };
+      gainParams.push(gain);
+      return { gain, connect: vi.fn(), disconnect: vi.fn() };
+    });
+    const context = {
+      currentTime: 4,
+      state: "running",
+      destination: {},
+      createOscillator,
+      createGain,
+      resume: vi.fn(async () => undefined),
+      close: vi.fn(async () => undefined),
+    } as unknown as AudioContext;
+    const player = new WebAudioPlayer(context, {
+      instrument: "synth",
+      masterGain: 0.2,
+      metronomeGain: 0.3,
+      scheduleAheadSeconds: 0,
+    });
+
+    player.setInstrumentVolume(0.6);
+    player.setMetronomeVolume(0.4);
+    player.setMetronomeEnabled(false);
+    player.setMetronomeEnabled(true);
+    expect(gainParams[0]?.setValueAtTime).toHaveBeenLastCalledWith(0.6, 4);
+    expect(gainParams[1]?.setValueAtTime).toHaveBeenNthCalledWith(2, 0.4, 4);
+    expect(gainParams[1]?.setValueAtTime).toHaveBeenNthCalledWith(3, 0, 4);
+    expect(gainParams[1]?.setValueAtTime).toHaveBeenLastCalledWith(0.4, 4);
+
+    player.play([{
+      id: "playback-1",
+      type: "note",
+      midi: 69,
+      startTime: 0,
+      duration: 1,
+      velocity: 100,
+    }], {
+      metronomeEvents: [
+        { startTime: 0, accent: true },
+        { startTime: 0.5, accent: false },
+      ],
+      totalDuration: 1,
+    });
+
+    expect(frequencies.map((frequency) => frequency.setValueAtTime.mock.calls[0]?.[0]))
+      .toEqual([440, 1500, 1000]);
+    player.stop();
+    expect(oscillators.every((oscillator) => oscillator.stop.mock.calls.length > 0)).toBe(true);
   });
 });

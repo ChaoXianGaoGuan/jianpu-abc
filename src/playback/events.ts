@@ -1,4 +1,13 @@
-import type { Fraction, Measure, MusicalEvent, NoteEvent, Score, Tempo, Voice } from "../core/ast";
+import type {
+  Fraction,
+  Measure,
+  MusicalEvent,
+  NoteEvent,
+  Score,
+  Tempo,
+  TimeSignature,
+  Voice,
+} from "../core/ast";
 import { degreeToPitch } from "../core/pitch";
 
 export interface PlaybackEvent {
@@ -14,6 +23,28 @@ export interface PlaybackEvent {
 export interface PlaybackOptions {
   velocity?: number;
   defaultTempo?: Tempo;
+}
+
+export interface PlaybackPlanOptions extends PlaybackOptions {
+  defaultMeter?: TimeSignature;
+}
+
+export interface MetronomeEvent {
+  startTime: number;
+  accent: boolean;
+}
+
+export interface PlaybackPlan {
+  events: PlaybackEvent[];
+  metronomeEvents: MetronomeEvent[];
+  duration: number;
+  meter: TimeSignature;
+  tempo: Tempo;
+}
+
+interface VoicePlaybackTimeline {
+  events: PlaybackEvent[];
+  duration: number;
 }
 
 export type PlaybackBuildErrorCode =
@@ -44,22 +75,46 @@ export function scoreToPlaybackEvents(
   score: Score,
   options: PlaybackOptions = {},
 ): PlaybackEvent[] {
+  return scoreToPlaybackPlan(score, options).events;
+}
+
+export function scoreToPlaybackPlan(
+  score: Score,
+  options: PlaybackPlanOptions = {},
+): PlaybackPlan {
   const key = score.header.key;
   if (!key) {
     throw new PlaybackBuildError("MISSING_KEY", "Cannot build playback events without a JABC K: field.");
   }
 
   const tempo = score.header.tempo ?? options.defaultTempo ?? DEFAULT_TEMPO;
+  const meter = score.header.meter ?? options.defaultMeter ?? { numerator: 4, denominator: 4 };
   validateTempo(tempo);
+  validateMeter(meter);
   const velocity = options.velocity ?? 96;
   if (!Number.isInteger(velocity) || velocity < 0 || velocity > 127) {
     throw new RangeError("Playback velocity must be an integer from 0 to 127.");
   }
 
-  const output = score.voices.flatMap((voice) => buildVoiceEvents(score, voice, tempo, velocity));
-  return output
+  const timelines = score.voices.map((voice) => buildVoiceEvents(score, voice, tempo, velocity));
+  const events = timelines.flatMap((timeline) => timeline.events)
     .sort((left, right) => left.startTime - right.startTime || left.id.localeCompare(right.id))
     .map((event, index) => ({ ...event, id: `playback-${index + 1}` }));
+  const structuralVoice = score.voices.find((voice) => voice.measures.length > 0);
+  const metronomeTimeline = structuralVoice
+    ? buildMetronomeEvents(structuralVoice, tempo, meter)
+    : { events: [], duration: 0 };
+  return {
+    events,
+    metronomeEvents: metronomeTimeline.events,
+    duration: Math.max(
+      metronomeTimeline.duration,
+      ...timelines.map((timeline) => timeline.duration),
+      0,
+    ),
+    meter,
+    tempo,
+  };
 }
 
 function buildVoiceEvents(
@@ -67,7 +122,7 @@ function buildVoiceEvents(
   voice: Voice,
   tempo: Tempo,
   velocity: number,
-): PlaybackEvent[] {
+): VoicePlaybackTimeline {
   const key = score.header.key;
   if (!key) {
     throw new PlaybackBuildError("MISSING_KEY", "Cannot build playback events without a JABC K: field.");
@@ -179,7 +234,37 @@ function buildVoiceEvents(
     );
   }
 
-  return output;
+  return { events: output, duration: cursor };
+}
+
+function buildMetronomeEvents(
+  voice: Voice,
+  tempo: Tempo,
+  meter: TimeSignature,
+): { events: MetronomeEvent[]; duration: number } {
+  const events: MetronomeEvent[] = [];
+  const pulseSeconds = durationToSeconds(metronomePulse(meter), tempo);
+  let cursor = 0;
+
+  for (const measureIndex of expandMeasureOrder(voice.measures)) {
+    const measure = voice.measures[measureIndex];
+    if (!measure) continue;
+    const measureDuration = measure.events.reduce((total, event) =>
+      event.type === "key-change" ? total : total + durationToSeconds(event.duration, tempo), 0);
+    for (let offset = 0; offset < measureDuration - 1e-9; offset += pulseSeconds) {
+      events.push({ startTime: cursor + offset, accent: offset === 0 });
+    }
+    cursor += measureDuration;
+  }
+
+  return { events, duration: cursor };
+}
+
+function metronomePulse(meter: TimeSignature): Fraction {
+  if (meter.denominator === 8 && [6, 9, 12].includes(meter.numerator)) {
+    return { numerator: 3, denominator: 8 };
+  }
+  return { numerator: 1, denominator: meter.denominator };
 }
 
 export function expandMeasureOrder(measures: Measure[]): number[] {
@@ -241,6 +326,17 @@ function validateTempo(tempo: Tempo): void {
   validateFraction(tempo.beat, "Tempo beat");
   if (!Number.isFinite(tempo.bpm) || tempo.bpm <= 0) {
     throw new PlaybackBuildError("INVALID_TEMPO", "Tempo BPM must be a positive number.");
+  }
+}
+
+function validateMeter(meter: TimeSignature): void {
+  if (
+    !Number.isInteger(meter.numerator)
+    || !Number.isInteger(meter.denominator)
+    || meter.numerator <= 0
+    || meter.denominator <= 0
+  ) {
+    throw new RangeError("Meter must use positive integer values.");
   }
 }
 

@@ -43,7 +43,8 @@ After `npm run dev`, open `http://127.0.0.1:5173`. The validation UI includes
 the repository's built-in JABC score library with search and category filters,
 live JABC parsing, single-view jianpu/staff preview switching, ABC/MusicXML
 copy/download actions, playback event counts, guitar-first instrument selection,
-and Web Audio play/pause/resume/stop controls. Use `npm run dev -- --port 4173`
+score-driven metronome and tempo controls, independent live volume sliders, and
+Web Audio play/pause/resume/stop controls. Use `npm run dev -- --port 4173`
 to select a different port.
 
 Add a score to `src/library/<category>/<slug>.jabc`, then commit and push it to
@@ -150,11 +151,14 @@ same major-key subset as the ABC exporter.
 ## Playback
 
 ```ts
-import { scoreToPlaybackEvents, WebAudioPlayer } from "./src/index";
+import { scoreToPlaybackPlan, WebAudioPlayer } from "./src/index";
 
-const events = scoreToPlaybackEvents(score);
+const plan = scoreToPlaybackPlan(score);
 const player = new WebAudioPlayer(undefined, { instrument: "guitar" }); // Create from a user interaction in browsers.
-player.play(events);
+player.play(plan.events, {
+  metronomeEvents: plan.metronomeEvents,
+  totalDuration: plan.duration,
+});
 ```
 
 The pure scheduler handles tempo, rests, extensions, inline key changes, parsed

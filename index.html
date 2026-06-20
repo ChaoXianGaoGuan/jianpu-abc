@@ -40,7 +40,7 @@
 
       <div class="workbench">
       <section class="controls" aria-labelledby="playback-title">
-        <div>
+        <div class="playback-panel-main">
           <p class="section-label" id="playback-title">播放控制</p>
           <div class="button-row">
             <button id="play-button" class="primary" type="button">播放</button>
@@ -56,6 +56,32 @@
               <option value="synth">合成器</option>
             </select>
           </label>
+          <div class="playback-settings">
+            <label class="toggle-control">
+              <input id="metronome-toggle" type="checkbox" checked />
+              <span>节拍器</span>
+            </label>
+            <div class="setting-control">
+              <span>拍号</span>
+              <span class="meter-inputs">
+                <input id="meter-numerator" aria-label="拍号分子" type="number" min="1" max="32" value="4" />
+                <span>/</span>
+                <input id="meter-denominator" aria-label="拍号分母" type="number" min="1" max="64" value="4" />
+              </span>
+            </div>
+            <label class="setting-control" for="tempo-bpm">
+              <span id="tempo-label">速度（1/4 BPM）</span>
+              <input id="tempo-bpm" type="number" min="20" max="300" value="120" />
+            </label>
+            <label class="volume-control" for="instrument-volume">
+              <span>音源音量 <output id="instrument-volume-value">20%</output></span>
+              <input id="instrument-volume" type="range" min="0" max="100" value="20" />
+            </label>
+            <label class="volume-control" for="metronome-volume">
+              <span>节拍器音量 <output id="metronome-volume-value">30%</output></span>
+              <input id="metronome-volume" type="range" min="0" max="100" value="30" />
+            </label>
+          </div>
         </div>
         <div class="playback-readout">
           <span>播放器：<strong id="playback-state">空闲</strong></span>

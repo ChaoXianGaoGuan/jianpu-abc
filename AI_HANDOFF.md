@@ -63,8 +63,8 @@ The current project supports:
 - Inline key changes such as `[K:G jianpu]` across export, playback, and rendering.
 - Standard ABC export.
 - Native MusicXML 4.0 partwise export.
-- Pure playback scheduling, including ties, triplets, repeats, first/second endings, rests, extensions, and multiple voices.
-- Web Audio playback with sampled guitar and piano instruments, a synth preset, and synthesized fallback.
+- Pure playback planning with metronome accents, ties, triplets, repeats, first/second endings, rests, extensions, and multiple voices.
+- Web Audio playback with independent live instrument/metronome gain, sampled guitar and piano instruments, a synth preset, and synthesized fallback.
 - SVG jianpu rendering with source-row layout preservation, aligned measure columns, duration grouping, graphical repeats, and SVG relation curves.
 - Staff rendering through `toStandardAbc` and abcjs.
 - Browser validation UI with a single jianpu/staff preview switch, playback highlighting, instrument selection, and copy/download actions for ABC and MusicXML.
@@ -84,7 +84,7 @@ Current expected state after the latest development pass:
 
 ```text
 Test files: 9 passed
-Tests: 150 passed
+Tests: 157 passed
 Typecheck: passes
 Build: passes
 ```
