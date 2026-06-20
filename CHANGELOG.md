@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
-- Suppress a redundant same-row single barline when the next measure begins with a repeat or start barline.
+- Suppress redundant same-row single barlines and align following repeat/start marks to the shared measure boundary.
 - Enlarge jianpu accidentals and render double-sharp/double-flat as standard `𝄪` / `𝄫` glyphs.
 - Align jianpu measure columns across explicit source rows by default, with an API option and Web UI checkbox to restore per-row natural spacing.
 - Update Web playback highlighting to toggle existing jianpu SVG event classes instead of redrawing the full score for every note.

@@ -163,10 +163,11 @@ describe("renderJianpu", () => {
   });
 
   it("keeps only the repeat-start barline at a shared same-row boundary", () => {
-    const svg = renderJianpu(parse("K:C jianpu\n| 1 |: 7 |"));
+    const svg = renderJianpu(parse("K:C jianpu\n| 1 |: 7 |"), { fontSize: 32 });
 
     expect(svg).toContain('class="barline barline-repeat-start"');
     expect(svg.match(/class="barline barline-single"/g)).toHaveLength(1);
+    expect(svg).toMatch(/barline-repeat-start[^>]*>\s*<line class="barline-thick" x1="-18\.24"/);
   });
 
   it("keeps the preceding barline when a repeat starts on a new row", () => {
@@ -174,6 +175,7 @@ describe("renderJianpu", () => {
 
     expect(svg).toContain('class="barline barline-repeat-start"');
     expect(svg.match(/class="barline barline-single"/g)).toHaveLength(2);
+    expect(svg).toMatch(/barline-repeat-start[^>]*>\s*<line class="barline-thick" x1="0"/);
   });
 
   it("renders multiple voices with voice labels", () => {

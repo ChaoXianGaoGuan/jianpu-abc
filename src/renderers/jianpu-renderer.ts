@@ -85,7 +85,13 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
       crossMeasureTies.map((connection) => connection.boundaryIndex),
     );
     renderedVoices.push(...layout.map((placed, measureIndex) => {
+      const previous = layout[measureIndex - 1];
       const next = layout[measureIndex + 1];
+      const sharedLeftBarlineX = placed.measure.leftBarline !== undefined
+        && previous !== undefined
+        && previous.y === placed.y
+        ? previous.x + previous.width - fontSize * 0.22 - placed.x
+        : undefined;
       const suppressRightBarline = placed.measure.barline?.type === "single"
         && next?.measure.leftBarline !== undefined
         && next.y === placed.y;
@@ -100,6 +106,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
         connectedBoundaries.has(measureIndex - 1),
         connectedBoundaries.has(measureIndex),
         suppressRightBarline,
+        sharedLeftBarlineX,
       );
     }));
     renderedVoices.push(renderCrossMeasureTies(crossMeasureTies, layout, fontSize));
@@ -294,6 +301,7 @@ function renderMeasure(
   suppressIncomingTie: boolean,
   suppressOutgoingTie: boolean,
   suppressRightBarline: boolean,
+  leftBarlineX: number | undefined,
 ): string {
   const events = positioned.map((item) => {
     const eventId = `${voice.id}:${placed.measureIndex}:${item.eventIndex}`;
@@ -315,7 +323,7 @@ function renderMeasure(
     suppressOutgoingTie,
   );
   const leftBarline = placed.measure.leftBarline
-    ? renderBarline(placed.measure.leftBarline, "left", placed.width, fontSize)
+    ? renderBarline(placed.measure.leftBarline, "left", placed.width, fontSize, leftBarlineX)
     : "";
   const ending = placed.measure.ending
     ? renderEnding(placed.measure.ending.number, placed.width, fontSize)
@@ -331,8 +339,9 @@ function renderBarline(
   side: "left" | "right",
   measureWidth: number,
   fontSize: number,
+  leftBoundaryX = 0,
 ): string {
-  const boundary = side === "left" ? 0 : measureWidth - fontSize * 0.22;
+  const boundary = side === "left" ? leftBoundaryX : measureWidth - fontSize * 0.22;
   const top = -fontSize * 1.02;
   const bottom = fontSize * 0.58;
   const offset = fontSize * 0.17;
