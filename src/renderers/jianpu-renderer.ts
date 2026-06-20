@@ -410,7 +410,10 @@ function renderMeasure(
       eventId === highlightEventId,
     );
   }).join("");
-  const durationLines = renderDurationLines(positioned, beatDuration, fontSize);
+  const rightBarlineX = placed.measure.barline && !suppressRightBarline
+    ? placed.width - fontSize * 0.22
+    : undefined;
+  const durationLines = renderDurationLines(positioned, beatDuration, fontSize, rightBarlineX);
   const relations = renderRelations(
     positioned,
     placed.width,
@@ -594,6 +597,7 @@ function renderDurationLines(
   positioned: PositionedEvent[],
   beatDuration: Fraction,
   fontSize: number,
+  rightBarlineX: number | undefined,
 ): string {
   const output: string[] = [];
   const maxLevel = positioned.reduce(
@@ -623,7 +627,23 @@ function renderDurationLines(
         }
       }
 
-      output.push(renderDurationLine(group, lineLevel, fontSize));
+      const previous = closestDurationLineItem(positioned, index - 1, -1, beatDuration, lineLevel);
+      const next = closestDurationLineItem(positioned, index + group.length, 1, beatDuration, lineLevel);
+      const firstBeat = beatIndex(first.startTime, beatDuration);
+      const lastBeat = beatIndex(group.at(-1)!.startTime, beatDuration);
+      const startsAfterBeatBoundary = previous !== undefined
+        && beatIndex(previous.startTime, beatDuration) !== firstBeat;
+      const endsBeforeBeatBoundary = next !== undefined
+        && beatIndex(next.startTime, beatDuration) !== lastBeat;
+      const maxEndX = next === undefined && rightBarlineX !== undefined
+        ? rightBarlineX - fontSize * 0.32
+        : undefined;
+
+      output.push(renderDurationLine(group, lineLevel, fontSize, {
+        startsAfterBeatBoundary,
+        endsBeforeBeatBoundary,
+        ...(maxEndX === undefined ? {} : { maxEndX }),
+      }));
       index += group.length;
     }
   }
@@ -642,14 +662,38 @@ function isDurationLineJoinable(item: PositionedEvent): boolean {
   return item.event.type === "note" || item.event.type === "rest";
 }
 
+function closestDurationLineItem(
+  positioned: PositionedEvent[],
+  startIndex: number,
+  step: -1 | 1,
+  beatDuration: Fraction,
+  lineLevel: number,
+): PositionedEvent | undefined {
+  for (let index = startIndex; index >= 0 && index < positioned.length; index += step) {
+    const item = positioned[index] as PositionedEvent;
+    if (hasDurationLine(item, beatDuration, lineLevel)) return item;
+  }
+  return undefined;
+}
+
 function renderDurationLine(
   group: PositionedEvent[],
   lineLevel: number,
   fontSize: number,
+  options: {
+    startsAfterBeatBoundary?: boolean;
+    endsBeforeBeatBoundary?: boolean;
+    maxEndX?: number;
+  } = {},
 ): string {
-  const startX = group[0]!.centerX - fontSize * 0.34;
+  const beatBoundaryInset = fontSize * 0.14;
+  const startX = group[0]!.centerX - fontSize * 0.34
+    + (options.startsAfterBeatBoundary ? beatBoundaryInset : 0);
   const last = group.at(-1)!;
-  const endX = durationLineEndX(last, fontSize);
+  const rawEndX = durationLineEndX(last, fontSize)
+    - (options.endsBeforeBeatBoundary ? beatBoundaryInset : 0);
+  const maxEndX = options.maxEndX ?? rawEndX;
+  const endX = Math.max(startX + fontSize * 0.18, Math.min(rawEndX, maxEndX));
   const y = fontSize * 0.43 + (lineLevel - 1) * 4.5;
   return `<line class="duration-line" data-line-level="${lineLevel}" data-group-size="${group.length}" x1="${round(startX)}" y1="${round(y)}" x2="${round(endX)}" y2="${round(y)}"/>`;
 }

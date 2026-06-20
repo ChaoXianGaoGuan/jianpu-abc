@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
+- Keep short-note jianpu underline groups clear at beat boundaries and before right barlines.
 - Preserve readable jianpu spacing on narrow previews by scaling a wider SVG viewBox instead of over-compressing notes.
 - Keep aligned jianpu measure columns consistent when narrow-screen readable widths expand individual measures.
 - Keep duration dots close to jianpu note numbers while preserving dotted-rhythm spacing.

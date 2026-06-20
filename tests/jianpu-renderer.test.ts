@@ -23,6 +23,21 @@ function svgHeight(svg: string): number {
   return Number(match?.[1] ?? 0);
 }
 
+function durationLineSegments(svg: string): Array<{ level: number; groupSize: number; x1: number; x2: number }> {
+  return [...svg.matchAll(/class="duration-line" data-line-level="(\d+)" data-group-size="(\d+)" x1="([\d.-]+)"[^>]* x2="([\d.-]+)"/g)]
+    .map((match) => ({
+      level: Number(match[1]),
+      groupSize: Number(match[2]),
+      x1: Number(match[3]),
+      x2: Number(match[4]),
+    }));
+}
+
+function barlineXs(svg: string): number[] {
+  return [...svg.matchAll(/class="barline-(?:thin|thick)" x1="([\d.-]+)"/g)]
+    .map((match) => Number(match[1]));
+}
+
 const SCORE = `T:渲染测试 <曲>
 C:传统来源
 M:4/4
@@ -151,6 +166,27 @@ describe("renderJianpu", () => {
     expect(centers.slice(0, 5)).toEqual([13.12, 39.36, 65.6, 91.84, 127.04]);
     expect(centers[4]! - centers[3]!).toBeGreaterThan(centers[3]! - centers[2]!);
     expect(svg.match(/data-line-level="2" data-group-size="4"/g)).toHaveLength(2);
+  });
+
+  it("leaves breathing room between adjacent duration-line beat groups", () => {
+    const svg = renderJianpu(parse(
+      "M:4/4\nL:1/16\nK:C jianpu\n| 1 2 3 4 5 6 7 1' |",
+    ), { fontSize: 32 });
+    const levelTwoGroups = durationLineSegments(svg)
+      .filter((line) => line.level === 2 && line.groupSize === 4);
+
+    expect(levelTwoGroups).toHaveLength(2);
+    expect(levelTwoGroups[1]!.x1 - levelTwoGroups[0]!.x2).toBeGreaterThanOrEqual(20);
+  });
+
+  it("keeps terminal duration lines away from the right barline", () => {
+    const svg = renderJianpu(parse(
+      "M:4/4\nL:1/4\nK:C jianpu\n| 6 0 7e 7s 7s 1e 2e 1e 7s |",
+    ), { fontSize: 32 });
+    const furthestDurationEnd = Math.max(...durationLineSegments(svg).map((line) => line.x2));
+    const rightmostBarline = Math.max(...barlineXs(svg));
+
+    expect(rightmostBarline - furthestDurationEnd).toBeGreaterThanOrEqual(10);
   });
 
   it("adds the highlight class to the requested source event", () => {
