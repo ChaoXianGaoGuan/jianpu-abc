@@ -443,7 +443,7 @@ function positionEvents(placed: LayoutMeasure, beatDuration: Fraction, fontSize:
     );
     const dotXs: number[] = [];
     for (let index = 0; index < dots; index += 1) {
-      dotXs.push(centerX + fontSize * (0.32 + index * 0.18));
+      dotXs.push(centerX + fontSize * (0.40 + index * 0.20));
     }
     const positioned: PositionedEvent = {
       event,
@@ -572,9 +572,15 @@ function renderDurationLine(
 ): string {
   const startX = group[0]!.centerX - fontSize * 0.34;
   const last = group.at(-1)!;
-  const endX = (last.dotXs.at(-1) ?? last.centerX) + fontSize * 0.34;
+  const endX = durationLineEndX(last, fontSize);
   const y = fontSize * 0.43 + (lineLevel - 1) * 4.5;
   return `<line class="duration-line" data-line-level="${lineLevel}" data-group-size="${group.length}" x1="${round(startX)}" y1="${round(y)}" x2="${round(endX)}" y2="${round(y)}"/>`;
+}
+
+function durationLineEndX(item: PositionedEvent, fontSize: number): number {
+  const dots = item.event.type === "note" || item.event.type === "rest" ? item.event.dots ?? 0 : 0;
+  const symbolPadding = dots > 0 ? 0.66 + (dots - 1) * 0.18 : 0.34;
+  return item.centerX + fontSize * symbolPadding;
 }
 
 function renderRelations(

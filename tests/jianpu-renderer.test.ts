@@ -64,7 +64,7 @@ describe("renderJianpu", () => {
 
     expect(svg).toContain('class="event-symbol" x="13.12" y="0">6</text>');
     expect(svg).toContain('class="event-symbol" x="39.36" y="0">1</text>');
-    expect(svg).toContain('class="duration-dot" cx="49.6"');
+    expect(svg).toContain('class="duration-dot" cx="52.16"');
     expect(svg).toContain('data-line-level="1" data-group-size="2" x1="2.24" y1="13.76" x2="60.48"');
   });
 
@@ -72,7 +72,7 @@ describe("renderJianpu", () => {
     const svg = renderJianpu(parse("M:4/4\nL:1/4\nK:C jianpu\n| 1'/2. 6/4 |"), { fontSize: 32 });
 
     expect(svg).toContain('class="event-symbol" x="13.12" y="0">1</text>');
-    expect(svg).toContain('class="duration-dot" cx="23.36"');
+    expect(svg).toContain('class="duration-dot" cx="25.92"');
     expect(svg).toContain('class="event-symbol" x="65.6" y="0">6</text>');
   });
 
