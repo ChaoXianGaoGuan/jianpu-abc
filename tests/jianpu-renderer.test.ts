@@ -79,10 +79,19 @@ describe("renderJianpu", () => {
   it("spaces notes within a beat in proportion to their durations", () => {
     const svg = renderJianpu(parse("M:4/4\nL:1/4\nK:C jianpu\n| 1/2 2/4 3/4 |"), { fontSize: 32 });
 
-    expect(svg).toContain('data-event-id="default:0:0" aria-label="1/2"><rect class="event-bg" x="2.4"');
-    expect(svg).toContain('class="event-symbol" x="12" y="0">1</text>');
-    expect(svg).toContain('class="event-symbol" x="30" y="0">2</text>');
-    expect(svg).toContain('class="event-symbol" x="42" y="0">3</text>');
+    expect(svg).toContain('data-event-id="default:0:0" aria-label="1/2"><rect class="event-bg" x="5.25"');
+    expect(svg).toContain('class="event-symbol" x="26.24" y="0">1</text>');
+    expect(svg).toContain('class="event-symbol" x="65.6" y="0">2</text>');
+    expect(svg).toContain('class="event-symbol" x="91.84" y="0">3</text>');
+  });
+
+  it("expands the beat width enough to keep short-note digits readable", () => {
+    const svg = renderJianpu(parse("M:4/4\nL:1/4\nK:C jianpu\n| 1/4 2/4 3/4 4/4 |"), { fontSize: 32 });
+    const centers = [...svg.matchAll(/class="event-symbol" x="([\d.]+)" y="0">/g)]
+      .map((match) => Number(match[1]));
+
+    expect(centers).toEqual([13.12, 39.36, 65.6, 91.84]);
+    expect(centers[1]! - centers[0]!).toBeGreaterThanOrEqual(32 * 0.82);
   });
 
   it("adds the highlight class to the requested source event", () => {

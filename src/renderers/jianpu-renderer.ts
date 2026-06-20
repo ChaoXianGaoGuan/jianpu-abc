@@ -40,6 +40,11 @@ interface CrossMeasureTie {
   end: PositionedEvent;
 }
 
+interface MeasureLayoutMetric {
+  slotCount: number;
+  naturalWidth: number;
+}
+
 const ACCIDENTAL_TEXT: Record<Accidental, string> = {
   sharp: "♯",
   flat: "♭",
@@ -184,10 +189,9 @@ function layoutMeasures(
     }
     if (currentSystem.length > 0) systems.push(currentSystem);
 
-    const systemMetrics = systems.map((system) => system.map(({ measure }) => {
-      const slotCount = measureSlotCount(measure, beatDuration);
-      return { slotCount, naturalWidth: slotCount * baseCellWidth + barSpace };
-    }));
+    const systemMetrics = systems.map((system) => system.map(({ measure }) =>
+      measureLayoutMetric(measure, beatDuration, fontSize, baseCellWidth, barSpace)
+    ));
     const alignedColumnWidths = alignMeasuresAcrossSystems
       ? columnWidths(systemMetrics)
       : [];
@@ -204,7 +208,7 @@ function layoutMeasures(
       const scaledGap = measureGap * scale;
       let systemX = padding;
       for (const [index, item] of system.entries()) {
-        const metric = metrics[index] as { slotCount: number; naturalWidth: number };
+        const metric = metrics[index] as MeasureLayoutMetric;
         const naturalWidth = naturalWidths[index] ?? metric.naturalWidth;
         const measureWidth = naturalWidth * scale;
         const scaledBarSpace = barSpace * scale;
@@ -231,8 +235,13 @@ function layoutMeasures(
   let y = musicTop;
 
   for (const [measureIndex, measure] of voice.measures.entries()) {
-    const slotCount = measureSlotCount(measure, beatDuration);
-    const naturalWidth = slotCount * baseCellWidth + barSpace;
+    const { slotCount, naturalWidth } = measureLayoutMetric(
+      measure,
+      beatDuration,
+      fontSize,
+      baseCellWidth,
+      barSpace,
+    );
     const measureWidth = Math.min(availableWidth, naturalWidth);
     const cellWidth = (measureWidth - barSpace) / slotCount;
     if (x > padding && x + measureWidth > width - padding) {
@@ -246,7 +255,7 @@ function layoutMeasures(
 }
 
 function columnWidths(
-  systemMetrics: Array<Array<{ slotCount: number; naturalWidth: number }>>,
+  systemMetrics: MeasureLayoutMetric[][],
 ): number[] {
   const output: number[] = [];
   for (const metrics of systemMetrics) {
@@ -255,6 +264,24 @@ function columnWidths(
     }
   }
   return output;
+}
+
+function measureLayoutMetric(
+  measure: Measure,
+  beatDuration: Fraction,
+  fontSize: number,
+  baseCellWidth: number,
+  barSpace: number,
+): MeasureLayoutMetric {
+  const slotCount = measureSlotCount(measure, beatDuration);
+  const cellWidth = measure.events.reduce((requiredWidth, event) => {
+    const span = Math.min(1, eventLayoutSpan(event, beatDuration));
+    const minimumEventWidth = fontSize * (
+      event.type === "note" && event.accidental !== undefined ? 1 : 0.82
+    );
+    return Math.max(requiredWidth, minimumEventWidth / span);
+  }, baseCellWidth);
+  return { slotCount, naturalWidth: slotCount * cellWidth + barSpace };
 }
 
 function measureSlotCount(measure: Measure, beatDuration: Fraction): number {
