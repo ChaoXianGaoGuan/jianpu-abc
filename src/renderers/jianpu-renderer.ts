@@ -33,6 +33,7 @@ interface PositionedEvent {
   slotCount: number;
   layoutSpan: number;
   layoutOffset: number;
+  dotXs: number[];
   startTime: Fraction;
 }
 
@@ -436,17 +437,27 @@ function positionEvents(placed: LayoutMeasure, beatDuration: Fraction): Position
   return placed.measure.events.map((event, eventIndex) => {
     const slotCount = visualSlotCount(event, beatDuration);
     const layoutSpan = eventLayoutSpan(event, beatDuration);
+    const undottedSpan = undottedLayoutSpan(event, beatDuration);
+    const dots = event.type === "note" || event.type === "rest" ? event.dots ?? 0 : 0;
+    const dotXs: number[] = [];
+    let dotOffset = slotOffset + undottedSpan;
+    for (let index = 0; index < dots; index += 1) {
+      const dotSpan = undottedSpan / 2 ** (index + 1);
+      dotXs.push(layoutXAt(dotOffset + dotSpan / 2, placed.cellWidth, placed.beatGap));
+      dotOffset += dotSpan;
+    }
     const positioned: PositionedEvent = {
       event,
       eventIndex,
       centerX: layoutXAt(
-        slotOffset + Math.min(layoutSpan, 1) / 2,
+        slotOffset + Math.min(undottedSpan, 1) / 2,
         placed.cellWidth,
         placed.beatGap,
       ),
       slotCount,
       layoutSpan,
       layoutOffset: slotOffset,
+      dotXs,
       startTime,
     };
     slotOffset += layoutSpan;
@@ -469,7 +480,7 @@ function renderEvent(
   showLyrics: boolean,
   highlighted: boolean,
 ): string {
-  const { event, centerX, slotCount, layoutSpan, layoutOffset } = positioned;
+  const { event, centerX, slotCount, layoutSpan, layoutOffset, dotXs } = positioned;
   const symbol = event.type === "note"
     ? String(event.degree)
     : event.type === "rest" ? "0" : event.type === "extension" ? "−" : `1=${event.key.tonic}`;
@@ -497,7 +508,7 @@ function renderEvent(
   }
   if (dots > 0) {
     for (let index = 0; index < dots; index += 1) {
-      parts.push(`<circle class="duration-dot" cx="${round(centerX + fontSize * (0.48 + index * 0.24))}" cy="${round(-fontSize * 0.38)}" r="${round(fontSize * 0.09)}"/>`);
+      parts.push(`<circle class="duration-dot" cx="${round(dotXs[index] ?? centerX)}" cy="${round(-fontSize * 0.38)}" r="${round(fontSize * 0.09)}"/>`);
     }
   }
   if (showLyrics && event.type === "note" && event.lyric) {
@@ -565,7 +576,8 @@ function renderDurationLine(
   fontSize: number,
 ): string {
   const startX = group[0]!.centerX - fontSize * 0.34;
-  const endX = group.at(-1)!.centerX + fontSize * 0.34;
+  const last = group.at(-1)!;
+  const endX = (last.dotXs.at(-1) ?? last.centerX) + fontSize * 0.34;
   const y = fontSize * 0.43 + (lineLevel - 1) * 4.5;
   return `<line class="duration-line" data-line-level="${lineLevel}" data-group-size="${group.length}" x1="${round(startX)}" y1="${round(y)}" x2="${round(endX)}" y2="${round(y)}"/>`;
 }
@@ -837,6 +849,15 @@ function visualSlotCount(event: MusicalEvent, beatDuration: Fraction): number {
 function eventLayoutSpan(event: MusicalEvent, beatDuration: Fraction): number {
   if (event.type === "key-change") return 1;
   const ratio = divideFractions(event.duration, beatDuration);
+  return ratio.numerator / ratio.denominator;
+}
+
+function undottedLayoutSpan(event: MusicalEvent, beatDuration: Fraction): number {
+  if (event.type === "key-change" || event.type === "extension") {
+    return eventLayoutSpan(event, beatDuration);
+  }
+  const duration = removeDots(event.duration, event.dots ?? 0);
+  const ratio = divideFractions(duration, beatDuration);
   return ratio.numerator / ratio.denominator;
 }
 

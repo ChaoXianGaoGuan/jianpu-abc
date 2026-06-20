@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
+- Place jianpu duration dots in their rhythmic extension slots instead of crowding the note number.
 - Add explicit spacing between complete jianpu beats while keeping duration lines grouped within each beat.
 - Remove redundant standard ABC barlines before same-system repeat/start marks so abcjs renders one shared staff boundary.
 - Space jianpu events proportionally to their performed durations, expand beats for readable short-note spacing, and place accidentals closer to the upper-left of note numbers.

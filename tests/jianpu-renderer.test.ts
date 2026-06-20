@@ -59,6 +59,15 @@ describe("renderJianpu", () => {
     expect(svg).toContain('cy="-12.16" r="2.88"');
   });
 
+  it("places a duration dot in its rhythmic extension slot", () => {
+    const svg = renderJianpu(parse("M:4/4\nL:1/4\nK:C jianpu\n| 6/4 1'/2. |"), { fontSize: 32 });
+
+    expect(svg).toContain('class="event-symbol" x="13.12" y="0">6</text>');
+    expect(svg).toContain('class="event-symbol" x="52.48" y="0">1</text>');
+    expect(svg).toContain('class="duration-dot" cx="91.84"');
+    expect(svg).toContain('data-line-level="1" data-group-size="2" x1="2.24" y1="13.76" x2="102.72"');
+  });
+
   it("renders larger accidentals and standard double accidental glyphs", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| #4 ##4 b7 bb7 =3 |"), { fontSize: 40 });
 
