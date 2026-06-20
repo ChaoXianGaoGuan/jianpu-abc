@@ -12,21 +12,23 @@ import {
   loadStaffRendererEngine,
   renderStaff,
 } from "../renderers/staff-renderer";
-
-const EXAMPLE = `X:1
-T:两只老虎
-M:4/4
-L:1/4
-Q:1/4=120
-K:C jianpu
-| 1 2 3 1 | 1 2 3 1 |
-| 3 4 5 - | 3 4 5 - |
-| 5 6 5 4 | 3 1 - - |
-w: 两 只 老 虎 两 只 老 虎 跑 得 快 跑 得 快`;
+import type { ScoreLibraryEntry } from "./score-library";
+import {
+  bundledScoreLibrary,
+  filterScoreLibrary,
+  isLibraryEditorDirty,
+  scoreLibraryCategories,
+} from "./score-library";
 
 type NotationMode = "jianpu" | "staff";
 
 const editor = element<HTMLTextAreaElement>("jabc-editor");
+const librarySearch = element<HTMLInputElement>("library-search");
+const libraryCategory = element<HTMLSelectElement>("library-category");
+const libraryCount = element<HTMLSpanElement>("library-count");
+const libraryErrors = element<HTMLDivElement>("library-errors");
+const libraryList = element<HTMLDivElement>("library-list");
+const libraryEmpty = element<HTMLParagraphElement>("library-empty");
 const jianpuPreview = element<HTMLDivElement>("jianpu-preview");
 const staffPreview = element<HTMLDivElement>("staff-preview");
 const notationSelect = element<HTMLSelectElement>("notation-select");
@@ -55,12 +57,16 @@ let activeEventId: string | undefined;
 let staffRenderVersion = 0;
 let player: WebAudioPlayer | undefined;
 let playerState: PlaybackState = "idle";
+let loadedLibraryId: string | undefined;
+let loadedLibrarySource: string | undefined;
 
-editor.value = EXAMPLE;
 editor.addEventListener("input", () => {
   player?.stop();
   evaluateSource();
+  renderLibraryList();
 });
+librarySearch.addEventListener("input", renderLibraryList);
+libraryCategory.addEventListener("change", renderLibraryList);
 
 playButton.addEventListener("click", () => {
   if (events.length === 0) return;
@@ -82,8 +88,72 @@ copyMusicXmlButton.addEventListener("click", () => void copyText(currentMusicXml
 downloadMusicXmlButton.addEventListener("click", () => downloadText(currentMusicXml, fileBaseName("musicxml"), "application/vnd.recordare.musicxml+xml"));
 window.addEventListener("resize", () => renderActivePreview(activeEventId));
 
-evaluateSource();
+initializeLibrary();
 updateControls();
+
+function initializeLibrary(): void {
+  for (const category of scoreLibraryCategories(bundledScoreLibrary.entries)) {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    libraryCategory.append(option);
+  }
+  libraryErrors.textContent = bundledScoreLibrary.errors
+    .map((error) => `${error.id}\n${error.message}`)
+    .join("\n\n");
+  libraryErrors.classList.toggle("hidden", bundledScoreLibrary.errors.length === 0);
+
+  const initial = bundledScoreLibrary.entries[0];
+  if (initial) {
+    loadLibraryEntry(initial, false);
+  } else {
+    editor.value = "";
+    evaluateSource();
+    renderLibraryList();
+  }
+}
+
+function renderLibraryList(): void {
+  const visibleEntries = filterScoreLibrary(bundledScoreLibrary.entries, {
+    query: librarySearch.value,
+    category: libraryCategory.value,
+  });
+  libraryList.replaceChildren();
+  for (const entry of visibleEntries) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "score-library-item";
+    if (entry.id === loadedLibraryId) button.classList.add("is-current");
+    button.setAttribute("aria-current", entry.id === loadedLibraryId ? "true" : "false");
+
+    const title = document.createElement("strong");
+    title.textContent = entry.title;
+    const metadata = document.createElement("span");
+    metadata.textContent = [entry.composer, entry.category].filter(Boolean).join(" · ");
+    button.append(title, metadata);
+    button.addEventListener("click", () => loadLibraryEntry(entry, true));
+    libraryList.append(button);
+  }
+  libraryCount.textContent = visibleEntries.length === bundledScoreLibrary.entries.length
+    ? `${visibleEntries.length} 首`
+    : `${visibleEntries.length} / ${bundledScoreLibrary.entries.length} 首`;
+  libraryEmpty.classList.toggle("hidden", visibleEntries.length > 0);
+}
+
+function loadLibraryEntry(entry: ScoreLibraryEntry, protectEdits: boolean): void {
+  if (
+    protectEdits
+    && isLibraryEditorDirty(editor.value, loadedLibrarySource)
+    && !window.confirm("当前编辑内容尚未保存。确定载入另一首曲谱并覆盖当前修改吗？")
+  ) return;
+
+  player?.stop();
+  loadedLibraryId = entry.id;
+  loadedLibrarySource = entry.source;
+  editor.value = entry.source;
+  evaluateSource();
+  renderLibraryList();
+}
 
 function evaluateSource(): void {
   const result = parseJabc(editor.value);

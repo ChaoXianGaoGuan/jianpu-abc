@@ -20,6 +20,7 @@ It is intentionally conservative: prioritize stable syntax, AST semantics, and t
 - Staff rendering through abcjs.
 - Inline key changes across parsing, export, playback, and rendering.
 - Browser validation UI with notation switching, playback highlighting, instrument selection, and ABC/MusicXML copy and download actions.
+- Repository-backed read-only JABC score library with search, categories, and dirty-editor protection.
 - Documentation for syntax, AST, converters, playback, and renderers.
 - AI handoff and design decision documentation.
 
@@ -143,6 +144,9 @@ Use cases:
 - Save editor state.
 - Store user preferences.
 - Preserve non-syntactic UI metadata.
+
+The built-in repository score library is complete, but it does not replace this
+future editable project format or browser/cloud persistence.
 
 ## Long-term possibilities
 

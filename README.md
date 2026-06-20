@@ -21,6 +21,7 @@ Audio playback, and SVG jianpu/staff rendering.
 - [SVG jianpu renderer](docs/jianpu-renderer.md)
 - [Staff renderer adapter](docs/staff-renderer.md)
 - [GitHub Pages deployment](docs/deployment.md)
+- [Built-in score library](docs/score-library.md)
 - [AI handoff guide](AI_HANDOFF.md)
 - [Roadmap](ROADMAP.md)
 - [Design decisions](DECISIONS.md)
@@ -39,10 +40,15 @@ npm run build
 ```
 
 After `npm run dev`, open `http://127.0.0.1:5173`. The validation UI includes
+the repository's built-in JABC score library with search and category filters,
 live JABC parsing, single-view jianpu/staff preview switching, ABC/MusicXML
 copy/download actions, playback event counts, guitar-first instrument selection,
 and Web Audio play/pause/resume/stop controls. Use `npm run dev -- --port 4173`
 to select a different port.
+
+Add a score to `src/library/<category>/<slug>.jabc`, then commit and push it to
+publish the score with the next GitHub Pages deployment. The browser library is
+read-only and never requests GitHub credentials.
 
 ## Supported syntax
 

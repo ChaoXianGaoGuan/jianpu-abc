@@ -16,7 +16,29 @@
       <div class="milestone">Milestone 5</div>
     </header>
 
-    <main>
+    <main class="app-shell">
+      <aside class="panel score-library" aria-labelledby="score-library-title">
+        <div class="library-heading">
+          <div>
+            <p class="section-label">仓库内置</p>
+            <h2 id="score-library-title">曲谱库</h2>
+          </div>
+          <span id="library-count" class="counter">0 首</span>
+        </div>
+        <p class="library-hint">曲谱随仓库发布，载入后可在编辑器中修改。</p>
+        <label class="sr-only" for="library-search">搜索曲谱</label>
+        <input id="library-search" class="library-search" type="search" placeholder="搜索标题、作者或分类" />
+        <label class="sr-only" for="library-category">曲谱分类</label>
+        <select id="library-category" class="library-category">
+          <option value="">全部分类</option>
+        </select>
+        <div id="library-errors" class="library-errors" role="status"></div>
+        <div id="library-list" class="score-library-list"></div>
+        <p id="library-empty" class="library-empty hidden">没有符合条件的曲谱。</p>
+        <p class="library-maintenance">新增曲谱：向 <code>src/library/&lt;分类&gt;/</code> 提交 <code>.jabc</code> 文件。</p>
+      </aside>
+
+      <div class="workbench">
       <section class="controls" aria-labelledby="playback-title">
         <div>
           <p class="section-label" id="playback-title">播放控制</p>
@@ -112,6 +134,7 @@
           <p class="hint">支持组合语法：#4、b7、1'、1,、1e、1s、1/2、1*2、1.、#4'e.，以及正文转调 [K:G jianpu]。修改左侧文本后再次点击播放即可验收。</p>
         </article>
       </section>
+      </div>
     </main>
 
     <script type="module" src="/src/web/main.ts"></script>

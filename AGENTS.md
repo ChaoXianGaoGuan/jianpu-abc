@@ -25,6 +25,9 @@ abcjs-specific options out of the AST.
 The lightweight validation UI lives in `src/web/` with its document shell at
 `index.html`. Keep it as an integration layer over exported core APIs.
 
+Built-in scores live at `src/library/<category>/<slug>.jabc`. Keep filenames
+ASCII, use `T:` and `C:` for display metadata, and ensure every score parses.
+
 Tests live in `tests/` and mirror the module they exercise, using names such as
 `parser.test.ts`. Generated output belongs in `dist/`. Do not edit or commit
 `dist/`, `node_modules/`, or `.npm-cache/`.

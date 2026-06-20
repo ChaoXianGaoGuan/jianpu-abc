@@ -40,6 +40,7 @@ src/core/        AST, parser, normalization, fractions, pitch mapping
 src/converters/  Standard ABC and MusicXML exporters
 src/playback/    Pure playback event scheduling and Web Audio player
 src/renderers/   SVG jianpu renderer and abcjs staff adapter
+src/library/     Repository-backed JABC scores grouped by category directory
 src/web/         Lightweight browser validation UI
 tests/           Vitest tests
 ```
@@ -67,6 +68,7 @@ The current project supports:
 - SVG jianpu rendering with source-row layout preservation, aligned measure columns, duration grouping, graphical repeats, and SVG relation curves.
 - Staff rendering through `toStandardAbc` and abcjs.
 - Browser validation UI with a single jianpu/staff preview switch, playback highlighting, instrument selection, and copy/download actions for ABC and MusicXML.
+- Read-only built-in JABC library with build-time discovery, search, category filtering, and dirty-editor confirmation.
 
 ## Commands to run before committing
 
@@ -81,8 +83,8 @@ npm run build
 Current expected state after the latest development pass:
 
 ```text
-Test files: 8 passed
-Tests: 131 passed
+Test files: 9 passed
+Tests: 147 passed
 Typecheck: passes
 Build: passes
 ```

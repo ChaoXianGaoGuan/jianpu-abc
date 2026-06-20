@@ -19,8 +19,8 @@ body {
 }
 
 .app-header,
-main {
-  width: min(1180px, calc(100% - 40px));
+.app-shell {
+  width: min(1500px, calc(100% - 40px));
   margin-inline: auto;
 }
 
@@ -111,8 +111,122 @@ h2 {
   accent-color: #254f40;
 }
 
-main {
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
   padding-bottom: 48px;
+}
+
+.workbench {
+  min-width: 0;
+}
+
+.score-library {
+  position: sticky;
+  top: 20px;
+  max-height: calc(100vh - 40px);
+  overflow: hidden;
+}
+
+.library-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.library-hint,
+.library-maintenance,
+.library-empty {
+  color: #718078;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.library-hint {
+  margin: 12px 0 14px;
+}
+
+.library-search,
+.library-category {
+  width: 100%;
+}
+
+.library-search {
+  border: 1px solid #9eafa5;
+  border-radius: 9px;
+  padding: 10px 12px;
+  color: #273a33;
+  outline: none;
+  background: #f7f8f3;
+  font: inherit;
+}
+
+.library-search:focus {
+  border-color: #517765;
+  box-shadow: 0 0 0 3px rgb(61 104 83 / 12%);
+}
+
+.library-category {
+  margin-top: 9px;
+}
+
+.score-library-list {
+  display: grid;
+  gap: 8px;
+  max-height: calc(100vh - 340px);
+  margin-top: 14px;
+  overflow-y: auto;
+  padding-right: 3px;
+}
+
+button.score-library-item {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  text-align: left;
+}
+
+.score-library-item strong,
+.score-library-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-library-item span {
+  color: #718078;
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
+.score-library-item.is-current {
+  border-color: #254f40;
+  box-shadow: inset 4px 0 #254f40;
+  background: #e8f0e9;
+}
+
+.library-errors {
+  max-height: 120px;
+  margin-top: 10px;
+  overflow: auto;
+  color: #a13f2d;
+  white-space: pre-wrap;
+  font: 0.75rem/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.library-empty {
+  margin: 16px 0 0;
+}
+
+.library-maintenance {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid #d2dacf;
 }
 
 .controls,
@@ -362,6 +476,22 @@ textarea:focus {
   white-space: nowrap;
 }
 
+@media (max-width: 1100px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .score-library {
+    position: static;
+    max-height: none;
+  }
+
+  .score-library-list {
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    max-height: 320px;
+  }
+}
+
 @media (max-width: 820px) {
   .app-header,
   .controls {
@@ -389,8 +519,8 @@ textarea:focus {
 
 @media (max-width: 520px) {
   .app-header,
-  main {
-    width: min(100% - 24px, 1180px);
+  .app-shell {
+    width: min(100% - 24px, 1500px);
   }
 
   .app-header {
