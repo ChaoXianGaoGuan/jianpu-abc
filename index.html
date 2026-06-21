@@ -207,56 +207,96 @@
       <section id="guide-view" class="app-view guide-view hidden" aria-labelledby="guide-title">
         <div class="guide-hero panel">
           <p class="section-label">JABC 入门</p>
-          <h2 id="guide-title">JABC 写法速查</h2>
-          <p>JABC 是面向简谱的 ABC 风格文本格式。核心规则是：<strong><code>K:C jianpu</code> 表示 1=C，2-7 按大调音阶级数排列。</strong></p>
+          <h2 id="guide-title">JABC 写法教程</h2>
+          <p>JABC 是面向简谱的 ABC 风格文本格式。先记住三件事：<strong><code>K:C jianpu</code> 表示 1=C，音乐行用 <code>|</code> 分小节，<code>w:</code> 给前一行音乐配歌词。</strong></p>
         </div>
 
         <section class="guide-section panel" aria-labelledby="guide-start-title">
           <div class="guide-section-heading">
             <div>
-              <p class="section-label">快速开始</p>
-              <h3 id="guide-start-title">最小示例</h3>
+              <p class="section-label">3 分钟上手</p>
+              <h3 id="guide-start-title">先写出第一首歌</h3>
             </div>
             <button type="button" data-guide-example="basic">载入示例</button>
           </div>
-          <pre class="guide-code"><code>T:两只老虎
+          <div class="guide-grid">
+            <div><code>T:</code><span>写标题</span></div>
+            <div><code>M:</code><span>写拍号</span></div>
+            <div><code>L:</code><span>写默认音符时值</span></div>
+            <div><code>Q:</code><span>写速度</span></div>
+            <div><code>K:C jianpu</code><span>写调号，表示 1=C</span></div>
+            <div><code>w:</code><span>给前一条音乐行配歌词</span></div>
+          </div>
+          <pre class="guide-code"><code>T:小星星
+M:4/4
+L:1/4
+Q:1/4=100
+K:C jianpu
+| 1 1 5 5 | 6 6 5 - |
+w: 一 闪 一 闪
+| 4 4 3 3 | 2 2 1 - |
+w: 亮 晶 晶</code></pre>
+        </section>
+
+        <section class="guide-section panel" aria-labelledby="guide-template-title">
+          <div class="guide-section-heading">
+            <div>
+              <p class="section-label">可复制模板</p>
+              <h3 id="guide-template-title">从这里开始改</h3>
+            </div>
+            <button type="button" data-guide-example="template">载入模板</button>
+          </div>
+          <pre class="guide-code"><code>T:标题
+C:作者或来源
 M:4/4
 L:1/4
 Q:1/4=120
 K:C jianpu
-| 1 2 3 1 | 1 2 3 1 |
-| 3 4 5 - | 3 4 5 - |
-w: 两 只 老 虎 两 只 老 虎</code></pre>
+
+| 1 2 3 4 | 5 6 7 1' |
+w: 这 里 写 歌 词</code></pre>
         </section>
 
-        <section class="guide-section panel" aria-labelledby="guide-fields-title">
-          <p class="section-label">头部字段</p>
-          <h3 id="guide-fields-title">常用字段</h3>
+        <section class="guide-section panel" aria-labelledby="guide-common-title">
+          <p class="section-label">先会这些就能写</p>
+          <h3 id="guide-common-title">最常用写法</h3>
           <div class="guide-grid">
-            <div><code>T:</code><span>标题，例如 <code>T:两只老虎</code></span></div>
-            <div><code>C:</code><span>作曲者或来源，例如 <code>C:传统儿歌</code></span></div>
-            <div><code>M:</code><span>拍号，例如 <code>M:4/4</code></span></div>
-            <div><code>L:</code><span>默认时值，例如 <code>L:1/4</code></span></div>
-            <div><code>Q:</code><span>速度，例如 <code>Q:1/4=120</code></span></div>
-            <div><code>K:</code><span>简谱主音，例如 <code>K:D jianpu</code> 表示 1=D</span></div>
-            <div><code>V:</code><span>声部，例如 <code>V:melody</code></span></div>
-            <div><code>w:</code><span>歌词，按空白分隔并依次附着到音符</span></div>
-          </div>
-        </section>
-
-        <section class="guide-section panel" aria-labelledby="guide-notes-title">
-          <p class="section-label">音符与修饰</p>
-          <h3 id="guide-notes-title">数字、休止、八度和变音</h3>
-          <div class="guide-grid">
-            <div><code>1 2 3 4 5 6 7</code><span>以 <code>K:</code> 指定的 1 为基准的音级</span></div>
+            <div><code>1 2 3 4 5 6 7</code><span>音级；由 <code>K:</code> 决定 1 等于哪个音</span></div>
             <div><code>0</code> 或 <code>z</code><span>休止符</span></div>
-            <div><code>-</code><span>延长前一个音</span></div>
+            <div><code>-</code><span>延长前一个音，不单独配歌词</span></div>
+            <div><code>1.</code><span>附点音符，仍然只对应一个歌词</span></div>
+            <div><code>1e</code> / <code>1s</code><span>八分音符 / 十六分音符</span></div>
+            <div><code>1/2</code> / <code>1*2</code><span>默认时值的一半 / 两倍</span></div>
             <div><code>#4 b7 =3</code><span>升、降、还原</span></div>
-            <div><code>##4 bb7</code><span>双升、双降</span></div>
-            <div><code>1' 1''</code><span>升高一个或两个八度</span></div>
-            <div><code>1, 1,,</code><span>降低一个或两个八度</span></div>
-            <div><code>[K:G jianpu]</code><span>正文中从当前位置改成 1=G</span></div>
+            <div><code>1'</code> / <code>1,</code><span>高八度 / 低八度</span></div>
+            <div><code>1~</code> / <code>~1</code><span>延音线，多个音只配一个歌词</span></div>
+            <div><code>(1 2)</code><span>圆滑线组，整组只配一个歌词</span></div>
           </div>
+        </section>
+
+        <section class="guide-section panel" aria-labelledby="guide-lyrics-title">
+          <div class="guide-section-heading">
+            <div>
+              <p class="section-label">歌词</p>
+              <h3 id="guide-lyrics-title">歌词怎样对齐音符</h3>
+            </div>
+            <button type="button" data-guide-example="lyrics">载入示例</button>
+          </div>
+          <div class="guide-grid">
+            <div><code>w:</code><span>对应前一条音乐源码行</span></div>
+            <div><code>没有 w:</code><span>这一行当作前奏、间奏或纯器乐</span></div>
+            <div><code>*</code><span>占一个发音单元，但不显示歌词</span></div>
+            <div><code>1 -</code><span>一个字拖长，不多消耗歌词</span></div>
+            <div><code>1~ ~1</code><span>延音线连接的一串音只配一个字</span></div>
+            <div><code>(4 5)</code><span>圆滑线包围的一组音只配一个字</span></div>
+          </div>
+          <pre class="guide-code"><code>% 前奏，没有 w: 就不显示歌词
+| 1 2 3 5 | 6 5 3 2 |
+
+| 1 1 5 5 | 6 6 5 - |
+w: 一 闪 一 闪
+| 4 4 3 3 | 2 2 1 - |
+w: * 晶 晶 亮</code></pre>
         </section>
 
         <section class="guide-section panel" aria-labelledby="guide-duration-title">
@@ -277,7 +317,20 @@ w: 两 只 老 虎 两 只 老 虎</code></pre>
           </div>
           <pre class="guide-code"><code>L:1/4
 K:C jianpu
-| 1 2/2 3e 4s 5. 6*2 |</code></pre>
+| 1 2/2 3e 4s | 5. 6*2 7.. - |</code></pre>
+        </section>
+
+        <section class="guide-section panel" aria-labelledby="guide-pitch-title">
+          <p class="section-label">音高</p>
+          <h3 id="guide-pitch-title">升降号、八度和转调</h3>
+          <div class="guide-grid">
+            <div><code>K:D jianpu</code><span>1=D，后续 2-7 按大调级数排列</span></div>
+            <div><code>[K:G jianpu]</code><span>正文中从当前位置临时改成 1=G</span></div>
+            <div><code>#4 b7 =3</code><span>升、降、还原</span></div>
+            <div><code>##4 bb7</code><span>双升、双降</span></div>
+            <div><code>1' 1''</code><span>升高一个或两个八度</span></div>
+            <div><code>1, 1,,</code><span>降低一个或两个八度</span></div>
+          </div>
         </section>
 
         <section class="guide-section panel" aria-labelledby="guide-flow-title">
@@ -312,8 +365,9 @@ K:C jianpu
           </div>
           <div class="guide-grid">
             <div><code>V:melody</code><span>切换或声明声部</span></div>
+            <div><code>V:bass</code><span>低声部或伴奏声部</span></div>
             <div><code>1~</code> / <code>~1</code><span>开始和结束延音线</span></div>
-            <div><code>(1</code> / <code>3)</code><span>开始和结束圆滑线</span></div>
+            <div><code>(1</code> / <code>2)</code><span>开始和结束圆滑线</span></div>
             <div><code>(3</code><span>后续三个音符或休止符构成三连音</span></div>
           </div>
           <pre class="guide-code"><code>K:C jianpu
@@ -321,6 +375,32 @@ V:melody
 | (3 1 2 3 | 1~ | ~1 - |
 V:bass
 | 1, 5, | 1, - |</code></pre>
+        </section>
+
+        <section class="guide-section panel" aria-labelledby="guide-ties-title">
+          <div class="guide-section-heading">
+            <div>
+              <p class="section-label">歌词拖腔</p>
+              <h3 id="guide-ties-title">一字多音怎么写</h3>
+            </div>
+            <button type="button" data-guide-example="ties">载入示例</button>
+          </div>
+          <pre class="guide-code"><code>K:C jianpu
+| 1 - 2~ | ~2 (4 5) 6. |
+w: 长 连 啊 点</code></pre>
+        </section>
+
+        <section class="guide-section panel" aria-labelledby="guide-errors-title">
+          <p class="section-label">避坑</p>
+          <h3 id="guide-errors-title">常见错误</h3>
+          <div class="guide-grid">
+            <div><code>忘记 K:C jianpu</code><span>无法确定 1 等于哪个音，先写调号</span></div>
+            <div><code>w: 全写最后</code><span>现在每条 <code>w:</code> 只对应前一条音乐行</span></div>
+            <div><code>(3 4)</code><span><code>(3</code> 是三连音标记；圆滑线示例可用 <code>(4 5)</code></span></div>
+            <div><code>前奏不唱</code><span>不要写 <code>w:</code>；某个音不唱则用 <code>*</code></span></div>
+            <div><code>歌词连在一起</code><span><code>w:</code> 按空白分词；<code>亮 晶 晶</code> 是三个歌词单位</span></div>
+            <div><code>音符太挤</code><span>预览区可用“每行小节”控制简谱排版</span></div>
+          </div>
         </section>
       </section>
     </main>

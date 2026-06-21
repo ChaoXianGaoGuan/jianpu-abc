@@ -108,27 +108,55 @@ let manualBpm = 120;
 let currentView: AppView = "workbench";
 
 const guideExamples: Record<string, string> = {
-  basic: `T:两只老虎
+  basic: `T:小星星
+M:4/4
+L:1/4
+Q:1/4=100
+K:C jianpu
+| 1 1 5 5 | 6 6 5 - |
+w: 一 闪 一 闪
+| 4 4 3 3 | 2 2 1 - |
+w: 亮 晶 晶`,
+  template: `T:标题
+C:作者或来源
 M:4/4
 L:1/4
 Q:1/4=120
 K:C jianpu
-| 1 2 3 1 | 1 2 3 1 |
-w: 两 只 老 虎 两 只 老 虎
-| 3 4 5 - | 3 4 5 - |
-w: 跑 得 快 跑 得 快`,
+
+| 1 2 3 4 | 5 6 7 1' |
+w: 这 里 写 歌 词`,
+  lyrics: `T:歌词对齐示例
+M:4/4
+L:1/4
+Q:1/4=100
+K:C jianpu
+% 前奏，没有 w: 就不显示歌词
+| 1 2 3 5 | 6 5 3 2 |
+
+| 1 1 5 5 | 6 6 5 - |
+w: 一 闪 一 闪
+| 4 4 3 3 | 2 2 1 - |
+w: * 晶 晶 亮`,
   durations: `T:时值示例
 M:4/4
 L:1/4
 Q:1/4=96
 K:C jianpu
-| 1 2/2 3e 4s 5. 6*2 |`,
+| 1 2/2 3e 4s | 5. 6*2 7.. - |`,
+  ties: `T:拖腔与连线示例
+M:4/4
+L:1/4
+Q:1/4=88
+K:C jianpu
+| 1 - 2~ | ~2 (4 5) 6. |
+w: 长 连 啊 点`,
   repeats: `T:反复示例
 M:4/4
 L:1/4
 K:C jianpu
 |: 1 2 | 3 4 :| [1 5 5 || [2 1' - |]`,
-  advanced: `T:进阶示例
+  advanced: `T:多声部示例
 M:4/4
 L:1/4
 Q:1/4=100
