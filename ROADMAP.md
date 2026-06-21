@@ -39,7 +39,7 @@ Scope:
 
 Follow-up slices:
 
-- Add a core rhythm/beat analysis module for measure validation and beat-clear display.
+- Build user-facing measure validation and beat-clear display on top of `src/core/rhythm.ts`.
 - Split the Web workbench controllers after the rendering boundary is stable.
 
 ### 2. Standard ABC import

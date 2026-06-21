@@ -4,6 +4,7 @@ export * from "./core/fraction";
 export * from "./core/normalize";
 export * from "./core/parser";
 export * from "./core/pitch";
+export * from "./core/rhythm";
 export * from "./converters/to-abc";
 export * from "./converters/to-musicxml";
 export * from "./playback/events";

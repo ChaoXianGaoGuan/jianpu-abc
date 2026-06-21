@@ -18,6 +18,7 @@ Audio playback, and SVG jianpu/staff rendering.
 - [Standard ABC export](docs/abc-export.md)
 - [MusicXML export](docs/musicxml-export.md)
 - [Playback and Web Audio](docs/playback.md)
+- [Rhythm and beat analysis](docs/rhythm.md)
 - [SVG jianpu renderer](docs/jianpu-renderer.md)
 - [Staff renderer adapter](docs/staff-renderer.md)
 - [GitHub Pages deployment](docs/deployment.md)
