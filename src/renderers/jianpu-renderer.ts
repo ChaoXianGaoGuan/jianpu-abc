@@ -15,12 +15,15 @@ import {
   type PositionedEvent,
 } from "./jianpu-layout";
 
+export type RhythmDisplayMode = "source" | "beat-clear";
+
 export interface RenderOptions {
   width?: number;
   fontSize?: number;
   showLyrics?: boolean;
   highlightEventId?: string;
   alignMeasuresAcrossSystems?: boolean;
+  rhythmDisplay?: RhythmDisplayMode;
 }
 
 interface CrossMeasureTie {
@@ -42,6 +45,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
   const fontSize = Math.max(18, options.fontSize ?? 32);
   const showLyrics = options.showLyrics ?? true;
   const alignMeasuresAcrossSystems = options.alignMeasuresAcrossSystems ?? true;
+  const rhythmDisplay = options.rhythmDisplay ?? "source";
   const padding = Math.max(24, fontSize);
   const defaultLength = score.header.defaultNoteLength ?? DEFAULT_NOTE_LENGTH;
   const beatDuration = score.header.meter
@@ -101,6 +105,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
         connectedBoundaries.has(measureIndex),
         suppressRightBarline,
         sharedLeftBarlineX,
+        rhythmDisplay,
       );
     }));
     renderedVoices.push(renderCrossMeasureTies(crossMeasureTies, layout, fontSize));
@@ -130,6 +135,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     .ending-number{font:700 ${fontSize * 0.45}px Georgia,'Songti SC',serif;fill:#33483f}
     .event-bg{fill:transparent;transition:fill .12s ease}
     .event-symbol,.duration-extension{font:600 ${fontSize}px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#1f332a;text-anchor:middle}
+    .beat-clear-extension{opacity:.72}
     .event-key-change{font:700 ${fontSize * 0.48}px Inter,'Microsoft YaHei',sans-serif;fill:#a4522c;text-anchor:middle}
     .event-accidental{font:700 ${fontSize * 0.8}px 'Bravura','Noto Music','Segoe UI Symbol',Georgia,serif;fill:#1f332a;text-anchor:middle;dominant-baseline:middle}
     .octave-dot,.duration-dot{fill:#1f332a}
@@ -194,6 +200,7 @@ function renderMeasure(
   suppressOutgoingTie: boolean,
   suppressRightBarline: boolean,
   leftBarlineX: number | undefined,
+  rhythmDisplay: RhythmDisplayMode,
 ): string {
   const events = positioned.map((item) => {
     const eventId = `${voice.id}:${placed.measureIndex}:${item.eventIndex}`;
@@ -210,6 +217,9 @@ function renderMeasure(
   const rightBarlineX = placed.measure.barline
     ? placed.width - fontSize * 0.22
     : undefined;
+  const beatClearExtensions = rhythmDisplay === "beat-clear"
+    ? renderBeatClearExtensions(positioned, placed.cellWidth, placed.beatGap, fontSize)
+    : "";
   const durationLines = renderDurationLines(positioned, beatDuration, fontSize, rightBarlineX);
   const relations = renderRelations(
     positioned,
@@ -227,7 +237,32 @@ function renderMeasure(
   const barline = placed.measure.barline && !suppressRightBarline
     ? renderBarline(placed.measure.barline, "right", placed.width, fontSize)
     : "";
-  return `<g class="measure" data-measure-index="${placed.measureIndex}" transform="translate(${round(placed.x)} ${round(placed.y)})">${leftBarline}${ending}${events}${durationLines}${relations}${barline}</g>`;
+  return `<g class="measure" data-measure-index="${placed.measureIndex}" transform="translate(${round(placed.x)} ${round(placed.y)})">${leftBarline}${ending}${events}${beatClearExtensions}${durationLines}${relations}${barline}</g>`;
+}
+
+function renderBeatClearExtensions(
+  positioned: PositionedEvent[],
+  cellWidth: number,
+  beatGap: number,
+  fontSize: number,
+): string {
+  const output: string[] = [];
+  for (const item of positioned) {
+    if (item.event.type !== "note") continue;
+    if (isIntegerPosition(item.layoutOffset)) continue;
+    const endOffset = item.layoutOffset + item.layoutSpan;
+    for (let boundary = Math.floor(item.layoutOffset + 1e-9) + 1; boundary < endOffset - 1e-9; boundary += 1) {
+      const segmentEnd = Math.min(boundary + 1, endOffset);
+      const centerOffset = (boundary + segmentEnd) / 2;
+      const x = layoutXAt(centerOffset, cellWidth, beatGap);
+      output.push(`<text class="duration-extension beat-clear-extension" x="${round(x)}" y="0">−</text>`);
+    }
+  }
+  return output.join("");
+}
+
+function isIntegerPosition(value: number): boolean {
+  return Math.abs(value - Math.round(value)) < 1e-9;
 }
 
 function renderBarline(

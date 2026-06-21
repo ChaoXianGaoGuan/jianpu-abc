@@ -344,6 +344,13 @@ describe("renderJianpu", () => {
     expect(quarterBeat).not.toContain("×3");
   });
 
+  it("can show beat-clear extension marks for cross-beat off-beat notes", () => {
+    const score = parse("M:4/4\nL:1/4\nK:C jianpu\n| 6e 1. 2 3 |");
+
+    expect(renderJianpu(score)).not.toContain('class="duration-extension beat-clear-extension"');
+    expect(renderJianpu(score, { rhythmDisplay: "beat-clear" })).toContain('class="duration-extension beat-clear-extension"');
+  });
+
   it("connects equal subdivisions within each beat", () => {
     const eighths = renderJianpu(parse("M:4/4\nL:1/8\nK:C jianpu\n| 1 2 3 4 |"));
     const sixteenths = renderJianpu(parse("M:4/4\nL:1/16\nK:C jianpu\n| 1 2 3 4 |"));

@@ -48,6 +48,7 @@ const staffPreview = element<HTMLDivElement>("staff-preview");
 const notationSelect = element<HTMLSelectElement>("notation-select");
 const previewKindIndicator = element<HTMLSpanElement>("preview-kind-indicator");
 const alignMeasuresToggle = element<HTMLInputElement>("align-measures-toggle");
+const beatClearToggle = element<HTMLInputElement>("beat-clear-toggle");
 const downloadScoreSvgButton = element<HTMLButtonElement>("download-score-svg-button");
 const downloadScorePngButton = element<HTMLButtonElement>("download-score-png-button");
 const parseStatus = element<HTMLDivElement>("parse-status");
@@ -135,6 +136,7 @@ meterDenominator.addEventListener("input", updateManualTiming);
 tempoBpm.addEventListener("input", updateManualTiming);
 notationSelect.addEventListener("change", renderActivePreview);
 alignMeasuresToggle.addEventListener("change", renderActivePreview);
+beatClearToggle.addEventListener("change", renderActivePreview);
 downloadScoreSvgButton.addEventListener("click", () => void downloadScoreImage("svg"));
 downloadScorePngButton.addEventListener("click", () => void downloadScoreImage("png"));
 jianpuPreview.addEventListener("contextmenu", navigateFromJianpu);
@@ -359,6 +361,7 @@ function renderActivePreview(): void {
   jianpuPreview.classList.toggle("hidden", !showJianpu);
   staffPreview.classList.toggle("hidden", showJianpu);
   alignMeasuresToggle.disabled = !showJianpu;
+  beatClearToggle.disabled = !showJianpu;
   previewKindIndicator.textContent = showJianpu ? "SVG" : "ABCJS";
 
   if (showJianpu) {
@@ -377,6 +380,7 @@ function renderJianpuPreview(): void {
     width,
     showLyrics: true,
     alignMeasuresAcrossSystems: alignMeasuresToggle.checked,
+    rhythmDisplay: beatClearToggle.checked ? "beat-clear" : "source",
   });
   previewReady = true;
   highlightJianpuEvents();

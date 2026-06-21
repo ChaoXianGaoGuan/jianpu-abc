@@ -11,10 +11,11 @@ const svg = renderJianpu(score, {
   showLyrics: true,
   highlightEventId: "default:0:2",
   alignMeasuresAcrossSystems: true,
+  rhythmDisplay: "source",
 });
 ```
 
-`width` 最小为 320，决定首选显示宽度。源码音乐行决定系统换行；同一源码行会尽量缩放以保持小节列数，但不会压缩到低于可读间距，必要时会扩大内部 viewBox 并把整张 SVG 按容器宽度等比例缩小。默认 `alignMeasuresAcrossSystems: true` 会按列统一上下系统的小节宽度，并在窄屏缩放时继续使用每一列的最大可读宽度，使四小节一行等练习谱保持垂直对齐；传入 `false` 可恢复每行独立自然排版，每个源码行或自动换出的显示行都会按自己的小节比例铺满最终可读 viewBox 宽度。Web 工作台在“简谱预览”标题右侧提供“小节列对齐”复选框来切换此选项。没有显式系统断点的 AST 才按宽度自动换行。`fontSize` 最小为 18。返回值可以直接设置为网页容器的 SVG 内容，也可以保存为 `.svg` 文件。
+`width` 最小为 320，决定首选显示宽度。源码音乐行决定系统换行；同一源码行会尽量缩放以保持小节列数，但不会压缩到低于可读间距，必要时会扩大内部 viewBox 并把整张 SVG 按容器宽度等比例缩小。默认 `alignMeasuresAcrossSystems: true` 会按列统一上下系统的小节宽度，并在窄屏缩放时继续使用每一列的最大可读宽度，使四小节一行等练习谱保持垂直对齐；传入 `false` 可恢复每行独立自然排版，每个源码行或自动换出的显示行都会按自己的小节比例铺满最终可读 viewBox 宽度。`rhythmDisplay: "beat-clear"` 会为从非拍点开始且跨过拍边界的音符补出淡化延音横线，帮助看清隐藏拍点；默认 `"source"` 保持原样。Web 工作台在预览标题右侧提供“小节列对齐”和“分拍显示”复选框来切换这些选项。没有显式系统断点的 AST 才按宽度自动换行。`fontSize` 最小为 18。返回值可以直接设置为网页容器的 SVG 内容，也可以保存为 `.svg` 文件。
 
 ## 当前渲染内容
 
