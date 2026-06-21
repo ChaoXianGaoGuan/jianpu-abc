@@ -53,6 +53,11 @@ function repeatStartBoundaryXs(svg: string): number[] {
     .map((match) => Number(match[1]));
 }
 
+function repeatMarkerXs(svg: string, kind: string): number[] {
+  return [...svg.matchAll(new RegExp(`class="event-repeat-marker event-repeat-marker-${kind}" x="([\\d.-]+)"`, "g"))]
+    .map((match) => Number(match[1]));
+}
+
 const SCORE = `T:渲染测试 <曲>
 C:传统来源
 M:4/4
@@ -127,6 +132,15 @@ describe("renderJianpu", () => {
     expect(svg).toContain('y="38.4">D.S.</text>');
     expect(svg).toContain('y="-39.04">𝄌</text>');
     expect(svg).toContain('y="38.4">Fine</text>');
+  });
+
+  it("aligns a leading coda marker with the preceding same-row barline", () => {
+    const svg = renderJianpu(parse("K:C jianpu\n| 1 | !coda! 2 |"));
+    const transforms = numericMeasureTransforms(svg);
+    const previousBarlineX = transforms[0]!.x + singleBarlineXs(svg)[0]!;
+    const codaX = transforms[1]!.x + repeatMarkerXs(svg, "coda")[0]!;
+
+    expect(codaX).toBeCloseTo(previousBarlineX, 3);
   });
 
   it("joins duration underlines across inline key changes within the same beat", () => {

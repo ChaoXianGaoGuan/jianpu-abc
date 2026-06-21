@@ -221,7 +221,12 @@ export function layoutMeasures(
   return output;
 }
 
-export function positionEvents(placed: LayoutMeasure, beatDuration: Fraction, fontSize: number): PositionedEvent[] {
+export function positionEvents(
+  placed: LayoutMeasure,
+  beatDuration: Fraction,
+  fontSize: number,
+  leftBoundaryX = 0,
+): PositionedEvent[] {
   let slotOffset = 0;
   let startTime: Fraction = { numerator: 0, denominator: 1 };
   const layoutSpans = measureEventLayoutSpans(placed.measure, beatDuration);
@@ -238,7 +243,7 @@ export function positionEvents(placed: LayoutMeasure, beatDuration: Fraction, fo
       ? slotOffset
       : slotOffset + Math.min(markerSpan, 1) / 2;
     const centerX = event.type === "repeat-marker"
-      ? repeatMarkerBoundaryX(placed, centerOffset, measureSpan, fontSize)
+      ? repeatMarkerBoundaryX(placed, centerOffset, measureSpan, fontSize, leftBoundaryX)
       : layoutXAt(
         centerOffset,
         placed.cellWidth,
@@ -276,8 +281,9 @@ function repeatMarkerBoundaryX(
   offset: number,
   measureSpan: number,
   fontSize: number,
+  leftBoundaryX: number,
 ): number {
-  if (offset <= 1e-9) return 0;
+  if (offset <= 1e-9) return leftBoundaryX;
   if (offset >= measureSpan - 1e-9) return placed.width - fontSize * 0.22;
   return layoutXAt(offset, placed.cellWidth, placed.beatGap);
 }

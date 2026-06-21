@@ -82,7 +82,15 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
       minCellWidth,
     );
     renderedWidth = Math.max(renderedWidth, ...layout.map((placed) => placed.x + placed.width + padding * 0.2));
-    const positionedByMeasure = layout.map((placed) => buildPositionedEvents(placed, beatDuration, fontSize));
+    const leftBoundaryXs = layout.map((placed, measureIndex) => {
+      const previous = layout[measureIndex - 1];
+      return previous !== undefined && previous.y === placed.y
+        ? previous.x + previous.width - fontSize * 0.22 - placed.x
+        : 0;
+    });
+    const positionedByMeasure = layout.map((placed, measureIndex) =>
+      buildPositionedEvents(placed, beatDuration, fontSize, leftBoundaryXs[measureIndex] ?? 0)
+    );
     const crossMeasureTies = findCrossMeasureTies(layout, positionedByMeasure);
     const connectedBoundaries = new Set(
       crossMeasureTies.map((connection) => connection.boundaryIndex),
@@ -91,9 +99,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
       const previous = layout[measureIndex - 1];
       const next = layout[measureIndex + 1];
       const sharedLeftBarlineX = placed.measure.leftBarline !== undefined
-        && previous !== undefined
-        && previous.y === placed.y
-        ? previous.x + previous.width - fontSize * 0.22 - placed.x
+        ? leftBoundaryXs[measureIndex]
         : undefined;
       const suppressRightBarline = placed.measure.barline?.type === "single"
         && next?.measure.leftBarline !== undefined
