@@ -100,6 +100,15 @@ export interface ExtensionEvent {
   location?: SourceLocation;
 }
 
+export type RepeatMarkerKind =
+  | "segno"
+  | "coda"
+  | "fine"
+  | "dc"
+  | "ds"
+  | "dacapo"
+  | "dacoda";
+
 export interface KeyChangeEvent {
   type: "key-change";
   key: JianpuKey;
@@ -107,7 +116,15 @@ export interface KeyChangeEvent {
   location?: SourceLocation;
 }
 
-export type MusicalEvent = NoteEvent | RestEvent | ExtensionEvent | KeyChangeEvent;
+export interface RepeatMarkerEvent {
+  type: "repeat-marker";
+  kind: RepeatMarkerKind;
+  text: string;
+  sourceText: `!${string}!`;
+  location?: SourceLocation;
+}
+
+export type MusicalEvent = NoteEvent | RestEvent | ExtensionEvent | KeyChangeEvent | RepeatMarkerEvent;
 
 export type BarlineType =
   | "single"

@@ -174,6 +174,10 @@ function renderMeasure(
       tokens.push({ token: `[K:${event.key.tonic}]` });
       continue;
     }
+    if (event.type === "repeat-marker") {
+      tokens.push({ token: event.sourceText });
+      continue;
+    }
 
     if (event.type === "extension") {
       if (!previousRenderable || previousRenderable.kind !== "note") {

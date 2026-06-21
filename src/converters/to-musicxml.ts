@@ -246,6 +246,7 @@ function toRenderableEvents(
       rendered.push({ kind: "key-change", source: event, key: event.key });
       continue;
     }
+    if (event.type === "repeat-marker") continue;
     if (event.type === "extension") {
       const previous = rendered.at(-1);
       if (!previous || previous.kind !== "note") {
@@ -345,7 +346,7 @@ function chooseDivisions(voices: Voice[]): number {
   for (const voice of voices) {
     for (const measure of voice.measures) {
       for (const event of measure.events) {
-        if (event.type === "key-change") continue;
+        if (event.type === "key-change" || event.type === "repeat-marker") continue;
         const quarterDuration = reduceFraction({
           numerator: event.duration.numerator * 4,
           denominator: event.duration.denominator,

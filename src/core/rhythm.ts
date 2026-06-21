@@ -102,7 +102,7 @@ export function measureDuration(measure: Measure): Fraction {
 }
 
 export function eventDuration(event: MusicalEvent): Fraction {
-  return event.type === "key-change"
+  return event.type === "key-change" || event.type === "repeat-marker"
     ? { numerator: 0, denominator: 1 }
     : event.duration;
 }

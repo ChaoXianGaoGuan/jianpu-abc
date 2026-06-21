@@ -8,6 +8,7 @@ import type {
   Measure,
   MusicalEvent,
   PitchClass,
+  RepeatMarkerKind,
   Score,
   ScoreHeader,
   SourceLocation,
@@ -54,6 +55,7 @@ const NOTE_TOKEN_PATTERN = /^(\()?(~)?(#{1,2}|b{1,2}|=)?([1-7])('+|,+)?(?:(\/)(\
 const REST_TOKEN_PATTERN = /^(0|z)(?:(\/)(\d*)|\*(\d+)|([whqes]))?(\.{0,2})$/;
 const INLINE_VOICE_PATTERN = /^\[V:([^\]\s]+)\]$/;
 const INLINE_KEY_PATTERN = /^\[K:(.+)\]$/;
+const REPEAT_MARKER_TOKEN_PATTERN = /^!(segno|coda|fine|D\.C\.|D\.S\.|dacapo|dacoda)!$/;
 const ENDING_TOKEN_PATTERN = /^\[(\d+)$/;
 const TUPLET_TOKEN_PATTERN = /^\(3$/;
 const ABSOLUTE_DURATION_LETTERS: Record<string, Fraction> = {
@@ -141,6 +143,12 @@ export function parseJabc(source: string): ParseResult<Score> {
         } else {
           errors.push(invalidInlineKeyError(token, lineNumber, rawLine));
         }
+        continue;
+      }
+
+      const repeatMarker = parseRepeatMarkerToken(token.text, location);
+      if (repeatMarker) {
+        currentVoice.currentEvents.push(repeatMarker);
         continue;
       }
 
@@ -407,7 +415,7 @@ function ensureVoice(id: string, voices: Map<string, VoiceDraft>, order: string[
 
 function applyTuplet(voice: VoiceDraft, event: MusicalEvent): MusicalEvent {
   const state = voice.pendingTuplet;
-  if (!state || event.type === "extension" || event.type === "key-change") return event;
+  if (!state || event.type === "extension" || event.type === "key-change" || event.type === "repeat-marker") return event;
 
   const position: Tuplet["position"] = state.remaining === state.actual
     ? "start"
@@ -465,6 +473,45 @@ function handleBarline(voice: VoiceDraft, barline: Barline): void {
     return;
   }
   finalizeCurrentEvents(voice, barline);
+}
+
+function parseRepeatMarkerToken(text: string, location: SourceLocation): MusicalEvent | undefined {
+  const match = REPEAT_MARKER_TOKEN_PATTERN.exec(text);
+  if (!match) return undefined;
+  const marker = match[1] as string;
+  const kind = repeatMarkerKind(marker);
+  return {
+    type: "repeat-marker",
+    kind,
+    text: repeatMarkerText(kind),
+    sourceText: text as `!${string}!`,
+    location,
+  };
+}
+
+function repeatMarkerKind(marker: string): RepeatMarkerKind {
+  switch (marker) {
+    case "segno": return "segno";
+    case "coda": return "coda";
+    case "fine": return "fine";
+    case "D.C.": return "dc";
+    case "D.S.": return "ds";
+    case "dacapo": return "dacapo";
+    case "dacoda": return "dacoda";
+    default: return "fine";
+  }
+}
+
+function repeatMarkerText(kind: RepeatMarkerKind): string {
+  switch (kind) {
+    case "segno": return "𝄋";
+    case "coda": return "𝄌";
+    case "fine": return "Fine";
+    case "dc": return "D.C.";
+    case "ds": return "D.S.";
+    case "dacapo": return "Da Capo";
+    case "dacoda": return "Da 𝄌";
+  }
 }
 
 function parseEndingToken(text: string, location: SourceLocation): Ending | undefined {

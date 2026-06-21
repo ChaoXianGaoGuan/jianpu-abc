@@ -65,9 +65,10 @@ K:C jianpu
 ## 音乐正文
 
 ```text
-body        = { voice | key-change | tuplet | note | rest | extension | barline } ;
+body        = { voice | key-change | repeat-marker | tuplet | note | rest | extension | barline } ;
 voice       = "[V:", voice-id, "]" ;
 key-change  = "[K:", key-field-value, "]" ;
+repeat-marker = "!segno!" | "!coda!" | "!fine!" | "!D.C.!" | "!D.S.!" | "!dacapo!" | "!dacoda!" ;
 tuplet      = "(3" ;
 note        = [ slur-start ], [ tie-end ], [ accidental ], degree, [ octave ], [ duration ], [ dots ], [ tie-start ], [ slur-end ] ;
 rest        = ( "0" | "z" ), [ duration ], [ dots ] ;
@@ -88,6 +89,7 @@ ending      = "[", positive-integer ;
 修饰符必须按“变音、音级、八度、时值、附点”的顺序书写，例如 `#4'e.` 或 `#4'/2.`。各规则如下：
 
 - `[K:G jianpu]` 在正文中改变后续音符的当前调，不占时值，也不消耗歌词。
+- `!segno!`、`!coda!`、`!fine!`、`!D.C.!`、`!D.S.!`、`!dacapo!`、`!dacoda!` 是反复导航视觉标记，不占时值，也不消耗歌词。当前阶段它们会在简谱中显示并保留到 ABC 导出，但播放层尚不按 D.C./D.S./Fine/Coda 语义展开。
 - `1'`、`1''` 分别升高一个、两个八度；`1,`、`1,,` 同理降低。
 - `#4`、`b7`、`=3` 表示升、降、还原；`##4`、`bb7` 表示双升、双降。
 - `w`、`h`、`q`、`e`、`s` 是绝对时值后缀，分别表示全音符、二分音符、四分音符、八分音符、十六分音符；例如 `1e` 永远是八分音符，不受 `L:` 影响。
@@ -109,4 +111,4 @@ ending      = "[", positive-integer ;
 
 ## 尚未支持
 
-通用连音比例、跨声部圆滑线、声部属性语义、同谱表声部合并及多段歌词复杂对齐尚未实现。新增任何语法时，必须同步更新本文档、README 示例和解析器测试。
+通用连音比例、D.C./D.S./Fine/Coda 的播放展开、跨声部圆滑线、声部属性语义、同谱表声部合并及多段歌词复杂对齐尚未实现。新增任何语法时，必须同步更新本文档、README 示例和解析器测试。

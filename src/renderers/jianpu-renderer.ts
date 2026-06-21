@@ -142,7 +142,8 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     ${cssScope}.jabc-event{cursor:pointer}
     ${cssScope}.event-bg{fill:transparent;transition:fill .12s ease,stroke .12s ease}
     ${cssScope}.event-symbol,${cssScope}.duration-extension{font:600 ${fontSize}px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#1f332a;text-anchor:middle}
-    ${cssScope}.event-key-change{font:700 ${fontSize * 0.48}px Inter,'Microsoft YaHei',sans-serif;fill:#a4522c;text-anchor:middle}
+    ${cssScope}.event-key-change,${cssScope}.event-repeat-marker{font:700 ${fontSize * 0.48}px Inter,'Microsoft YaHei',sans-serif;fill:#a4522c;text-anchor:middle}
+    ${cssScope}.event-repeat-marker{font-size:${round(fontSize * 0.54)}px;fill:#7f3f25}
     ${cssScope}.event-accidental{font:700 ${fontSize * 0.8}px 'Bravura','Noto Music','Segoe UI Symbol',Georgia,serif;fill:#1f332a;text-anchor:middle;dominant-baseline:middle}
     ${cssScope}.octave-dot,${cssScope}.duration-dot{fill:#1f332a}
     ${cssScope}.duration-line{stroke:#1f332a;stroke-width:1.7;stroke-linecap:round}
@@ -307,12 +308,13 @@ function renderEvent(
   const { event, centerX, slotCount, layoutSpan, layoutOffset, dotXs } = positioned;
   const symbol = event.type === "note"
     ? String(event.degree)
-    : event.type === "rest" ? "0" : event.type === "extension" ? "−" : `1=${event.key.tonic}`;
+    : event.type === "rest" ? "0" : event.type === "extension" ? "−" : event.type === "key-change" ? `1=${event.key.tonic}` : event.text;
   const className = highlighted ? "jabc-event is-highlighted" : "jabc-event";
   const backgroundHeight = fontSize * (showLyrics ? 2.45 : 1.75);
   const dots = event.type === "note" || event.type === "rest" ? event.dots ?? 0 : 0;
-  if (event.type === "key-change") {
-    return `<g class="${className}" data-event-id="${escapeXml(eventId)}" aria-label="${escapeXml(event.sourceText ?? symbol)}"><text class="event-key-change" x="${round(centerX)}" y="${round(-fontSize * 1.42)}">${symbol}</text></g>`;
+  if (event.type === "key-change" || event.type === "repeat-marker") {
+    const markerClass = event.type === "key-change" ? "event-key-change" : "event-repeat-marker";
+    return `<g class="${className}" data-event-id="${escapeXml(eventId)}" aria-label="${escapeXml(event.sourceText ?? symbol)}"><text class="${markerClass}" x="${round(centerX)}" y="${round(-fontSize * 1.42)}">${escapeXml(symbol)}</text></g>`;
   }
 
   const visualStartX = layoutXAt(layoutOffset, cellWidth, beatGap);
@@ -365,7 +367,7 @@ function renderRelations(
 
   let tupletStart: PositionedEvent | undefined;
   for (const item of positioned) {
-    if (item.event.type === "extension" || item.event.type === "key-change") continue;
+    if (item.event.type === "extension" || item.event.type === "key-change" || item.event.type === "repeat-marker") continue;
     if (item.event.tuplet?.position === "start") tupletStart = item;
     if (item.event.tuplet?.position === "end" && tupletStart) {
       output.push(renderTupletArc(

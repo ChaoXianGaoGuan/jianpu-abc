@@ -1,8 +1,10 @@
 import type {
   Fraction,
+  KeyChangeEvent,
   Measure,
   MusicalEvent,
   NoteEvent,
+  RepeatMarkerEvent,
   RestEvent,
 } from "../core/ast";
 import { reduceFraction } from "../core/fraction";
@@ -228,7 +230,7 @@ export function positionEvents(placed: LayoutMeasure, beatDuration: Fraction, fo
     const layoutSpan = layoutSpans[eventIndex] ?? eventLayoutSpan(event, beatDuration);
     const dots = event.type === "note" || event.type === "rest" ? event.dots ?? 0 : 0;
     const visualUnitSpan = layoutSpan / (dots + 1);
-    const markerSpan = event.type === "key-change"
+    const markerSpan = isZeroTimeEvent(event)
       ? nextTimedLayoutSpan(placed.measure.events, layoutSpans, eventIndex, beatDuration)
       : visualUnitSpan;
     const centerX = layoutXAt(
@@ -250,7 +252,7 @@ export function positionEvents(placed: LayoutMeasure, beatDuration: Fraction, fo
       dotXs,
       startTime,
     };
-    if (event.type !== "key-change") {
+    if (!isZeroTimeEvent(event)) {
       slotOffset += layoutSpan;
       startTime = addFractions(startTime, event.duration);
     }
@@ -314,7 +316,7 @@ function measureLayoutMetric(
   const slotCount = Math.max(1, layoutSpans.reduce((total, span) => total + span, 0));
   const beatGapCount = measureBeatGapCount(slotCount);
   const cellWidth = measure.events.reduce((requiredWidth, event, index) => {
-    if (event.type === "key-change") return requiredWidth;
+    if (isZeroTimeEvent(event)) return requiredWidth;
     const span = Math.min(1, layoutSpans[index] ?? eventLayoutSpan(event, beatDuration));
     const minimumEventWidth = fontSize * (
       event.type === "note" && event.accidental !== undefined ? 1 : 0.82
@@ -341,21 +343,21 @@ function nextTimedLayoutSpan(
 ): number {
   for (let index = eventIndex + 1; index < events.length; index += 1) {
     const event = events[index] as MusicalEvent;
-    if (event.type === "key-change") continue;
+    if (isZeroTimeEvent(event)) continue;
     return layoutSpans[index] ?? eventLayoutSpan(event, beatDuration);
   }
   return 1;
 }
 
 function visualSlotCount(event: MusicalEvent, beatDuration: Fraction): number {
-  if (event.type === "key-change") return 0;
+  if (isZeroTimeEvent(event)) return 0;
   if (event.type === "extension") return 1;
   const ratio = divideFractions(notationDuration(event), beatDuration);
   return ratio.denominator === 1 && ratio.numerator > 1 ? ratio.numerator : 1;
 }
 
 function eventLayoutSpan(event: MusicalEvent, beatDuration: Fraction): number {
-  if (event.type === "key-change") return 0;
+  if (isZeroTimeEvent(event)) return 0;
   const ratio = divideFractions(event.duration, beatDuration);
   return ratio.numerator / ratio.denominator;
 }
@@ -366,7 +368,7 @@ function measureEventLayoutSpans(measure: Measure, beatDuration: Fraction): numb
   let elapsed: Fraction = { numerator: 0, denominator: 1 };
 
   for (const [index, event] of measure.events.entries()) {
-    if (event.type === "key-change") continue;
+    if (isZeroTimeEvent(event)) continue;
     const indexInBeat = beatIndex(elapsed, beatDuration);
     const group = groups.get(indexInBeat) ?? [];
     group.push(index);
@@ -402,12 +404,16 @@ function measureEventLayoutSpans(measure: Measure, beatDuration: Fraction): numb
   return spans;
 }
 
+function isZeroTimeEvent(event: MusicalEvent): event is KeyChangeEvent | RepeatMarkerEvent {
+  return event.type === "key-change" || event.type === "repeat-marker";
+}
+
 function isNoteOrRest(event: MusicalEvent): event is NoteEvent | RestEvent {
   return event.type === "note" || event.type === "rest";
 }
 
 function undottedLayoutSpan(event: MusicalEvent, beatDuration: Fraction): number {
-  if (event.type === "key-change" || event.type === "extension") {
+  if (isZeroTimeEvent(event) || event.type === "extension") {
     return eventLayoutSpan(event, beatDuration);
   }
   const duration = removeDots(event.duration, event.dots ?? 0);
@@ -416,7 +422,7 @@ function undottedLayoutSpan(event: MusicalEvent, beatDuration: Fraction): number
 }
 
 export function durationLineCount(event: MusicalEvent, beatDuration: Fraction): number {
-  if (event.type === "key-change" || event.type === "extension") return 0;
+  if (isZeroTimeEvent(event) || event.type === "extension") return 0;
   const subdivisions = divideFractions(beatDuration, notationDuration(event));
   return subdivisions.denominator === 1 && isPowerOfTwo(subdivisions.numerator)
     ? Math.log2(subdivisions.numerator)
@@ -424,7 +430,7 @@ export function durationLineCount(event: MusicalEvent, beatDuration: Fraction): 
 }
 
 function notationDuration(event: MusicalEvent): Fraction {
-  if (event.type === "key-change") return { numerator: 0, denominator: 1 };
+  if (isZeroTimeEvent(event)) return { numerator: 0, denominator: 1 };
   if (event.type === "extension") return event.duration;
   let duration = removeDots(event.duration, event.dots ?? 0);
   if (event.tuplet) {

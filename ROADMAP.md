@@ -38,7 +38,21 @@ Follow-up slices:
 - Extend beat-clear visual rewriting to more edge cases such as cross-measure splits and complex tie/slur combinations.
 - Split the Web workbench controllers after the rendering boundary is stable.
 
-### 2. Standard ABC import
+### 2. Repeat navigation semantics
+
+Goal: support the four common repeat-navigation forms in two layers: visual notation first, then semantic playback/export flow.
+
+Status: first visual slice is underway. JABC should accept ABC-style repeat-navigation decorations such as `!segno!`, `!coda!`, `!fine!`, `!D.C.!`, `!D.S.!`, `!dacapo!`, and `!dacoda!` as zero-duration AST events. These markers should render above jianpu, survive standard ABC export, and be ignored by playback until semantic expansion is implemented.
+
+Follow-up slices:
+
+- Add MusicXML direction export for Segno, Coda, Fine, D.C., and D.S.
+- Add AST-level semantic fields for D.C./D.S. targets and stop/jump points instead of relying only on visual text.
+- Expand playback order for D.C. al Fine, D.C. al Coda, D.S. al Fine, and D.S. al Coda.
+- Add validation for missing Segno, Coda, or Fine targets and ambiguous multiple markers.
+- Extend the Web guide and examples with all four repeat forms.
+
+### 3. Standard ABC import
 
 Goal: parse a useful subset of standard ABC into the existing `Score` AST.
 
@@ -61,7 +75,7 @@ Deliverables:
 - Tests with round-trip examples.
 - Documentation update.
 
-### 3. MusicXML import
+### 4. MusicXML import
 
 Goal: import a focused subset of MusicXML partwise documents into AST/JABC.
 
@@ -82,7 +96,7 @@ Deliverables:
 - Importer module and tests.
 - Documentation for supported MusicXML subset.
 
-### 4. Minor and pentatonic semantics
+### 5. Minor and pentatonic semantics
 
 Goal: make parsed `K:A minor jianpu` and `K:G pentatonic jianpu` musically meaningful.
 
@@ -93,7 +107,7 @@ Scope:
 - Decide how accidentals interact with non-major modes.
 - Update ABC/MusicXML export expectations.
 
-### 5. Remaining renderer quality improvements
+### 6. Remaining renderer quality improvements
 
 Goal: improve readability without attempting full engraving.
 
@@ -103,7 +117,7 @@ Scope:
 - Optional measure numbers.
 - Better lyrics spacing.
 
-### 6. Same-staff multi-voice semantics
+### 7. Same-staff multi-voice semantics
 
 Goal: represent multiple voices on the same staff in ABC/MusicXML/rendering when appropriate.
 
@@ -127,13 +141,13 @@ Requirements:
 
 ### Advanced repeat flow
 
-Support nested or more complex repeat structures.
+Support nested or more complex repeat structures after the repeat-navigation plan lands.
 
 Examples:
 
 - Multiple endings beyond `[1` and `[2`.
-- D.C. / D.S. / Fine / Coda.
-- Repeat validation and error reporting.
+- Nested or overlapping local repeats.
+- Repeat validation and error reporting across multi-voice scores.
 
 ### Better playback expression
 

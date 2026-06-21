@@ -148,6 +148,7 @@ function buildVoiceEvents(
         currentKey = event.key;
         continue;
       }
+      if (event.type === "repeat-marker") continue;
       const duration = durationToSeconds(event.duration, tempo);
 
       if (event.type === "extension") {
@@ -250,7 +251,7 @@ function buildMetronomeEvents(
     const measure = voice.measures[measureIndex];
     if (!measure) continue;
     const measureDuration = measure.events.reduce((total, event) =>
-      event.type === "key-change" ? total : total + durationToSeconds(event.duration, tempo), 0);
+      event.type === "key-change" || event.type === "repeat-marker" ? total : total + durationToSeconds(event.duration, tempo), 0);
     for (let offset = 0; offset < measureDuration - 1e-9; offset += pulseSeconds) {
       events.push({ startTime: cursor + offset, accent: offset === 0 });
     }

@@ -115,6 +115,12 @@ describe("toStandardAbc", () => {
     expect(toStandardAbc(score)).toBe("X:1\nL:1/4\nK:C\n|: C D :| [1 E || [2 F |]\n");
   });
 
+  it("preserves repeat navigation decorations", () => {
+    const score = parse("K:C jianpu\n| !segno! 1 2 !D.S.! | !coda! 3 !fine! |");
+
+    expect(toStandardAbc(score)).toBe("X:1\nL:1/4\nK:C\n| !segno! C D !D.S.! | !coda! E !fine! |\n");
+  });
+
   it("emits only the repeat start at a shared same-system boundary", () => {
     const score = parse("K:C jianpu\n| 1 |: 7 |");
 

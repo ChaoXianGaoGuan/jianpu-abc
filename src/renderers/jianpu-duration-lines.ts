@@ -85,7 +85,7 @@ function isDurationLineJoinable(item: PositionedEvent): boolean {
 }
 
 function isDurationLineTransparent(item: PositionedEvent): boolean {
-  return item.event.type === "key-change";
+  return item.event.type === "key-change" || item.event.type === "repeat-marker";
 }
 
 function closestDurationLineItem(

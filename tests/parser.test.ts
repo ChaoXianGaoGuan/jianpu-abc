@@ -256,6 +256,24 @@ describe("parseJabc", () => {
     expect(result.value.voices[1]?.measures[0]?.events).toMatchObject([{ degree: 3 }, { degree: 4 }]);
   });
 
+  it("parses repeat navigation markers as zero-duration events", () => {
+    const result = parseJabc("K:C jianpu\n| !segno! 1 2 !D.S.! | !coda! 3 !fine! |");
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.value.voices[0]?.measures[0]?.events).toMatchObject([
+      { type: "repeat-marker", kind: "segno", text: "𝄋", sourceText: "!segno!" },
+      { type: "note", degree: 1 },
+      { type: "note", degree: 2 },
+      { type: "repeat-marker", kind: "ds", text: "D.S.", sourceText: "!D.S.!" },
+    ]);
+    expect(result.value.voices[0]?.measures[1]?.events).toMatchObject([
+      { type: "repeat-marker", kind: "coda", text: "𝄌", sourceText: "!coda!" },
+      { type: "note", degree: 3 },
+      { type: "repeat-marker", kind: "fine", text: "Fine", sourceText: "!fine!" },
+    ]);
+  });
+
   it("parses inline key changes with spaces", () => {
     const result = parseJabc("K:C jianpu\n| 1 [K:G jianpu] 1 |");
 
