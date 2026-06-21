@@ -8,8 +8,9 @@ L:1/4
 Q:1/4=120
 K:C jianpu
 | 1 2 3 1 | 1 2 3 1 |
+w: 两 只 老 虎 两 只 老 虎
 | 3 4 5 - | 3 4 5 - |
-w: 两 只 老 虎 两 只 老 虎`;
+w: 跑 得 快 跑 得 快`;
 
 describe("parseJabc", () => {
   it("preserves source music rows as system breaks", () => {
@@ -74,6 +75,53 @@ describe("parseJabc", () => {
     const events = result.value.voices[0]?.measures[0]?.events ?? [];
     expect(events.filter((event) => event.type === "note").map((event) => event.type === "note" ? event.lyric : undefined))
       .toEqual(["一", "二", "三"]);
+  });
+
+  it("attaches each lyric line to the preceding music source row", () => {
+    const result = parseJabc(`K:C jianpu\n| 1 2 |\nw: 第 一\n| 3 4 |\nw: 第 二`);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const events = result.value.voices[0]?.measures.flatMap((measure) => measure.events) ?? [];
+    expect(events.filter((event) => event.type === "note").map((event) => event.type === "note" ? event.lyric : undefined))
+      .toEqual(["第", "一", "第", "二"]);
+  });
+
+  it("leaves music rows without lyrics silent and supports star lyric skips", () => {
+    const result = parseJabc(`K:C jianpu\n| 1 2 |\n| 3 4 |\nw: 唱 *`);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const notes = result.value.voices[0]?.measures.flatMap((measure) => measure.events)
+      .filter((event) => event.type === "note") ?? [];
+    expect(notes.map((event) => event.type === "note" ? event.lyric : undefined))
+      .toEqual([undefined, undefined, "唱", undefined]);
+  });
+
+  it("does not backfill earlier rows when repeated lyric lines target the same music row", () => {
+    const result = parseJabc(`K:C jianpu\n| 1 2 |\n| 3 4 |\nw: 三 四\nw: 重 复`);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const notes = result.value.voices[0]?.measures.flatMap((measure) => measure.events)
+      .filter((event) => event.type === "note") ?? [];
+    expect(notes.map((event) => event.type === "note" ? event.lyric : undefined))
+      .toEqual([undefined, undefined, "三", "四"]);
+  });
+
+  it("attaches one lyric to extension, tie, and slur lyric units", () => {
+    const result = parseJabc(`K:C jianpu\n| 1 - 2~ | ~2 (4 5) 6. |\nw: 长 连 啊 点`);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const notes = result.value.voices[0]?.measures.flatMap((measure) => measure.events)
+      .filter((event) => event.type === "note") ?? [];
+    expect(notes.map((event) => event.type === "note" ? event.lyric : undefined))
+      .toEqual(["长", "连", undefined, "啊", undefined, "点"]);
   });
 
   it("parses accidentals and octave suffixes", () => {

@@ -65,7 +65,7 @@ The current parser supports these header fields:
 - `Q:` tempo such as `1/4=120`
 - `K:` jianpu tonic such as `K:C jianpu`; inline key changes such as `[K:G jianpu]` are also supported in music lines
 - `V:` voice switch such as `V:melody`; inline `[V:melody]` is also supported
-- `w:` whitespace-separated lyrics for the current voice
+- `w:` whitespace-separated lyrics for the current voice and the preceding music source row
 
 Music tokens support degrees `1` through `7`, rests `0` and `z`, extension `-`,
 single and compound barlines (`|`, `||`, `|]`, `[|`, `|:`, `:|`), and endings
@@ -84,8 +84,9 @@ L:1/4
 Q:1/4=120
 K:C jianpu
 | 1 2 3 1 | 1 2 3 1 |
-| 3 4 5 - | 3 4 5 - |
 w: 两 只 老 虎 两 只 老 虎
+| 3 4 5 - | 3 4 5 - |
+w: 跑 得 快 跑 得 快
 ```
 
 ## Parser API
@@ -128,8 +129,8 @@ and current limits.
 - A leading barline does not create an empty measure.
 - A closing `|` is stored as `Measure.barline`.
 - Notes, rests, and extensions initially receive the current `L:` duration.
-- The first `w:` line is attached to notes in sequence; rests and extensions
-  do not consume lyric syllables.
+- Each `w:` line targets the nearest preceding music source row in the same voice; if that row already has an attached lyric line, the extra `w:` is preserved but not rendered as note lyrics.
+- Lyrics are assigned by vocal unit rather than raw event count: a note with dots or duration modifiers consumes one syllable; `-` extensions, tied notes, and slurred groups continue the same syllable; rests, key changes, repeat markers, barlines, and endings do not consume syllables. A `*` syllable consumes one vocal unit without displaying text.
 - Extensions remain explicit AST events. Duration resolution belongs to a
   later milestone.
 

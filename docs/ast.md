@@ -40,7 +40,7 @@ Score
 JABC text -> parseJabc -> raw Score -> normalizeScore -> Score
 ```
 
-当前 `normalizeScore` 只执行 `attachLyrics`：复制 AST，并把第一条歌词的音节依次附着到 note。rest 和 extension 不消耗音节。该转换应保持纯函数风格，不修改输入对象。
+当前 `normalizeScore` 只执行 `attachLyrics`：复制 AST，并把每条 `w:` 歌词附着到同声部里前一条音乐源码行；若该源码行已有逐音歌词，额外 `w:` 只保留在 `Voice.lyricLines`。歌词按发音单元分配：普通 note、附点 note 和带时值修饰的 note 消耗一个音节；`-`、tie continuation、slur continuation、rest、key-change 和 repeat marker 不额外消耗音节。`*` 音节会消耗一个发音单元但不写入 `NoteEvent.lyric`。该转换应保持纯函数风格，不修改输入对象。
 
 parser 在构建事件时已把 `/N`、`*N` 和附点折算进 `duration`；`dots` 仍保留原记谱信息，供简谱渲染使用。下游播放和导出必须读取最终 `duration`，不得再次应用附点。
 
