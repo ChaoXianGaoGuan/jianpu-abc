@@ -29,6 +29,8 @@ const tunes = await renderStaffAsync(document.querySelector("#staff")!, score, {
 
 `toStaffAbc(score)` 可单独取得 adapter 使用的 ABC 文本。ABC 导出器会去掉同一拍内短于一拍的相邻音符之间的空格，使 abcjs 为等分、混合八分/十六分和附点节奏生成同拍连梁；同一系统中起始反复记号会与前一小节共享边界，不会再额外输出普通小节线。`loadStaffRendererEngine()` 延迟加载 abcjs，避免它进入初始网页 chunk。底层 `renderStaff` 接受显式 `StaffRendererEngine`，测试借此注入 mock 验证调用契约，不依赖浏览器 DOM。
 
+Web 工作台提供 SVG 和 PNG 下载。abcjs 的 `oneSvgPerLine` 会生成多个系统 SVG；下载时按显示顺序纵向组合为一个 SVG，PNG 再以 2 倍分辨率和白色背景栅格化。导出保持当前窗口宽度产生的布局，不改变 adapter 的公开 API。
+
 ## 依赖与限制
 
 当前固定使用 `abcjs 6.6.3`，其 npm 包自带 TypeScript 声明。abcjs 只存在于五线谱 adapter 和网页集成层，不进入 parser、AST、播放或简谱渲染逻辑。

@@ -27,10 +27,12 @@ const svg = renderJianpu(score, {
 - 单小节线、复小节线、歌词、声部标签和按小节自动换行。
 - SVG 曲线路径形式的圆滑线、从数字边缘起止的延音线，以及中央留出数字断口的三连音弧线。圆滑线端点会避开高音点；同一行的跨小节延音线连续绘制，并在与小节线交叉处留出视觉净空，不同行时拆为行尾和行首两段。
 
-每个事件组包含 `data-event-id="voiceId:measureIndex:eventIndex"`。传入相同的 `highlightEventId` 会添加 `is-highlighted` class；该 ID 与 `PlaybackEvent.sourceEventId` 一致，因此播放层无需维护第二套映射。Web 工作台在播放过程中只切换现有 SVG 节点的 `is-highlighted` class，不会为每个音符重新生成整张简谱 SVG。
+每个事件组包含 `data-event-id="voiceId:measureIndex:eventIndex"`。传入相同的 `highlightEventId` 会添加 `is-highlighted` class；该 ID 与 `PlaybackEvent.sourceEventId` 一致，因此播放层无需维护第二套映射。Web 工作台在播放过程中切换 `is-highlighted`，编辑器光标则使用独立的 `is-source-active`。光标位于音乐 token 内或紧邻 token 末尾时高亮对应事件；右键事件图形会停止播放、聚焦编辑器并选中完整 token。空白、注释和标题字段不映射到事件。
+
+预览区可以将当前简谱布局下载为 SVG 或白底 2x PNG。导出副本会移除播放与源码光标 class，不把临时交互状态写入文件。
 
 标题、作者、歌词和属性均经过 XML 转义。调用方可以插入完整的渲染结果，但不应将任意未转义的片段拼入 SVG。
 
 ## 当前限制
 
-支持多个声部按块垂直排列，并显示基础复小节线、反复线和 ending 标记。布局以清晰预览为目标，不是出版级排版；嵌套或跨声部连线、装饰音、同小节跨声部对齐和交互式编辑尚未实现。后续规则必须保持渲染器纯函数，并增加字符串或 snapshot 测试。
+支持多个声部按块垂直排列，并显示基础复小节线、反复线和 ending 标记。布局以清晰预览为目标，不是出版级排版；源码定位只覆盖可渲染音乐事件，不覆盖小节线、标题或注释。嵌套或跨声部连线、装饰音和同小节跨声部对齐尚未实现。后续规则必须保持渲染器纯函数，并增加字符串或 snapshot 测试。

@@ -19,6 +19,19 @@ import {
   isLibraryEditorDirty,
   scoreLibraryCategories,
 } from "./score-library";
+import {
+  composeSvgFragments,
+  rasterSize,
+  scoreImageFilename,
+  type ScoreImageFormat,
+  type SvgFragment,
+} from "./score-image-export";
+import {
+  buildSourceEventRanges,
+  sourceEventAtCaret,
+  sourceEventById,
+  type SourceEventRange,
+} from "./source-navigation";
 
 type NotationMode = "jianpu" | "staff";
 
@@ -34,6 +47,8 @@ const staffPreview = element<HTMLDivElement>("staff-preview");
 const notationSelect = element<HTMLSelectElement>("notation-select");
 const previewKindIndicator = element<HTMLSpanElement>("preview-kind-indicator");
 const alignMeasuresToggle = element<HTMLInputElement>("align-measures-toggle");
+const downloadScoreSvgButton = element<HTMLButtonElement>("download-score-svg-button");
+const downloadScorePngButton = element<HTMLButtonElement>("download-score-png-button");
 const parseStatus = element<HTMLDivElement>("parse-status");
 const parseErrors = element<HTMLPreElement>("parse-errors");
 const eventCount = element<HTMLSpanElement>("event-count");
@@ -63,8 +78,12 @@ let playbackPlan: PlaybackPlan | undefined;
 let currentScore: Score | undefined;
 let currentAbc = "";
 let currentMusicXml = "";
-let activeEventId: string | undefined;
+let playbackEventId: string | undefined;
+let sourceEventId: string | undefined;
+let sourceEventRanges: SourceEventRange[] = [];
 let staffRenderVersion = 0;
+let previewReady = false;
+let previewExportPending = false;
 let player: WebAudioPlayer | undefined;
 let playerState: PlaybackState = "idle";
 let loadedLibraryId: string | undefined;
@@ -77,6 +96,9 @@ editor.addEventListener("input", () => {
   evaluateSource();
   renderLibraryList();
 });
+for (const eventName of ["click", "keyup", "select"] as const) {
+  editor.addEventListener(eventName, updateSourceCaretHighlight);
+}
 librarySearch.addEventListener("input", renderLibraryList);
 libraryCategory.addEventListener("change", renderLibraryList);
 
@@ -108,13 +130,16 @@ metronomeVolume.addEventListener("input", () => {
 meterNumerator.addEventListener("input", updateManualTiming);
 meterDenominator.addEventListener("input", updateManualTiming);
 tempoBpm.addEventListener("input", updateManualTiming);
-notationSelect.addEventListener("change", () => renderActivePreview(activeEventId));
-alignMeasuresToggle.addEventListener("change", () => renderActivePreview(activeEventId));
+notationSelect.addEventListener("change", renderActivePreview);
+alignMeasuresToggle.addEventListener("change", renderActivePreview);
+downloadScoreSvgButton.addEventListener("click", () => void downloadScoreImage("svg"));
+downloadScorePngButton.addEventListener("click", () => void downloadScoreImage("png"));
+jianpuPreview.addEventListener("contextmenu", navigateFromJianpu);
 copyAbcButton.addEventListener("click", () => void copyText(currentAbc, "ABC 已复制"));
 downloadAbcButton.addEventListener("click", () => downloadText(currentAbc, fileBaseName("abc"), "text/vnd.abc"));
 copyMusicXmlButton.addEventListener("click", () => void copyText(currentMusicXml, "MusicXML 已复制"));
 downloadMusicXmlButton.addEventListener("click", () => downloadText(currentMusicXml, fileBaseName("musicxml"), "application/vnd.recordare.musicxml+xml"));
-window.addEventListener("resize", () => renderActivePreview(activeEventId));
+window.addEventListener("resize", renderActivePreview);
 
 initializeLibrary();
 updateControls();
@@ -189,7 +214,10 @@ function evaluateSource(): void {
     events = [];
     playbackPlan = undefined;
     currentScore = undefined;
-    activeEventId = undefined;
+    playbackEventId = undefined;
+    sourceEventId = undefined;
+    sourceEventRanges = [];
+    previewReady = false;
     staffRenderVersion += 1;
     currentAbc = "";
     currentMusicXml = "";
@@ -207,7 +235,9 @@ function evaluateSource(): void {
 
   try {
     currentScore = result.value;
-    activeEventId = undefined;
+    playbackEventId = undefined;
+    sourceEventRanges = buildSourceEventRanges(result.value, editor.value);
+    sourceEventId = sourceEventAtCaret(sourceEventRanges, editor.selectionStart)?.eventId;
     syncTimingControls(result.value);
     playbackPlan = createPlaybackPlan(result.value);
     events = playbackPlan.events;
@@ -237,9 +267,9 @@ function getPlayer(): WebAudioPlayer {
     oscillatorType: "triangle",
     instrument: selectedInstrument(),
     onEventStart: (event) => {
-      activeEventId = event?.sourceEventId;
-      currentEvent.textContent = activeEventId ?? "—";
-      highlightJianpuEvent(activeEventId);
+      playbackEventId = event?.sourceEventId;
+      currentEvent.textContent = playbackEventId ?? "—";
+      highlightJianpuEvents();
     },
     onStateChange: (state) => {
       playerState = state;
@@ -312,7 +342,7 @@ function sliderGain(input: HTMLInputElement): number {
   return Number(input.value) / 100;
 }
 
-function renderActivePreview(highlightEventId?: string): void {
+function renderActivePreview(): void {
   if (!currentScore) return;
   const mode = selectedNotation();
   const showJianpu = mode === "jianpu";
@@ -322,13 +352,15 @@ function renderActivePreview(highlightEventId?: string): void {
   previewKindIndicator.textContent = showJianpu ? "SVG" : "ABCJS";
 
   if (showJianpu) {
-    renderJianpuPreview(highlightEventId);
+    renderJianpuPreview();
   } else {
+    previewReady = false;
+    updateControls();
     void renderStaffPreview(currentScore);
   }
 }
 
-function renderJianpuPreview(highlightEventId?: string): void {
+function renderJianpuPreview(): void {
   if (!currentScore) return;
   const width = Math.max(320, Math.floor(jianpuPreview.clientWidth || 900));
   jianpuPreview.innerHTML = renderJianpu(currentScore, {
@@ -336,19 +368,15 @@ function renderJianpuPreview(highlightEventId?: string): void {
     showLyrics: true,
     alignMeasuresAcrossSystems: alignMeasuresToggle.checked,
   });
-  highlightJianpuEvent(highlightEventId);
+  previewReady = true;
+  highlightJianpuEvents();
+  updateControls();
 }
 
-function highlightJianpuEvent(eventId?: string): void {
-  for (const item of jianpuPreview.querySelectorAll<SVGGElement>(".jabc-event.is-highlighted")) {
-    item.classList.remove("is-highlighted");
-  }
-  if (eventId === undefined) return;
+function highlightJianpuEvents(): void {
   for (const item of jianpuPreview.querySelectorAll<SVGGElement>(".jabc-event")) {
-    if (item.getAttribute("data-event-id") === eventId) {
-      item.classList.add("is-highlighted");
-      return;
-    }
+    item.classList.toggle("is-highlighted", item.dataset.eventId === playbackEventId);
+    item.classList.toggle("is-source-active", item.dataset.eventId === sourceEventId);
   }
 }
 
@@ -365,9 +393,41 @@ async function renderStaffPreview(score: Score): Promise<void> {
       staffWidth,
       measuresPerLine: 4,
     }, engine);
+    previewReady = staffPreview.querySelector("svg") !== null;
+    updateControls();
   } catch (error) {
-    if (version === staffRenderVersion) showRuntimeError(error);
+    if (version === staffRenderVersion) {
+      previewReady = false;
+      showRuntimeError(error);
+      updateControls();
+    }
   }
+}
+
+function updateSourceCaretHighlight(): void {
+  if (!currentScore || playerState === "playing") return;
+  sourceEventId = sourceEventAtCaret(sourceEventRanges, editor.selectionStart)?.eventId;
+  highlightJianpuEvents();
+}
+
+function navigateFromJianpu(event: MouseEvent): void {
+  const target = event.target instanceof Element
+    ? event.target.closest<SVGGElement>(".jabc-event")
+    : null;
+  const eventId = target?.dataset.eventId;
+  if (!eventId) return;
+  const range = sourceEventById(sourceEventRanges, eventId);
+  if (!range) return;
+
+  event.preventDefault();
+  player?.stop();
+  playbackEventId = undefined;
+  sourceEventId = eventId;
+  editor.focus();
+  editor.setSelectionRange(range.start, range.end);
+  const lineHeight = Number.parseFloat(getComputedStyle(editor).lineHeight) || 25;
+  editor.scrollTop = Math.max(0, (range.line - 2) * lineHeight);
+  highlightJianpuEvents();
 }
 
 function updateControls(): void {
@@ -383,6 +443,9 @@ function updateControls(): void {
   downloadAbcButton.disabled = currentAbc === "";
   copyMusicXmlButton.disabled = currentMusicXml === "";
   downloadMusicXmlButton.disabled = currentMusicXml === "";
+  const imageDownloadDisabled = !previewReady || previewExportPending;
+  downloadScoreSvgButton.disabled = imageDownloadDisabled;
+  downloadScorePngButton.disabled = imageDownloadDisabled;
 }
 
 function showRuntimeError(error: unknown): void {
@@ -413,6 +476,82 @@ function downloadText(value: string, filename: string, type: string): void {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+async function downloadScoreImage(format: ScoreImageFormat): Promise<void> {
+  if (!currentScore || !previewReady || previewExportPending) return;
+  previewExportPending = true;
+  updateControls();
+  try {
+    await document.fonts.ready;
+    const notation = selectedNotation();
+    const scoreSvg = collectPreviewSvg(notation === "jianpu" ? jianpuPreview : staffPreview);
+    const filename = scoreImageFilename(currentScore.header.title, notation, format);
+    if (format === "svg") {
+      downloadBlob(new Blob([scoreSvg.markup], { type: "image/svg+xml;charset=utf-8" }), filename);
+    } else {
+      downloadBlob(await svgToPng(scoreSvg), filename);
+    }
+  } catch (error) {
+    showRuntimeError(error);
+  } finally {
+    previewExportPending = false;
+    updateControls();
+  }
+}
+
+function collectPreviewSvg(container: HTMLElement): SvgFragment {
+  const fragments = [...container.querySelectorAll<SVGSVGElement>("svg")]
+    .filter((svg) => svg.parentElement?.closest("svg") === null)
+    .map(svgFragment);
+  return composeSvgFragments(fragments);
+}
+
+function svgFragment(svg: SVGSVGElement): SvgFragment {
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  for (const item of clone.querySelectorAll(".is-highlighted, .is-source-active")) {
+    item.classList.remove("is-highlighted", "is-source-active");
+  }
+  const viewBox = svg.viewBox.baseVal;
+  const bounds = svg.getBoundingClientRect();
+  const width = viewBox.width || bounds.width;
+  const height = viewBox.height || bounds.height;
+  if (width <= 0 || height <= 0) throw new Error("渲染结果没有有效的 SVG 尺寸。");
+  return { markup: new XMLSerializer().serializeToString(clone), width, height };
+}
+
+async function svgToPng(svg: SvgFragment): Promise<Blob> {
+  const imageUrl = URL.createObjectURL(new Blob([svg.markup], { type: "image/svg+xml;charset=utf-8" }));
+  try {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = imageUrl;
+    await image.decode();
+    const size = rasterSize(svg.width, svg.height);
+    const canvas = document.createElement("canvas");
+    canvas.width = size.width;
+    canvas.height = size.height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("浏览器无法创建 PNG 画布。");
+    context.fillStyle = "#fffef9";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return await new Promise<Blob>((resolve, reject) => canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("浏览器无法生成 PNG 文件。"));
+    }, "image/png"));
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function fileBaseName(extension: "abc" | "musicxml"): string {

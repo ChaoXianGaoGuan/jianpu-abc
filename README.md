@@ -42,7 +42,8 @@ npm run build
 After `npm run dev`, open `http://127.0.0.1:5173`. The validation UI includes
 the repository's built-in JABC score library with search and category filters,
 live JABC parsing, single-view jianpu/staff preview switching, ABC/MusicXML
-copy/download actions, playback event counts, guitar-first instrument selection,
+copy/download actions, SVG/PNG score downloads, cursor-to-jianpu highlighting,
+right-click source navigation, playback event counts, guitar-first instrument selection,
 score-driven metronome and tempo controls, independent live volume sliders, and
 Web Audio play/pause/resume/stop controls. Use `npm run dev -- --port 4173`
 to select a different port.
@@ -185,8 +186,9 @@ glyphs, octave and duration marks, rests, extensions, lyrics, aligned source-row
 measure columns, measure wrapping, readable narrow-screen spacing with responsive SVG scaling when needed, short-note underline gaps at beat and barline boundaries, multi-voice labels, and optional event highlighting. The
 validation UI shows jianpu by default, can switch the same preview area to
 staff notation, includes a checkbox for toggling aligned jianpu measure columns,
-and follows playback through matching source event IDs by toggling existing SVG
-highlight classes instead of redrawing the whole score on every note.
+highlights the JABC token under the editor caret, and selects the matching token
+when a rendered note is right-clicked. Playback follows matching source event IDs
+by toggling existing SVG highlight classes instead of redrawing the whole score.
 
 ## Staff rendering
 
@@ -198,7 +200,8 @@ await renderStaffAsync(document.querySelector("#staff")!, score);
 
 The staff adapter converts the AST through `toStandardAbc`, then uses abcjs to
 render responsive staff notation. The web UI refreshes the selected notation
-preview, playback, and export actions from the same parsed score.
+preview, playback, and export actions from the same parsed score. The current
+jianpu or multi-system staff layout can be downloaded as one SVG or 2x PNG.
 
 The JABC text parser accepts basic triplets and slurs, but does not yet accept
 general tuplet ratios beyond `(3`. Repeats and endings are preserved in ABC,

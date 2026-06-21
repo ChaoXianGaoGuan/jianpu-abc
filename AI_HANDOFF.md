@@ -67,7 +67,7 @@ The current project supports:
 - Web Audio playback with independent live instrument/metronome gain, sampled guitar and piano instruments, a synth preset, and synthesized fallback.
 - SVG jianpu rendering with source-row layout preservation, aligned measure columns, duration grouping, graphical repeats, and SVG relation curves.
 - Staff rendering through `toStandardAbc` and abcjs.
-- Browser validation UI with a single jianpu/staff preview switch, playback highlighting, instrument selection, and copy/download actions for ABC and MusicXML.
+- Browser validation UI with a single jianpu/staff preview switch, separate playback/editor-caret highlighting, right-click JABC token navigation, SVG/PNG score downloads, instrument selection, and copy/download actions for ABC and MusicXML.
 - Read-only built-in JABC library with build-time discovery, search, category filtering, and dirty-editor confirmation.
 
 ## Commands to run before committing
@@ -83,8 +83,8 @@ npm run build
 Current expected state after the latest development pass:
 
 ```text
-Test files: 9 passed
-Tests: 157 passed
+Test files: 11 passed
+Tests: 162 passed
 Typecheck: passes
 Build: passes
 ```

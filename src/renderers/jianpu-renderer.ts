@@ -164,6 +164,8 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     .tuplet-arc{stroke-width:1.4}
     .tuplet-number{font:700 ${fontSize * 0.48}px Georgia,serif;fill:#35483f;text-anchor:middle;dominant-baseline:middle}
     .event-lyric{font:15px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#4f6259;text-anchor:middle}
+    .is-source-active .event-bg{fill:#cfe5da;stroke:#4e8069;stroke-width:1.2}
+    .is-source-active .event-symbol,.is-source-active .event-accidental,.is-source-active .duration-extension{fill:#245b45}
     .is-highlighted .event-bg{fill:#f7d98b}
     .is-highlighted .event-symbol,.is-highlighted .event-accidental,.is-highlighted .duration-extension{fill:#8d3f23}
   </style>

@@ -33,6 +33,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
+- Bidirectional JABC/jianpu source navigation with editor-caret highlighting and right-click token selection, plus SVG/PNG downloads for current jianpu and staff previews.
 - Score-driven metronome playback with compound-meter accents, manual meter/tempo fallbacks, and independent live instrument/metronome volume controls.
 - Add 林俊杰《一千年以后》 to the built-in JABC score library.
 - Repository-backed JABC score library with build-time discovery, search, category filtering, editor loading, and unsaved-change protection.
