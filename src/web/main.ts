@@ -32,6 +32,7 @@ import {
   sourceEventById,
   type SourceEventRange,
 } from "./source-navigation";
+import { rhythmWarningMessages } from "./rhythm-warnings";
 
 type NotationMode = "jianpu" | "staff";
 
@@ -227,6 +228,7 @@ function evaluateSource(): void {
     staffPreview.replaceChildren();
     parseStatus.textContent = `解析失败：${result.errors.length} 个错误`;
     parseStatus.className = "status error-status";
+    parseErrors.className = "errors";
     parseErrors.textContent = result.errors.map((error) =>
       `第 ${error.line} 行，第 ${error.column} 列：${error.message}\n${error.suggestion ?? ""}`
     ).join("\n\n");
@@ -247,9 +249,15 @@ function evaluateSource(): void {
     currentMusicXml = toMusicXml(result.value);
     renderActivePreview();
     const measureCount = result.value.voices[0]?.measures.length ?? 0;
-    parseStatus.textContent = `解析成功：${measureCount} 个小节`;
-    parseStatus.className = "status success-status";
-    parseErrors.textContent = "";
+    const rhythmWarnings = rhythmWarningMessages(result.value, manualMeter);
+    parseStatus.textContent = rhythmWarnings.length === 0
+      ? `解析成功：${measureCount} 个小节`
+      : `解析成功：${measureCount} 个小节，${rhythmWarnings.length} 个节奏提示`;
+    parseStatus.className = rhythmWarnings.length === 0
+      ? "status success-status"
+      : "status warning-status";
+    parseErrors.className = rhythmWarnings.length === 0 ? "errors" : "errors warnings";
+    parseErrors.textContent = rhythmWarnings.join("\n");
     eventCount.textContent = `${events.length} 个音符`;
   } catch (error) {
     events = [];
@@ -459,6 +467,7 @@ function showRuntimeError(error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
   parseStatus.textContent = "无法生成或播放当前乐谱";
   parseStatus.className = "status error-status";
+  parseErrors.className = "errors";
   parseErrors.textContent = message;
   eventCount.textContent = "0 个音符";
 }

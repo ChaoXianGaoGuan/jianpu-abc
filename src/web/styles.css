@@ -517,6 +517,11 @@ textarea:focus {
   color: #2d6a4e;
 }
 
+.warning-status,
+.warnings {
+  color: #8a6a1f;
+}
+
 .error-status,
 .errors {
   color: #a13f2d;

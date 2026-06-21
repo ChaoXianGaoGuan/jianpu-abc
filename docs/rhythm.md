@@ -23,4 +23,4 @@ const spans = eventTimeSpans(measure, rhythm.beatDuration);
 
 ## Current limits
 
-The module only reports timing facts. It does not yet emit user-facing warnings, rewrite notation, or decide whether a dotted value should be rendered as an extension. Those behaviors should build on this module instead of duplicating time arithmetic inside renderers or Web UI code.
+The module only reports timing facts. Web warning text is generated in `src/web/rhythm-warnings.ts`, which consumes this module and shows non-fatal tips in the workbench after successful parsing. The project does not yet rewrite notation or decide whether a dotted value should be rendered as an extension; beat-clear display should build on this module instead of duplicating time arithmetic inside renderers or Web UI code.

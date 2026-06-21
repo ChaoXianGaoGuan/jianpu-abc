@@ -39,7 +39,7 @@ Scope:
 
 Follow-up slices:
 
-- Build user-facing measure validation and beat-clear display on top of `src/core/rhythm.ts`.
+- Build beat-clear display on top of `src/core/rhythm.ts` and the Web rhythm warning path.
 - Split the Web workbench controllers after the rendering boundary is stable.
 
 ### 2. Standard ABC import

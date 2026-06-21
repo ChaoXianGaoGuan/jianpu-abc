@@ -42,7 +42,7 @@ npm run build
 
 After `npm run dev`, open `http://127.0.0.1:5173`. The validation UI includes
 the repository's built-in JABC score library with search and category filters,
-live JABC parsing, single-view jianpu/staff preview switching, ABC/MusicXML
+live JABC parsing, non-fatal rhythm tips, single-view jianpu/staff preview switching, ABC/MusicXML
 copy/download actions, SVG/PNG score downloads, cursor-to-jianpu highlighting,
 right-click source navigation, playback event counts, guitar-first instrument selection,
 score-driven metronome and tempo controls, independent live volume sliders, and
