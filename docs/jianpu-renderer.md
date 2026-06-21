@@ -1,6 +1,6 @@
 # SVG 简谱渲染
 
-`renderJianpu(score, options)` 从统一 `Score` AST 生成 SVG 字符串，不访问 DOM，也不重新解析 JABC。内部先由 `src/renderers/jianpu-layout.ts` 计算系统、小节、行宽和事件位置，`src/renderers/jianpu-duration-lines.ts` 负责短时值底线分组与边界净空，`src/renderers/jianpu-beat-clear.ts` 负责分拍视觉重写，最后由 `src/renderers/jianpu-renderer.ts` 输出 SVG。
+`renderJianpu(score, options)` 从统一 `Score` AST 生成 SVG 字符串，不访问 DOM，也不重新解析 JABC。内部先由 `src/core/beat-clear.ts` 在需要时把 Score 转换为分拍后的普通 Score，再由 `src/renderers/jianpu-layout.ts` 计算系统、小节、行宽和事件位置，`src/renderers/jianpu-duration-lines.ts` 负责短时值底线分组与边界净空，最后由 `src/renderers/jianpu-renderer.ts` 输出 SVG。
 
 ## API
 
@@ -15,7 +15,7 @@ const svg = renderJianpu(score, {
 });
 ```
 
-`width` 最小为 320，决定首选显示宽度。源码音乐行决定系统换行；同一源码行会尽量缩放以保持小节列数，但不会压缩到低于可读间距，必要时会扩大内部 viewBox 并把整张 SVG 按容器宽度等比例缩小。默认 `alignMeasuresAcrossSystems: true` 会按列统一上下系统的小节宽度，并在窄屏缩放时继续使用每一列的最大可读宽度，使四小节一行等练习谱保持垂直对齐；传入 `false` 可恢复每行独立自然排版，每个源码行或自动换出的显示行都会按自己的小节比例铺满最终可读 viewBox 宽度。`rhythmDisplay: "beat-clear"` 会把跨拍附点等隐藏拍点的音符在渲染层拆成同音数字片段，并用延音弧连接；跨拍休止符会拆成多个 `0` 片段但不加延音弧；每个片段按自身时值显示底线。源码、AST 和播放保持不变，默认 `"source"` 保持原样。Web 工作台在预览标题右侧提供“小节列对齐”和“分拍显示”复选框来切换这些选项。没有显式系统断点的 AST 才按宽度自动换行。`fontSize` 最小为 18。返回值可以直接设置为网页容器的 SVG 内容，也可以保存为 `.svg` 文件。
+`width` 最小为 320，决定首选显示宽度。源码音乐行决定系统换行；同一源码行会尽量缩放以保持小节列数，但不会压缩到低于可读间距，必要时会扩大内部 viewBox 并把整张 SVG 按容器宽度等比例缩小。默认 `alignMeasuresAcrossSystems: true` 会按列统一上下系统的小节宽度，并在窄屏缩放时继续使用每一列的最大可读宽度，使四小节一行等练习谱保持垂直对齐；传入 `false` 可恢复每行独立自然排版，每个源码行或自动换出的显示行都会按自己的小节比例铺满最终可读 viewBox 宽度。`rhythmDisplay: "beat-clear"` 会先把跨拍附点等隐藏拍点的音符转换成普通同音分拍事件，并用普通延音弧连接；跨拍休止符会转换成多个 `0` 事件但不加延音弧；每个片段按自身时值显示底线。原始源码和输入 AST 保持不变，默认 `"source"` 保持原样。Web 工作台在预览标题右侧提供“小节列对齐”和“分拍显示”复选框来切换这些选项。没有显式系统断点的 AST 才按宽度自动换行。`fontSize` 最小为 18。返回值可以直接设置为网页容器的 SVG 内容，也可以保存为 `.svg` 文件。
 
 ## 当前渲染内容
 

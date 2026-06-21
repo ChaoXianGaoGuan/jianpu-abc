@@ -344,34 +344,32 @@ describe("renderJianpu", () => {
     expect(quarterBeat).not.toContain("×3");
   });
 
-  it("can rewrite cross-beat off-beat notes into tied beat-clear segments", () => {
+  it("can rewrite cross-beat off-beat notes into ordinary tied segments", () => {
     const score = parse("M:4/4\nL:1/4\nK:C jianpu\n| 6e 1. 2 3 |");
     const source = renderJianpu(score);
     const beatClear = renderJianpu(score, { rhythmDisplay: "beat-clear" });
 
-    expect(source).not.toContain('data-beat-clear="split"');
-    expect(beatClear).toContain('data-beat-clear="split"');
-    expect(beatClear).toContain("beat-clear-tie");
-    expect(beatClear).toContain("beat-clear-duration-line");
+    expect(source).not.toContain('class="relation-arc tie-arc"');
+    expect(beatClear).toContain('class="relation-arc tie-arc"');
+    expect(beatClear).not.toContain('data-beat-clear="split"');
     expect(beatClear).not.toContain("beat-clear-extension");
     expect(beatClear).not.toContain("beat-clear-boundary");
   });
 
-  it("can rewrite dotted notes ending off beat into tied beat-clear segments", () => {
+  it("can rewrite dotted notes ending off beat into ordinary tied segments", () => {
     const score = parse("M:4/4\nL:1/4\nK:C jianpu\n| 3'e 2's 1's~ ~1'e 5e 2'. 3's 2's |");
     const beatClear = renderJianpu(score, { rhythmDisplay: "beat-clear" });
 
-    expect(beatClear).toContain('data-beat-clear="split"');
-    expect(beatClear).toContain("beat-clear-tie");
+    expect(beatClear).toContain('class="relation-arc tie-arc"');
+    expect(beatClear).not.toContain('data-beat-clear="split"');
   });
 
   it("can rewrite cross-beat rests without tie arcs", () => {
     const score = parse("M:4/4\nL:1/4\nK:C jianpu\n| 1e 0. 2 3 |");
     const beatClear = renderJianpu(score, { rhythmDisplay: "beat-clear" });
 
-    expect(beatClear).toContain('data-beat-clear="split"');
-    expect(beatClear).toContain("beat-clear-duration-line");
-    expect(beatClear).not.toContain('class="relation-arc tie-arc beat-clear-tie"');
+    expect(beatClear).toContain('aria-label="0"');
+    expect(beatClear).not.toContain('class="relation-arc tie-arc"');
   });
 
   it("connects equal subdivisions within each beat", () => {

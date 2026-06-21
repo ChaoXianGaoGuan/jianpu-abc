@@ -5,11 +5,8 @@ import type {
   Score,
   Voice,
 } from "../core/ast";
+import { toBeatClearScore } from "../core/beat-clear";
 import { DEFAULT_NOTE_LENGTH } from "../core/fraction";
-import {
-  renderBeatClearSplitEvent,
-  shouldSplitBeatClear,
-} from "./jianpu-beat-clear";
 import { renderDurationLines } from "./jianpu-duration-lines";
 import {
   layoutMeasures as buildLayoutMeasures,
@@ -49,24 +46,24 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
   const fontSize = Math.max(18, options.fontSize ?? 32);
   const showLyrics = options.showLyrics ?? true;
   const alignMeasuresAcrossSystems = options.alignMeasuresAcrossSystems ?? true;
-  const rhythmDisplay = options.rhythmDisplay ?? "source";
+  const displayScore = options.rhythmDisplay === "beat-clear" ? toBeatClearScore(score) : score;
   const padding = Math.max(24, fontSize);
-  const defaultLength = score.header.defaultNoteLength ?? DEFAULT_NOTE_LENGTH;
-  const beatDuration = score.header.meter
-    ? { numerator: 1, denominator: score.header.meter.denominator }
+  const defaultLength = displayScore.header.defaultNoteLength ?? DEFAULT_NOTE_LENGTH;
+  const beatDuration = displayScore.header.meter
+    ? { numerator: 1, denominator: displayScore.header.meter.denominator }
     : defaultLength;
   const titleY = padding;
-  const metaY = score.header.title ? padding + fontSize * 1.2 : padding;
+  const metaY = displayScore.header.title ? padding + fontSize * 1.2 : padding;
   const musicTop = metaY + fontSize * 2;
   const lineHeight = fontSize * (showLyrics ? 3.35 : 2.55);
   const minCellWidth = fontSize * 0.62;
-  const title = score.header.title ?? "JABC score";
+  const title = displayScore.header.title ?? "JABC score";
   const renderedVoices: string[] = [];
   let renderedWidth = width;
   let cursorY = musicTop;
 
-  for (const [voiceIndex, voice] of score.voices.entries()) {
-    if (score.voices.length > 1) {
+  for (const [voiceIndex, voice] of displayScore.voices.entries()) {
+    if (displayScore.voices.length > 1) {
       renderedVoices.push(`<text class="voice-label" x="${padding}" y="${round(cursorY - fontSize * 1.18)}">${escapeXml(voice.id)}</text>`);
     }
     const layout = buildLayoutMeasures(
@@ -109,17 +106,16 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
         connectedBoundaries.has(measureIndex),
         suppressRightBarline,
         sharedLeftBarlineX,
-        rhythmDisplay,
       );
     }));
     renderedVoices.push(renderCrossMeasureTies(crossMeasureTies, layout, fontSize));
     const lastLineY = layout.at(-1)?.y ?? cursorY;
-    cursorY = lastLineY + lineHeight + (voiceIndex === score.voices.length - 1 ? 0 : fontSize * 0.9);
+    cursorY = lastLineY + lineHeight + (voiceIndex === displayScore.voices.length - 1 ? 0 : fontSize * 0.9);
   }
 
   const height = Math.ceil(cursorY + padding * 0.4);
   const content = [
-    renderHeader(score, renderedWidth, padding, titleY, metaY, fontSize),
+    renderHeader(displayScore, renderedWidth, padding, titleY, metaY, fontSize),
     ...renderedVoices,
   ].join("");
 
@@ -139,7 +135,6 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     .ending-number{font:700 ${fontSize * 0.45}px Georgia,'Songti SC',serif;fill:#33483f}
     .event-bg{fill:transparent;transition:fill .12s ease}
     .event-symbol,.duration-extension{font:600 ${fontSize}px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#1f332a;text-anchor:middle}
-    .beat-clear-tie{stroke-width:1.25;opacity:.86}
     .event-key-change{font:700 ${fontSize * 0.48}px Inter,'Microsoft YaHei',sans-serif;fill:#a4522c;text-anchor:middle}
     .event-accidental{font:700 ${fontSize * 0.8}px 'Bravura','Noto Music','Segoe UI Symbol',Georgia,serif;fill:#1f332a;text-anchor:middle;dominant-baseline:middle}
     .octave-dot,.duration-dot{fill:#1f332a}
@@ -204,7 +199,6 @@ function renderMeasure(
   suppressOutgoingTie: boolean,
   suppressRightBarline: boolean,
   leftBarlineX: number | undefined,
-  rhythmDisplay: RhythmDisplayMode,
 ): string {
   const events = positioned.map((item) => {
     const eventId = `${voice.id}:${placed.measureIndex}:${item.eventIndex}`;
@@ -216,7 +210,6 @@ function renderMeasure(
       fontSize,
       showLyrics,
       eventId === highlightEventId,
-      rhythmDisplay,
     );
   }).join("");
   const rightBarlineX = placed.measure.barline
@@ -301,7 +294,6 @@ function renderEvent(
   fontSize: number,
   showLyrics: boolean,
   highlighted: boolean,
-  rhythmDisplay: RhythmDisplayMode,
 ): string {
   const { event, centerX, slotCount, layoutSpan, layoutOffset, dotXs } = positioned;
   const symbol = event.type === "note"
@@ -312,10 +304,6 @@ function renderEvent(
   const dots = event.type === "note" || event.type === "rest" ? event.dots ?? 0 : 0;
   if (event.type === "key-change") {
     return `<g class="${className}" data-event-id="${escapeXml(eventId)}" aria-label="${escapeXml(event.sourceText ?? symbol)}"><text class="event-key-change" x="${round(centerX)}" y="${round(-fontSize * 1.42)}">${symbol}</text></g>`;
-  }
-
-  if (shouldSplitBeatClear(positioned, rhythmDisplay)) {
-    return renderBeatClearSplitEvent(positioned, eventId, cellWidth, beatGap, fontSize, showLyrics, highlighted);
   }
 
   const visualStartX = layoutXAt(layoutOffset, cellWidth, beatGap);

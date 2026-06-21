@@ -6,8 +6,9 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Changed
 
-- Shared hidden beat-boundary detection between rhythm warnings and beat-clear rendering.
-- Extracted beat-clear visual rewriting from the jianpu SVG renderer into its own module.
+- Route beat-clear display through a core Score transform instead of renderer-only visual fragments.
+- Retire renderer-only beat-clear visual fragments after moving display rewriting to the core transform.
+- Shared hidden beat-boundary detection between rhythm warnings and beat-clear transformation.
 - Added a pure rhythm analysis module for measure duration, beat positions, and cross-beat event spans.
 - Continued the jianpu renderer refactor by moving short-note duration-line grouping into its own module.
 - Began the jianpu renderer refactor by introducing a pure layout module for measure and event positioning.
