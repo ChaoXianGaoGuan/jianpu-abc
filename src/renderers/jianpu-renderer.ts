@@ -7,7 +7,7 @@ import type {
 } from "../core/ast";
 import { DEFAULT_NOTE_LENGTH } from "../core/fraction";
 import {
-  renderBeatClearSplitNote,
+  renderBeatClearSplitEvent,
   shouldSplitBeatClear,
 } from "./jianpu-beat-clear";
 import { renderDurationLines } from "./jianpu-duration-lines";
@@ -315,7 +315,7 @@ function renderEvent(
   }
 
   if (shouldSplitBeatClear(positioned, rhythmDisplay)) {
-    return renderBeatClearSplitNote(positioned, eventId, cellWidth, beatGap, fontSize, showLyrics, highlighted);
+    return renderBeatClearSplitEvent(positioned, eventId, cellWidth, beatGap, fontSize, showLyrics, highlighted);
   }
 
   const visualStartX = layoutXAt(layoutOffset, cellWidth, beatGap);

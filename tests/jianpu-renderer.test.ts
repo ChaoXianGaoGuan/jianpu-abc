@@ -365,6 +365,15 @@ describe("renderJianpu", () => {
     expect(beatClear).toContain("beat-clear-tie");
   });
 
+  it("can rewrite cross-beat rests without tie arcs", () => {
+    const score = parse("M:4/4\nL:1/4\nK:C jianpu\n| 1e 0. 2 3 |");
+    const beatClear = renderJianpu(score, { rhythmDisplay: "beat-clear" });
+
+    expect(beatClear).toContain('data-beat-clear="split"');
+    expect(beatClear).toContain("beat-clear-duration-line");
+    expect(beatClear).not.toContain('class="relation-arc tie-arc beat-clear-tie"');
+  });
+
   it("connects equal subdivisions within each beat", () => {
     const eighths = renderJianpu(parse("M:4/4\nL:1/8\nK:C jianpu\n| 1 2 3 4 |"));
     const sixteenths = renderJianpu(parse("M:4/4\nL:1/16\nK:C jianpu\n| 1 2 3 4 |"));

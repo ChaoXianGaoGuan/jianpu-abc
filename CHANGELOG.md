@@ -43,7 +43,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
-- Add optional beat-clear jianpu visual rewrites for notes that hide beat boundaries.
+- Add optional beat-clear jianpu visual rewrites for notes and rests that hide beat boundaries.
 - Show non-fatal Web workbench rhythm tips for incomplete measures and cross-beat dotted spans.
 - Bidirectional JABC/jianpu source navigation with editor-caret highlighting and right-click token selection, plus SVG/PNG downloads for current jianpu and staff previews.
 - Score-driven metronome playback with compound-meter accents, manual meter/tempo fallbacks, and independent live instrument/metronome volume controls.

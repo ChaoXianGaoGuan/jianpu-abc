@@ -37,6 +37,14 @@ describe("rhythmWarningMessages", () => {
     );
   });
 
+  it("warns about cross-beat rests that hide a beat boundary", () => {
+    const score = parse("M:4/4\nL:1/4\nK:C jianpu\n| 1e 0. 2 3 |");
+
+    expect(rhythmWarningMessages(score)).toContain(
+      "第 1 小节第 2 个事件 “0.” 跨过拍点；若需要每拍更清楚，可考虑用延音线或分拍写法。",
+    );
+  });
+
   it("uses the manual fallback meter when the score has no M header", () => {
     const score = parse("L:1/4\nK:C jianpu\n| 1 2 |");
 

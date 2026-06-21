@@ -26,7 +26,7 @@ export function shouldSplitBeatClear(
   rhythmDisplay: RhythmDisplayMode,
 ): boolean {
   if (rhythmDisplay !== "beat-clear") return false;
-  if (item.event.type !== "note") return false;
+  if (item.event.type !== "note" && item.event.type !== "rest") return false;
   const endOffset = item.layoutOffset + item.layoutSpan;
   const segments = beatClearSegments(item, 1, 0);
   return hidesBeatBoundary({
@@ -36,7 +36,7 @@ export function shouldSplitBeatClear(
   });
 }
 
-export function renderBeatClearSplitNote(
+export function renderBeatClearSplitEvent(
   positioned: PositionedEvent,
   eventId: string,
   cellWidth: number,
@@ -46,7 +46,7 @@ export function renderBeatClearSplitNote(
   highlighted: boolean,
 ): string {
   const event = positioned.event;
-  if (event.type !== "note") return "";
+  if (event.type !== "note" && event.type !== "rest") return "";
   const segments = beatClearSegments(positioned, cellWidth, beatGap);
   const visualStartX = layoutXAt(positioned.layoutOffset, cellWidth, beatGap);
   const visualEndX = layoutXAt(positioned.layoutOffset + positioned.layoutSpan, cellWidth, beatGap);
@@ -56,19 +56,20 @@ export function renderBeatClearSplitNote(
   const parts = [
     `<rect class="event-bg" x="${round(visualStartX + visualWidth * 0.1)}" y="${round(-fontSize * 1.25)}" width="${round(visualWidth * 0.8)}" height="${round(backgroundHeight)}" rx="7"/>`,
   ];
-  const symbol = String(event.degree);
+  const isNote = event.type === "note";
+  const symbol = isNote ? String(event.degree) : "0";
   const tieY = -fontSize * 0.82;
   const tiePeak = -fontSize * 1.04;
   const tieInset = fontSize * 0.22;
 
   for (const [index, segment] of segments.entries()) {
     parts.push(`<text class="event-symbol beat-clear-segment" x="${round(segment.centerX)}" y="0">${symbol}</text>`);
-    if (event.accidental && index === 0) {
+    if (isNote && event.accidental && index === 0) {
       parts.push(`<text class="event-accidental" x="${round(segment.centerX - fontSize * 0.38)}" y="${round(-fontSize * 0.45)}">${ACCIDENTAL_TEXT[event.accidental]}</text>`);
     }
-    parts.push(renderOctaveDots(segment.centerX, event.octaveShift, fontSize));
+    if (isNote) parts.push(renderOctaveDots(segment.centerX, event.octaveShift, fontSize));
     parts.push(renderBeatClearSegmentDurationLines(segment.centerX, segment.span, fontSize));
-    if (index > 0) {
+    if (isNote && index > 0) {
       const previous = segments[index - 1] as BeatClearSegment;
       parts.push(arcPath(
         "tie-arc beat-clear-tie",
@@ -80,7 +81,7 @@ export function renderBeatClearSplitNote(
     }
   }
 
-  if (showLyrics && event.lyric) {
+  if (showLyrics && isNote && event.lyric) {
     parts.push(`<text class="event-lyric" x="${round(segments[0]!.centerX)}" y="${round(fontSize * 1.5)}">${escapeXml(event.lyric)}</text>`);
   }
 

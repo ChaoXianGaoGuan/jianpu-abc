@@ -39,7 +39,7 @@ Scope:
 
 Follow-up slices:
 
-- Extend beat-clear visual rewriting to more edge cases such as cross-measure splits and rest grouping.
+- Extend beat-clear visual rewriting to more edge cases such as cross-measure splits and complex tie/slur combinations.
 - Split the Web workbench controllers after the rendering boundary is stable.
 
 ### 2. Standard ABC import
