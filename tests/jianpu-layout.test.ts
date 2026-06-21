@@ -50,6 +50,24 @@ K:C jianpu
     expect(layout[1]?.width).toBeCloseTo(layout[3]?.width ?? 0);
   });
 
+  it("fills the available width after aligning explicit measure columns", () => {
+    const measures = parseMeasures(`M:4/4
+L:1/4
+K:C jianpu
+| 1 2 3 1 | 1 2 3 1 |
+| 3 4 5 - | 3 4 5 - |
+| 5 6 5 4 | 3 1 - - |`);
+
+    const layout = buildLayout(measures, { width: 620, alignMeasuresAcrossSystems: true });
+    const expectedRightEdge = 620 - 32;
+
+    expect(layout[1]!.x + layout[1]!.width).toBeCloseTo(expectedRightEdge, 5);
+    expect(layout[3]!.x + layout[3]!.width).toBeCloseTo(expectedRightEdge, 5);
+    expect(layout[5]!.x + layout[5]!.width).toBeCloseTo(expectedRightEdge, 5);
+    expect(layout[0]!.x).toBe(layout[2]!.x);
+    expect(layout[1]!.x).toBe(layout[3]!.x);
+  });
+
   it("wraps measures automatically when no source system breaks are present", () => {
     const measures = parseMeasures(`M:4/4
 L:1/4

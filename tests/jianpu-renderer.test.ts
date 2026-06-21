@@ -526,6 +526,25 @@ describe("renderJianpu", () => {
     expect(rowPositions[2]).not.toBe(rowPositions[3]);
   });
 
+  it("fills aligned rows when a small fixed measure count is selected", () => {
+    const width = 620;
+    const fontSize = 32;
+    const score = parse("K:C jianpu\n| 1 2 3 1 | 1 2 3 1 | 3 4 5 - | 3 4 5 - | 5 6 5 4 | 3 1 - - |");
+    const svg = renderJianpu(score, {
+      width,
+      fontSize,
+      alignMeasuresAcrossSystems: true,
+      measuresPerSystem: 2,
+    });
+    const transforms = numericMeasureTransforms(svg);
+    const localBarlines = singleBarlineXs(svg);
+    const expectedRightBoundary = width - fontSize - fontSize * 0.22;
+
+    for (const index of [1, 3, 5]) {
+      expect(transforms[index]!.x + localBarlines[index]!).toBeCloseTo(expectedRightBoundary, 1);
+    }
+  });
+
   it("aligns measure columns across source rows by default", () => {
     const score = parse("K:C jianpu\n| 1 2 3 4 | 1 |\n| 1 | 1 2 3 4 |");
     const svg = renderJianpu(score, { width: 620 });

@@ -79,9 +79,18 @@ export function layoutMeasures(
     const alignedReadableColumnWidths = alignMeasuresAcrossSystems
       ? columnReadableWidths(systemMetrics, minCellWidth, beatGap, barSpace)
       : [];
+    const alignedBaseColumnWidths = alignMeasuresAcrossSystems
+      ? alignedColumnWidths.map((naturalWidth, index) =>
+        Math.max(naturalWidth, alignedReadableColumnWidths[index] ?? 0)
+      )
+      : [];
+    const alignedGridWidth = alignedBaseColumnWidths.reduce(
+      (sum, measureWidth) => sum + measureWidth,
+      0,
+    ) + Math.max(0, alignedBaseColumnWidths.length - 1) * measureGap;
 
     const targetAvailableWidth = alignMeasuresAcrossSystems
-      ? availableWidth
+      ? Math.max(availableWidth, alignedGridWidth)
       : Math.max(
         availableWidth,
         ...systemMetrics.map((metrics) =>
@@ -96,16 +105,15 @@ export function layoutMeasures(
     for (const [systemIndex, system] of systems.entries()) {
       const metrics = systemMetrics[systemIndex] ?? [];
       const naturalWidths = alignMeasuresAcrossSystems
-        ? metrics.map((metric, index) => alignedColumnWidths[index] ?? metric.naturalWidth)
+        ? metrics.map((metric, index) => alignedBaseColumnWidths[index] ?? metric.naturalWidth)
         : metrics.map((metric) => metric.naturalWidth);
       const readableWidths = alignMeasuresAcrossSystems
         ? metrics.map((metric, index) => alignedReadableColumnWidths[index] ?? readableMeasureWidth(metric, minCellWidth, beatGap, barSpace))
         : metrics.map((metric) => readableMeasureWidth(metric, minCellWidth, beatGap, barSpace));
       const naturalTotal = naturalWidths.reduce((sum, measureWidth) => sum + measureWidth, 0)
         + Math.max(0, system.length - 1) * measureGap;
-      const scale = alignMeasuresAcrossSystems || naturalTotal <= 0
-        ? 1
-        : targetAvailableWidth / naturalTotal;
+      const scaleBase = alignMeasuresAcrossSystems ? alignedGridWidth : naturalTotal;
+      const scale = scaleBase <= 0 ? 1 : targetAvailableWidth / scaleBase;
       const scaledGap = measureGap * scale;
       let systemX = padding;
       for (const [index, item] of system.entries()) {
@@ -114,10 +122,12 @@ export function layoutMeasures(
         const readableWidth = readableWidths[index] ?? readableMeasureWidth(metric, minCellWidth, beatGap, barSpace);
         const scaledBarSpace = barSpace * scale;
         const scaledBeatGap = beatGap * scale;
-        const measureWidth = Math.max(
-          naturalWidth * scale,
-          alignMeasuresAcrossSystems ? readableWidth : readableMeasureWidth(metric, minCellWidth, scaledBeatGap, scaledBarSpace),
-        );
+        const measureWidth = alignMeasuresAcrossSystems
+          ? naturalWidth * scale
+          : Math.max(
+            naturalWidth * scale,
+            readableMeasureWidth(metric, minCellWidth, scaledBeatGap, scaledBarSpace),
+          );
         const cellWidth = Math.max(
           minCellWidth,
           (measureWidth - scaledBarSpace - metric.beatGapCount * scaledBeatGap) / metric.slotCount,
