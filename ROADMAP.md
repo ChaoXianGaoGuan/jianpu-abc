@@ -39,7 +39,7 @@ Scope:
 
 Follow-up slices:
 
-- Expand beat-clear display from auxiliary extension marks into full optional notation rewriting where appropriate.
+- Expand beat-clear display from auxiliary boundary marks into full optional notation rewriting where appropriate.
 - Split the Web workbench controllers after the rendering boundary is stable.
 
 ### 2. Standard ABC import

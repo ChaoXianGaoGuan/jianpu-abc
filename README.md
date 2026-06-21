@@ -184,7 +184,7 @@ const svg = renderJianpu(score, {
 The pure renderer outputs an SVG string with metadata, numbered notes,
 inline key-change markers, larger accidentals, standard double-sharp/double-flat
 glyphs, octave and duration marks, rests, extensions, lyrics, aligned source-row
-measure columns, measure wrapping, readable narrow-screen spacing with responsive SVG scaling when needed, short-note underline gaps at beat and barline boundaries, optional beat-clear extension marks, multi-voice labels, and optional event highlighting. The
+measure columns, measure wrapping, readable narrow-screen spacing with responsive SVG scaling when needed, short-note underline gaps at beat and barline boundaries, optional beat-clear boundary marks, multi-voice labels, and optional event highlighting. The
 validation UI shows jianpu by default, can switch the same preview area to
 staff notation, includes a checkbox for toggling aligned jianpu measure columns,
 highlights the JABC token under the editor caret, and selects the matching token

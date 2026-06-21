@@ -344,17 +344,18 @@ describe("renderJianpu", () => {
     expect(quarterBeat).not.toContain("×3");
   });
 
-  it("can show beat-clear extension marks for cross-beat off-beat notes", () => {
+  it("can show beat-clear boundary marks for cross-beat off-beat notes", () => {
     const score = parse("M:4/4\nL:1/4\nK:C jianpu\n| 6e 1. 2 3 |");
 
-    expect(renderJianpu(score)).not.toContain('class="duration-extension beat-clear-extension"');
-    expect(renderJianpu(score, { rhythmDisplay: "beat-clear" })).toContain('class="duration-extension beat-clear-extension"');
+    expect(renderJianpu(score)).not.toContain('class="beat-clear-boundary"');
+    expect(renderJianpu(score, { rhythmDisplay: "beat-clear" })).toContain('class="beat-clear-boundary"');
+    expect(renderJianpu(score, { rhythmDisplay: "beat-clear" })).not.toContain("beat-clear-extension");
   });
 
-  it("can show beat-clear extension marks for dotted notes ending off beat", () => {
+  it("can show beat-clear boundary marks for dotted notes ending off beat", () => {
     const score = parse("M:4/4\nL:1/4\nK:C jianpu\n| 3'e 2's 1's~ ~1'e 5e 2'. 3's 2's |");
 
-    expect(renderJianpu(score, { rhythmDisplay: "beat-clear" })).toContain('class="duration-extension beat-clear-extension"');
+    expect(renderJianpu(score, { rhythmDisplay: "beat-clear" })).toContain('class="beat-clear-boundary"');
   });
 
   it("connects equal subdivisions within each beat", () => {
