@@ -133,7 +133,8 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     .repeat-dot{fill:#33483f}
     .ending-bracket{stroke-width:1.5;stroke-linecap:square;stroke-linejoin:miter}
     .ending-number{font:700 ${fontSize * 0.45}px Georgia,'Songti SC',serif;fill:#33483f}
-    .event-bg{fill:transparent;transition:fill .12s ease}
+    .jabc-event{cursor:pointer}
+    .event-bg{fill:transparent;transition:fill .12s ease,stroke .12s ease}
     .event-symbol,.duration-extension{font:600 ${fontSize}px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#1f332a;text-anchor:middle}
     .event-key-change{font:700 ${fontSize * 0.48}px Inter,'Microsoft YaHei',sans-serif;fill:#a4522c;text-anchor:middle}
     .event-accidental{font:700 ${fontSize * 0.8}px 'Bravura','Noto Music','Segoe UI Symbol',Georgia,serif;fill:#1f332a;text-anchor:middle;dominant-baseline:middle}
@@ -148,6 +149,8 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     .event-lyric{font:15px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#4f6259;text-anchor:middle}
     .is-source-active .event-bg{fill:#cfe5da;stroke:#4e8069;stroke-width:1.2}
     .is-source-active .event-symbol,.is-source-active .event-accidental,.is-source-active .duration-extension{fill:#245b45}
+    .is-playback-start .event-bg{fill:#dbeafe;stroke:#3b6f9e;stroke-width:1.2}
+    .is-playback-start .event-symbol,.is-playback-start .event-accidental,.is-playback-start .duration-extension{fill:#1f4f7a}
     .is-highlighted .event-bg{fill:#f7d98b}
     .is-highlighted .event-symbol,.is-highlighted .event-accidental,.is-highlighted .duration-extension{fill:#8d3f23}
   </style>

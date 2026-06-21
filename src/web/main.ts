@@ -74,6 +74,7 @@ const instrumentVolumeValue = element<HTMLOutputElement>("instrument-volume-valu
 const metronomeVolume = element<HTMLInputElement>("metronome-volume");
 const metronomeVolumeValue = element<HTMLOutputElement>("metronome-volume-value");
 const playButton = element<HTMLButtonElement>("play-button");
+const playFromSelectionButton = element<HTMLButtonElement>("play-from-selection-button");
 const pauseButton = element<HTMLButtonElement>("pause-button");
 const resumeButton = element<HTMLButtonElement>("resume-button");
 const stopButton = element<HTMLButtonElement>("stop-button");
@@ -88,6 +89,7 @@ let currentScore: Score | undefined;
 let currentAbc = "";
 let currentMusicXml = "";
 let playbackEventId: string | undefined;
+let playbackStartEventId: string | undefined;
 let sourceEventId: string | undefined;
 let sourceEventRanges: SourceEventRange[] = [];
 let staffRenderVersion = 0;
@@ -141,6 +143,7 @@ for (const button of document.querySelectorAll<HTMLButtonElement>("[data-guide-e
 
 editor.addEventListener("input", () => {
   player?.stop();
+  playbackStartEventId = undefined;
   evaluateSource();
   renderLibraryList();
 });
@@ -153,15 +156,12 @@ librarySearch.addEventListener("input", renderLibraryList);
 libraryCategory.addEventListener("change", renderLibraryList);
 
 playButton.addEventListener("click", () => {
-  if (!playbackPlan || (events.length === 0 && playbackPlan.metronomeEvents.length === 0)) return;
-  try {
-    getPlayer().play(events, {
-      metronomeEvents: playbackPlan.metronomeEvents,
-      totalDuration: playbackPlan.duration,
-    });
-  } catch (error) {
-    showRuntimeError(error);
-  }
+  playFromTime(0);
+});
+playFromSelectionButton.addEventListener("click", () => {
+  const startTime = selectedPlaybackStartTime();
+  if (startTime === undefined) return;
+  playFromTime(startTime);
 });
 pauseButton.addEventListener("click", () => player?.pause());
 resumeButton.addEventListener("click", () => player?.resume());
@@ -185,6 +185,7 @@ alignMeasuresToggle.addEventListener("change", renderActivePreview);
 beatClearToggle.addEventListener("change", renderActivePreview);
 downloadScoreSvgButton.addEventListener("click", () => void downloadScoreImage("svg"));
 downloadScorePngButton.addEventListener("click", () => void downloadScoreImage("png"));
+jianpuPreview.addEventListener("click", selectPlaybackStartFromJianpu);
 jianpuPreview.addEventListener("contextmenu", navigateFromJianpu);
 copyAbcButton.addEventListener("click", () => void copyText(currentAbc, "ABC 已复制"));
 downloadAbcButton.addEventListener("click", () => downloadText(currentAbc, fileBaseName("abc"), "text/vnd.abc"));
@@ -257,6 +258,7 @@ function loadLibraryEntry(entry: ScoreLibraryEntry, protectEdits: boolean): bool
   ) return false;
 
   player?.stop();
+  playbackStartEventId = undefined;
   loadedLibraryId = entry.id;
   loadedLibrarySource = entry.source;
   editor.value = entry.source;
@@ -292,6 +294,7 @@ function loadGuideExample(exampleId: string | undefined): void {
   ) return;
 
   player?.stop();
+  playbackStartEventId = undefined;
   loadedLibraryId = undefined;
   loadedLibrarySource = source;
   editor.value = source;
@@ -307,6 +310,7 @@ function evaluateSource(): void {
     playbackPlan = undefined;
     currentScore = undefined;
     playbackEventId = undefined;
+    playbackStartEventId = undefined;
     sourceEventId = undefined;
     sourceEventRanges = [];
     previewReady = false;
@@ -379,6 +383,19 @@ function getPlayer(): WebAudioPlayer {
   player.setInstrumentVolume(sliderGain(instrumentVolume));
   player.setMetronomeVolume(sliderGain(metronomeVolume));
   return player;
+}
+
+function playFromTime(startTime: number): void {
+  if (!playbackPlan || (events.length === 0 && playbackPlan.metronomeEvents.length === 0)) return;
+  try {
+    getPlayer().play(events, {
+      metronomeEvents: playbackPlan.metronomeEvents,
+      totalDuration: playbackPlan.duration,
+      startTime,
+    });
+  } catch (error) {
+    showRuntimeError(error);
+  }
 }
 
 function syncTimingControls(score: Score): void {
@@ -477,6 +494,7 @@ function renderJianpuPreview(): void {
 function highlightJianpuEvents(): void {
   for (const item of jianpuPreview.querySelectorAll<SVGGElement>(".jabc-event")) {
     item.classList.toggle("is-highlighted", item.dataset.eventId === playbackEventId);
+    item.classList.toggle("is-playback-start", item.dataset.eventId === playbackStartEventId);
     item.classList.toggle("is-source-active", item.dataset.eventId === sourceEventId);
   }
 }
@@ -509,11 +527,24 @@ function updateSourceCaretHighlight(): void {
   if (!currentScore || playerState === "playing") return;
   sourceEventId = sourceEventAtCaret(sourceEventRanges, editor.selectionStart)?.eventId;
   highlightJianpuEvents();
+  updateControls();
 }
 
 function clearSourceCaretHighlight(): void {
   sourceEventId = undefined;
   highlightJianpuEvents();
+  updateControls();
+}
+
+function selectPlaybackStartFromJianpu(event: MouseEvent): void {
+  const target = event.target instanceof Element
+    ? event.target.closest<SVGGElement>(".jabc-event")
+    : null;
+  const eventId = target?.dataset.eventId;
+  if (!eventId) return;
+  playbackStartEventId = eventId;
+  highlightJianpuEvents();
+  updateControls();
 }
 
 function navigateFromJianpu(event: MouseEvent): void {
@@ -529,6 +560,7 @@ function navigateFromJianpu(event: MouseEvent): void {
   player?.stop();
   playbackEventId = undefined;
   sourceEventId = eventId;
+  playbackStartEventId = eventId;
   editor.focus();
   editor.setSelectionRange(range.start, range.end);
   const lineHeight = Number.parseFloat(getComputedStyle(editor).lineHeight) || 25;
@@ -542,6 +574,11 @@ function updateControls(): void {
     || (events.length === 0 && playbackPlan.metronomeEvents.length === 0)
     || playerState === "loading"
   );
+  playFromSelectionButton.disabled = (
+    !playbackPlan
+    || selectedPlaybackStartTime() === undefined
+    || playerState === "loading"
+  );
   pauseButton.disabled = playerState !== "playing";
   resumeButton.disabled = playerState !== "paused";
   stopButton.disabled = playerState === "idle";
@@ -552,6 +589,26 @@ function updateControls(): void {
   const imageDownloadDisabled = !previewReady || previewExportPending;
   downloadScoreSvgButton.disabled = imageDownloadDisabled;
   downloadScorePngButton.disabled = imageDownloadDisabled;
+}
+
+function selectedPlaybackStartTime(): number | undefined {
+  const selectedEventId = playbackStartEventId
+    ?? sourceEventAtCaret(sourceEventRanges, editor.selectionStart)?.eventId;
+  return playbackStartTimeFromSourceEvent(selectedEventId);
+}
+
+function playbackStartTimeFromSourceEvent(eventId: string | undefined): number | undefined {
+  if (!eventId) return undefined;
+  const directEvent = events.find((event) => event.sourceEventId === eventId);
+  if (directEvent) return directEvent.startTime;
+
+  const rangeIndex = sourceEventRanges.findIndex((range) => range.eventId === eventId);
+  if (rangeIndex < 0) return undefined;
+  for (const range of sourceEventRanges.slice(rangeIndex + 1)) {
+    const nextEvent = events.find((event) => event.sourceEventId === range.eventId);
+    if (nextEvent) return nextEvent.startTime;
+  }
+  return undefined;
 }
 
 function showRuntimeError(error: unknown): void {
@@ -616,8 +673,8 @@ function collectPreviewSvg(container: HTMLElement): SvgFragment {
 
 function svgFragment(svg: SVGSVGElement): SvgFragment {
   const clone = svg.cloneNode(true) as SVGSVGElement;
-  for (const item of clone.querySelectorAll(".is-highlighted, .is-source-active")) {
-    item.classList.remove("is-highlighted", "is-source-active");
+  for (const item of clone.querySelectorAll(".is-highlighted, .is-playback-start, .is-source-active")) {
+    item.classList.remove("is-highlighted", "is-playback-start", "is-source-active");
   }
   const viewBox = svg.viewBox.baseVal;
   const bounds = svg.getBoundingClientRect();

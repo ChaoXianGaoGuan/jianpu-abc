@@ -18,6 +18,7 @@ export interface WebAudioPlayerOptions {
 export interface WebAudioPlayOptions {
   metronomeEvents?: MetronomeEvent[];
   totalDuration?: number;
+  startTime?: number;
 }
 
 interface ScheduledVoice {
@@ -174,7 +175,6 @@ export class WebAudioPlayer {
     this.events = [...events].sort((left, right) => left.startTime - right.startTime);
     this.metronomeEvents = [...(playbackOptions.metronomeEvents ?? [])]
       .sort((left, right) => left.startTime - right.startTime);
-    this.positionSeconds = 0;
     const eventDuration = this.events.reduce(
       (latest, event) => Math.max(latest, event.startTime + event.duration),
       0,
@@ -188,6 +188,8 @@ export class WebAudioPlayer {
       metronomeDuration,
       playbackOptions.totalDuration ?? 0,
     );
+    const startTime = clamp(playbackOptions.startTime ?? 0, 0, this.totalDuration);
+    this.positionSeconds = startTime;
 
     if (this.events.length === 0 && this.metronomeEvents.length === 0) {
       this.setState("idle");
@@ -213,11 +215,11 @@ export class WebAudioPlayer {
         if (
           generation === this.playGeneration
           && (this.events.length > 0 || this.metronomeEvents.length > 0)
-        ) this.scheduleFrom(0);
+        ) this.scheduleFrom(startTime);
       });
       return;
     }
-    this.scheduleFrom(0);
+    this.scheduleFrom(startTime);
   }
 
   pause(): void {

@@ -282,6 +282,62 @@ describe("WebAudioPlayer", () => {
     expect(player.currentTime).toBe(0);
   });
 
+  it("starts playback from a requested offset", () => {
+    const oscillators: Array<{
+      start: ReturnType<typeof vi.fn>;
+      stop: ReturnType<typeof vi.fn>;
+    }> = [];
+    const createOscillator = vi.fn(() => {
+      const oscillator = {
+        type: "sine" as OscillatorType,
+        frequency: { setValueAtTime: vi.fn() },
+        detune: { setValueAtTime: vi.fn() },
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        start: vi.fn(),
+        stop: vi.fn(),
+        addEventListener: vi.fn(),
+      };
+      oscillators.push(oscillator);
+      return oscillator;
+    });
+    const context = {
+      currentTime: 5,
+      state: "running",
+      destination: {},
+      createOscillator,
+      createGain: vi.fn(() => ({
+        gain: {
+          setValueAtTime: vi.fn(),
+          linearRampToValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      })),
+      resume: vi.fn(async () => undefined),
+      close: vi.fn(async () => undefined),
+    } as unknown as AudioContext;
+    const player = new WebAudioPlayer(context, { instrument: "synth", scheduleAheadSeconds: 0 });
+
+    player.play([
+      { id: "playback-1", type: "note", midi: 60, startTime: 0, duration: 1, velocity: 100 },
+      { id: "playback-2", type: "note", midi: 62, startTime: 2, duration: 1, velocity: 100 },
+    ], {
+      metronomeEvents: [
+        { startTime: 0, accent: true },
+        { startTime: 2, accent: false },
+      ],
+      totalDuration: 3,
+      startTime: 1.5,
+    });
+
+    expect(player.currentTime).toBeCloseTo(1.5);
+    expect(createOscillator).toHaveBeenCalledTimes(2);
+    expect(oscillators[0]?.start).toHaveBeenCalledWith(5.5);
+    expect(oscillators[1]?.start).toHaveBeenCalledWith(5.5);
+  });
+
   it("waits for audio readiness before scheduling notes and highlights", async () => {
     let resumeContext: (() => void) | undefined;
     const resumePromise = new Promise<void>((resolve) => {
