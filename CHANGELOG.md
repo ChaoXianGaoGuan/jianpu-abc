@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Changed
 
+- Clarify Web playback-start behavior so only left-clicked jianpu events set the persistent start anchor, while source navigation remains separate.
 - Split the Web UI into a focused workbench view and a separate score-library view with top navigation.
 - Update AI handoff and roadmap status for the completed jianpu layout extraction and current validation counts.
 - Route beat-clear display through a core Score transform instead of renderer-only visual fragments.

@@ -493,9 +493,11 @@ function renderJianpuPreview(): void {
 
 function highlightJianpuEvents(): void {
   for (const item of jianpuPreview.querySelectorAll<SVGGElement>(".jabc-event")) {
-    item.classList.toggle("is-highlighted", item.dataset.eventId === playbackEventId);
-    item.classList.toggle("is-playback-start", item.dataset.eventId === playbackStartEventId);
-    item.classList.toggle("is-source-active", item.dataset.eventId === sourceEventId);
+    const eventId = item.dataset.eventId;
+    const isSourceActive = eventId === sourceEventId;
+    item.classList.toggle("is-highlighted", eventId === playbackEventId);
+    item.classList.toggle("is-source-active", isSourceActive);
+    item.classList.toggle("is-playback-start", !isSourceActive && eventId === playbackStartEventId);
   }
 }
 
@@ -542,7 +544,7 @@ function selectPlaybackStartFromJianpu(event: MouseEvent): void {
     : null;
   const eventId = target?.dataset.eventId;
   if (!eventId) return;
-  playbackStartEventId = eventId;
+  playbackStartEventId = playbackStartEventId === eventId ? undefined : eventId;
   highlightJianpuEvents();
   updateControls();
 }
@@ -560,7 +562,6 @@ function navigateFromJianpu(event: MouseEvent): void {
   player?.stop();
   playbackEventId = undefined;
   sourceEventId = eventId;
-  playbackStartEventId = eventId;
   editor.focus();
   editor.setSelectionRange(range.start, range.end);
   const lineHeight = Number.parseFloat(getComputedStyle(editor).lineHeight) || 25;
@@ -592,9 +593,7 @@ function updateControls(): void {
 }
 
 function selectedPlaybackStartTime(): number | undefined {
-  const selectedEventId = playbackStartEventId
-    ?? sourceEventAtCaret(sourceEventRanges, editor.selectionStart)?.eventId;
-  return playbackStartTimeFromSourceEvent(selectedEventId);
+  return playbackStartTimeFromSourceEvent(playbackStartEventId);
 }
 
 function playbackStartTimeFromSourceEvent(eventId: string | undefined): number | undefined {
