@@ -99,6 +99,8 @@ editor.addEventListener("input", () => {
 for (const eventName of ["click", "keyup", "select"] as const) {
   editor.addEventListener(eventName, updateSourceCaretHighlight);
 }
+editor.addEventListener("focus", updateSourceCaretHighlight);
+editor.addEventListener("blur", clearSourceCaretHighlight);
 librarySearch.addEventListener("input", renderLibraryList);
 libraryCategory.addEventListener("change", renderLibraryList);
 
@@ -407,6 +409,11 @@ async function renderStaffPreview(score: Score): Promise<void> {
 function updateSourceCaretHighlight(): void {
   if (!currentScore || playerState === "playing") return;
   sourceEventId = sourceEventAtCaret(sourceEventRanges, editor.selectionStart)?.eventId;
+  highlightJianpuEvents();
+}
+
+function clearSourceCaretHighlight(): void {
+  sourceEventId = undefined;
   highlightJianpuEvents();
 }
 

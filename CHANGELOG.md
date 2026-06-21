@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
+- Clear the jianpu editor-caret highlight when the JABC textarea loses focus, and restore it when editing resumes.
 - Preserve the cross-bar tie into the first ending in 《一千年以后》 and cover ties that leave a triplet at an ending boundary.
 - Fill automatically wrapped jianpu rows to the final readable viewBox width when measure column alignment is disabled.
 - Enlarge jianpu header text and separate key, meter, and tempo metadata fields.
