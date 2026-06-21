@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Changed
 
+- Extracted beat-clear visual rewriting from the jianpu SVG renderer into its own module.
 - Added a pure rhythm analysis module for measure duration, beat positions, and cross-beat event spans.
 - Continued the jianpu renderer refactor by moving short-note duration-line grouping into its own module.
 - Began the jianpu renderer refactor by introducing a pure layout module for measure and event positioning.
