@@ -42,15 +42,14 @@ Follow-up slices:
 
 Goal: support the four common repeat-navigation forms in two layers: visual notation first, then semantic playback/export flow.
 
-Status: first visual slice is underway. JABC should accept ABC-style repeat-navigation decorations such as `!segno!`, `!coda!`, `!fine!`, `!D.C.!`, `!D.S.!`, `!dacapo!`, and `!dacoda!` as zero-duration AST events. These markers should render above jianpu, survive standard ABC export, and be ignored by playback until semantic expansion is implemented.
+Status: visual markers and first playback expansion are implemented. JABC accepts ABC-style repeat-navigation decorations such as `!segno!`, `!coda!`, `!fine!`, `!D.C.!`, `!D.S.!`, `!dacapo!`, and `!dacoda!` as zero-duration AST events. These markers render at jianpu barline positions, survive standard ABC export, and playback expands D.C./D.S. to Fine or Coda for the common single-jump forms.
 
 Follow-up slices:
 
 - Add MusicXML direction export for Segno, Coda, Fine, D.C., and D.S.
 - Add AST-level semantic fields for D.C./D.S. targets and stop/jump points instead of relying only on visual text.
-- Expand playback order for D.C. al Fine, D.C. al Coda, D.S. al Fine, and D.S. al Coda.
 - Add validation for missing Segno, Coda, or Fine targets and ambiguous multiple markers.
-- Extend the Web guide and examples with all four repeat forms.
+- Extend the Web guide and examples with complete D.C./D.S. playback examples.
 
 ### 3. Standard ABC import
 

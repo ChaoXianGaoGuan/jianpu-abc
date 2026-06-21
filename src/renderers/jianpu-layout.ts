@@ -233,8 +233,11 @@ export function positionEvents(placed: LayoutMeasure, beatDuration: Fraction, fo
     const markerSpan = isZeroTimeEvent(event)
       ? nextTimedLayoutSpan(placed.measure.events, layoutSpans, eventIndex, beatDuration)
       : visualUnitSpan;
+    const centerOffset = event.type === "repeat-marker"
+      ? slotOffset
+      : slotOffset + Math.min(markerSpan, 1) / 2;
     const centerX = layoutXAt(
-      slotOffset + Math.min(markerSpan, 1) / 2,
+      centerOffset,
       placed.cellWidth,
       placed.beatGap,
     );

@@ -2,6 +2,7 @@ import type {
   Accidental,
   Fraction,
   Measure,
+  RepeatMarkerKind,
   Score,
   Voice,
 } from "../core/ast";
@@ -142,8 +143,9 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     ${cssScope}.jabc-event{cursor:pointer}
     ${cssScope}.event-bg{fill:transparent;transition:fill .12s ease,stroke .12s ease}
     ${cssScope}.event-symbol,${cssScope}.duration-extension{font:600 ${fontSize}px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#1f332a;text-anchor:middle}
-    ${cssScope}.event-key-change,${cssScope}.event-repeat-marker{font:700 ${fontSize * 0.48}px Inter,'Microsoft YaHei',sans-serif;fill:#a4522c;text-anchor:middle}
-    ${cssScope}.event-repeat-marker{font-size:${round(fontSize * 0.54)}px;fill:#7f3f25}
+    ${cssScope}.event-key-change{font:700 ${fontSize * 0.48}px Inter,'Microsoft YaHei',sans-serif;fill:#a4522c;text-anchor:middle}
+    ${cssScope}.event-repeat-marker{font:700 ${round(fontSize * 0.54)}px Inter,'Microsoft YaHei',sans-serif;fill:#7f3f25;text-anchor:middle}
+    ${cssScope}.event-repeat-marker-segno,${cssScope}.event-repeat-marker-coda{font:700 ${round(fontSize * 0.78)}px 'Bravura','Noto Music','Segoe UI Symbol',serif;fill:#7f3f25}
     ${cssScope}.event-accidental{font:700 ${fontSize * 0.8}px 'Bravura','Noto Music','Segoe UI Symbol',Georgia,serif;fill:#1f332a;text-anchor:middle;dominant-baseline:middle}
     ${cssScope}.octave-dot,${cssScope}.duration-dot{fill:#1f332a}
     ${cssScope}.duration-line{stroke:#1f332a;stroke-width:1.7;stroke-linecap:round}
@@ -312,9 +314,12 @@ function renderEvent(
   const className = highlighted ? "jabc-event is-highlighted" : "jabc-event";
   const backgroundHeight = fontSize * (showLyrics ? 2.45 : 1.75);
   const dots = event.type === "note" || event.type === "rest" ? event.dots ?? 0 : 0;
-  if (event.type === "key-change" || event.type === "repeat-marker") {
-    const markerClass = event.type === "key-change" ? "event-key-change" : "event-repeat-marker";
-    return `<g class="${className}" data-event-id="${escapeXml(eventId)}" aria-label="${escapeXml(event.sourceText ?? symbol)}"><text class="${markerClass}" x="${round(centerX)}" y="${round(-fontSize * 1.42)}">${escapeXml(symbol)}</text></g>`;
+  if (event.type === "key-change") {
+    return `<g class="${className}" data-event-id="${escapeXml(eventId)}" aria-label="${escapeXml(event.sourceText ?? symbol)}"><text class="event-key-change" x="${round(centerX)}" y="${round(-fontSize * 1.42)}">${escapeXml(symbol)}</text></g>`;
+  }
+  if (event.type === "repeat-marker") {
+    const markerClass = `event-repeat-marker event-repeat-marker-${event.kind}`;
+    return `<g class="${className}" data-event-id="${escapeXml(eventId)}" aria-label="${escapeXml(event.sourceText ?? symbol)}"><text class="${markerClass}" x="${round(centerX)}" y="${round(repeatMarkerY(event.kind, fontSize, showLyrics))}">${escapeXml(symbol)}</text></g>`;
   }
 
   const visualStartX = layoutXAt(layoutOffset, cellWidth, beatGap);
@@ -346,6 +351,12 @@ function renderEvent(
   }
 
   return `<g class="${className}" data-event-id="${escapeXml(eventId)}" aria-label="${escapeXml(event.sourceText ?? symbol)}">${parts.join("")}</g>`;
+}
+
+function repeatMarkerY(kind: RepeatMarkerKind, fontSize: number, showLyrics: boolean): number {
+  return kind === "segno" || kind === "coda"
+    ? -fontSize * 1.52
+    : fontSize * (showLyrics ? 2.08 : 1.35);
 }
 
 function renderRelations(

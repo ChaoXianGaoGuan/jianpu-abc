@@ -3,6 +3,8 @@ import type {
   Measure,
   MusicalEvent,
   NoteEvent,
+  RepeatMarkerEvent,
+  RepeatMarkerKind,
   Score,
   Tempo,
   TimeSignature,
@@ -96,13 +98,14 @@ export function scoreToPlaybackPlan(
     throw new RangeError("Playback velocity must be an integer from 0 to 127.");
   }
 
-  const timelines = score.voices.map((voice) => buildVoiceEvents(score, voice, tempo, velocity));
+  const structuralVoice = score.voices.find((voice) => voice.measures.length > 0);
+  const measureOrder = structuralVoice ? expandMeasureOrder(structuralVoice.measures) : [];
+  const timelines = score.voices.map((voice) => buildVoiceEvents(score, voice, tempo, velocity, measureOrder));
   const events = timelines.flatMap((timeline) => timeline.events)
     .sort((left, right) => left.startTime - right.startTime || left.id.localeCompare(right.id))
     .map((event, index) => ({ ...event, id: `playback-${index + 1}` }));
-  const structuralVoice = score.voices.find((voice) => voice.measures.length > 0);
   const metronomeTimeline = structuralVoice
-    ? buildMetronomeEvents(structuralVoice, tempo, meter)
+    ? buildMetronomeEvents(structuralVoice, tempo, meter, measureOrder)
     : { events: [], duration: 0 };
   return {
     events,
@@ -122,6 +125,7 @@ function buildVoiceEvents(
   voice: Voice,
   tempo: Tempo,
   velocity: number,
+  measureOrder: number[],
 ): VoicePlaybackTimeline {
   const key = score.header.key;
   if (!key) {
@@ -134,7 +138,7 @@ function buildVoiceEvents(
   let pendingTie: { event: PlaybackEvent; midi: number } | undefined;
   let previousMeasureIndex: number | undefined;
 
-  for (const measureIndex of expandMeasureOrder(voice.measures)) {
+  for (const measureIndex of measureOrder) {
     const measure = voice.measures[measureIndex];
     if (!measure) continue;
     let extendable: PlaybackEvent | undefined;
@@ -242,12 +246,13 @@ function buildMetronomeEvents(
   voice: Voice,
   tempo: Tempo,
   meter: TimeSignature,
+  measureOrder: number[],
 ): { events: MetronomeEvent[]; duration: number } {
   const events: MetronomeEvent[] = [];
   const pulseSeconds = durationToSeconds(metronomePulse(meter), tempo);
   let cursor = 0;
 
-  for (const measureIndex of expandMeasureOrder(voice.measures)) {
+  for (const measureIndex of measureOrder) {
     const measure = voice.measures[measureIndex];
     if (!measure) continue;
     const measureDuration = measure.events.reduce((total, event) =>
@@ -269,6 +274,10 @@ function metronomePulse(meter: TimeSignature): Fraction {
 }
 
 export function expandMeasureOrder(measures: Measure[]): number[] {
+  return expandRepeatNavigationOrder(measures, expandLocalRepeatOrder(measures));
+}
+
+function expandLocalRepeatOrder(measures: Measure[]): number[] {
   const output: number[] = [];
   let repeatStart = 0;
 
@@ -289,6 +298,83 @@ export function expandMeasureOrder(measures: Measure[]): number[] {
     }
   }
 
+  return output;
+}
+
+function expandRepeatNavigationOrder(measures: Measure[], baseOrder: number[]): number[] {
+  const directive = firstDirectiveMeasure(measures, baseOrder);
+  if (!directive) return baseOrder;
+
+  const firstPass = baseOrder.slice(0, directive.orderIndex + 1);
+  const target = directive.kind === "ds" ? firstMarkerMeasure(measures, "segno") ?? 0 : 0;
+  const codaMeasures = markerMeasures(measures, "coda");
+  const codaJump = codaMeasures.find((index) => index >= target && index <= directive.measureIndex);
+  const codaDestination = codaJump === undefined
+    ? undefined
+    : codaMeasures.find((index) => index > directive.measureIndex) ?? codaMeasures.find((index) => index > codaJump);
+  if (codaJump !== undefined && codaDestination !== undefined) {
+    return [
+      ...firstPass,
+      ...measureRange(target, repeatNavigationEnd(measures, codaJump)),
+      ...measureRange(codaDestination, measures.length - 1),
+    ];
+  }
+
+  const fine = firstMarkerMeasure(measures, "fine", target, directive.measureIndex);
+  if (fine !== undefined) {
+    return [...firstPass, ...measureRange(target, repeatNavigationEnd(measures, fine))];
+  }
+
+  return [...firstPass, ...measureRange(target, measures.length - 1)];
+}
+
+function firstDirectiveMeasure(
+  measures: Measure[],
+  order: number[],
+): { measureIndex: number; orderIndex: number; kind: "dc" | "ds" } | undefined {
+  for (const [orderIndex, measureIndex] of order.entries()) {
+    const kind = firstMarkerKind(measures[measureIndex], ["dc", "dacapo", "ds"]);
+    if (kind === "dc" || kind === "dacapo") return { measureIndex, orderIndex, kind: "dc" };
+    if (kind === "ds") return { measureIndex, orderIndex, kind: "ds" };
+  }
+  return undefined;
+}
+
+function firstMarkerMeasure(
+  measures: Measure[],
+  kind: RepeatMarkerKind,
+  start = 0,
+  end = measures.length - 1,
+): number | undefined {
+  return markerMeasures(measures, kind).find((index) => index >= start && index <= end);
+}
+
+function markerMeasures(measures: Measure[], kind: RepeatMarkerKind): number[] {
+  const output: number[] = [];
+  for (const [index, measure] of measures.entries()) {
+    if (firstMarkerKind(measure, [kind])) output.push(index);
+  }
+  return output;
+}
+
+function firstMarkerKind(measure: Measure | undefined, kinds: RepeatMarkerKind[]): RepeatMarkerKind | undefined {
+  return measure?.events.find(
+    (event): event is RepeatMarkerEvent => event.type === "repeat-marker" && kinds.includes(event.kind),
+  )?.kind;
+}
+
+function repeatNavigationEnd(measures: Measure[], markerMeasureIndex: number): number {
+  return markerIsAtMeasureStart(measures[markerMeasureIndex]) ? markerMeasureIndex - 1 : markerMeasureIndex;
+}
+
+function markerIsAtMeasureStart(measure: Measure | undefined): boolean {
+  const firstEvent = measure?.events[0];
+  return firstEvent?.type === "repeat-marker";
+}
+
+function measureRange(start: number, end: number): number[] {
+  const output: number[] = [];
+  for (let index = Math.max(0, start); index <= end; index += 1) output.push(index);
   return output;
 }
 

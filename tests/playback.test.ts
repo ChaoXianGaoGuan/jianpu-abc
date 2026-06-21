@@ -123,6 +123,34 @@ describe("scoreToPlaybackEvents", () => {
     expect(scoreToPlaybackEvents(score).map((event) => event.midi)).toEqual([60, 62, 60, 64]);
   });
 
+  it("expands D.C. playback until Fine", () => {
+    const score = parse("L:1/4\nQ:1/4=120\nK:C jianpu\n| 1 | 2 !fine! | 3 !D.C.! |");
+
+    expect(expandMeasureOrder(score.voices[0]?.measures ?? [])).toEqual([0, 1, 2, 0, 1]);
+    expect(scoreToPlaybackEvents(score).map((event) => event.midi)).toEqual([60, 62, 64, 60, 62]);
+  });
+
+  it("expands D.S. playback from Segno until Fine", () => {
+    const score = parse("L:1/4\nQ:1/4=120\nK:C jianpu\n| 1 | !segno! 2 | 3 !fine! | 4 !D.S.! |");
+
+    expect(expandMeasureOrder(score.voices[0]?.measures ?? [])).toEqual([0, 1, 2, 3, 1, 2]);
+    expect(scoreToPlaybackEvents(score).map((event) => event.midi)).toEqual([60, 62, 64, 65, 62, 64]);
+  });
+
+  it("expands D.S. playback to Coda", () => {
+    const score = parse("L:1/4\nQ:1/4=120\nK:C jianpu\n| 1 | !segno! 2 | !coda! 3 | 4 !D.S.! | !coda! 5 |");
+
+    expect(expandMeasureOrder(score.voices[0]?.measures ?? [])).toEqual([0, 1, 2, 3, 1, 4]);
+    expect(scoreToPlaybackEvents(score).map((event) => event.midi)).toEqual([60, 62, 64, 65, 62, 67]);
+  });
+
+  it("expands D.C. playback to Coda", () => {
+    const score = parse("L:1/4\nQ:1/4=120\nK:C jianpu\n| 1 | !coda! 2 | 3 !D.C.! | !coda! 5 |");
+
+    expect(expandMeasureOrder(score.voices[0]?.measures ?? [])).toEqual([0, 1, 2, 0, 3]);
+    expect(scoreToPlaybackEvents(score).map((event) => event.midi)).toEqual([60, 62, 64, 60, 67]);
+  });
+
   it("ends a first-ending-only tie when repeat playback branches to the second ending", () => {
     const score = parse("L:1/4\nQ:1/4=120\nK:C jianpu\n|: 1~ | [1 ~1 :| [2 2 |]");
 

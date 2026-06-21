@@ -26,6 +26,9 @@ const events = scoreToPlaybackEvents(score, { velocity: 96 });
 - 每个声部使用独立时间轴调度，最终合并为并行播放事件。
 - 简单反复 `|:` / `:|` 会展开播放。
 - 标准一二房子 `[1 ... :| [2 ...` 会在第二遍跳过第一房子并进入第二房子。
+- `!D.C.!` / `!dacapo!` 会在第一次到达该标记所在小节后回到开头；若存在 `!fine!`，第二遍播放到 Fine 后停止；若存在两个 `!coda!`，第二遍播放到第一个 Coda 处跳到第二个 Coda。
+- `!D.S.!` 会在第一次到达该标记所在小节后回到 `!segno!`；Fine 和 Coda 的处理方式与 D.C. 相同。
+- 反复导航标记按结构声部生成全局小节顺序，其他声部按同一小节顺序并行调度；D.C./D.S. 后的第二遍不再次展开局部 `|:` / `:|`。
 - 共享小节末尾的 tie 只在所进入的房子以 `tieEnd` 开头时继续；跳到不带 `tieEnd` 的另一房子时，该分支按普通音符结束。
 
 `PlaybackBuildError.code` 包括 `MISSING_KEY`、`INVALID_TEMPO`、`INVALID_DURATION`、`ORPHAN_EXTENSION`、`UNMATCHED_TIE`、`TIE_PITCH_MISMATCH` 和 `UNSUPPORTED_PITCH`。
@@ -65,7 +68,7 @@ await player.dispose();
 
 播放器在采样加载和浏览器 `AudioContext.resume()` 完成之前会进入 `loading` 状态，不会调度音符或触发高亮回调；这可以避免音源延迟时光标先于声音移动。
 
-当前支持多个声部的并行事件调度和基础反复展开。声部分轨音色、离线打包采样、循环、复杂嵌套反复和精细 seek 属于后续扩展。
+当前支持多个声部的并行事件调度、基础反复、一二房子和常见 D.C./D.S. 到 Fine/Coda 的展开。声部分轨音色、离线打包采样、循环、复杂嵌套反复和精细 seek 属于后续扩展。
 
 ## 测试要求
 

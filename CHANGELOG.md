@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Changed
 
+- Place Segno/Coda repeat markers above jianpu barlines and D.C./D.S./Fine markers below them.
 - Make the Web current-measure preview a compact inline strip that fills the preview slot more effectively.
 - Clarify Web playback-start behavior so only left-clicked jianpu events set the persistent start anchor, while source navigation remains separate.
 - Split the Web UI into a focused workbench view and a separate score-library view with top navigation.
@@ -50,7 +51,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
-- Add zero-duration visual repeat navigation markers for Segno, Coda, Fine, D.C., D.S., Da Capo, and Da Coda in parsing, jianpu rendering, and ABC export.
+- Add zero-duration repeat navigation markers for Segno, Coda, Fine, D.C., D.S., Da Capo, and Da Coda in parsing, jianpu rendering, ABC export, and D.C./D.S. playback expansion.
 - Add a Web current-measure jianpu preview that follows the editor caret.
 - Add selectable playback start points in the jianpu preview plus a "play from current position" Web control.
 - Add a Web guide view with JABC syntax quick reference cards and loadable examples.

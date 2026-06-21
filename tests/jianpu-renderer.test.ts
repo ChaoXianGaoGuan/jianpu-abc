@@ -121,10 +121,12 @@ describe("renderJianpu", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| !segno! 1 2 !D.S.! | !coda! 3 !fine! |"));
 
     expect(svg).toContain("event-repeat-marker");
-    expect(svg).toContain(">𝄋</text>");
-    expect(svg).toContain(">D.S.</text>");
-    expect(svg).toContain(">𝄌</text>");
-    expect(svg).toContain(">Fine</text>");
+    expect(svg).toContain("event-repeat-marker-segno");
+    expect(svg).toContain("event-repeat-marker-coda");
+    expect(svg).toContain('y="-48.64">𝄋</text>');
+    expect(svg).toContain('y="66.56">D.S.</text>');
+    expect(svg).toContain('y="-48.64">𝄌</text>');
+    expect(svg).toContain('y="66.56">Fine</text>');
   });
 
   it("joins duration underlines across inline key changes within the same beat", () => {
