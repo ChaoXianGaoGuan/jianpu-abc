@@ -39,7 +39,6 @@ Scope:
 
 Follow-up slices:
 
-- Remove legacy local layout helper copies from `jianpu-renderer.ts` after the new layout module is covered by focused tests.
 - Extract duration-line grouping and barline clearance into a dedicated module.
 - Add a core rhythm/beat analysis module for measure validation and beat-clear display.
 - Split the Web workbench controllers after the rendering boundary is stable.
