@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Changed
 
+- Continued the jianpu renderer refactor by moving short-note duration-line grouping into its own module.
 - Began the jianpu renderer refactor by introducing a pure layout module for measure and event positioning.
 
 ### Fixed

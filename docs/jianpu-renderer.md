@@ -1,6 +1,6 @@
 # SVG 简谱渲染
 
-`renderJianpu(score, options)` 从统一 `Score` AST 生成 SVG 字符串，不访问 DOM，也不重新解析 JABC。内部先由 `src/renderers/jianpu-layout.ts` 计算系统、小节、行宽和事件位置，再由 `src/renderers/jianpu-renderer.ts` 输出 SVG。
+`renderJianpu(score, options)` 从统一 `Score` AST 生成 SVG 字符串，不访问 DOM，也不重新解析 JABC。内部先由 `src/renderers/jianpu-layout.ts` 计算系统、小节、行宽和事件位置，`src/renderers/jianpu-duration-lines.ts` 负责短时值底线分组与边界净空，最后由 `src/renderers/jianpu-renderer.ts` 输出 SVG。
 
 ## API
 
