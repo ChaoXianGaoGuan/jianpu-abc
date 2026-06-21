@@ -249,8 +249,8 @@ function renderBeatClearExtensions(
   const output: string[] = [];
   for (const item of positioned) {
     if (item.event.type !== "note") continue;
-    if (isIntegerPosition(item.layoutOffset)) continue;
     const endOffset = item.layoutOffset + item.layoutSpan;
+    if (isIntegerPosition(item.layoutOffset) && isIntegerPosition(endOffset)) continue;
     for (let boundary = Math.floor(item.layoutOffset + 1e-9) + 1; boundary < endOffset - 1e-9; boundary += 1) {
       const segmentEnd = Math.min(boundary + 1, endOffset);
       const centerOffset = (boundary + segmentEnd) / 2;

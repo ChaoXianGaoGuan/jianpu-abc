@@ -351,6 +351,12 @@ describe("renderJianpu", () => {
     expect(renderJianpu(score, { rhythmDisplay: "beat-clear" })).toContain('class="duration-extension beat-clear-extension"');
   });
 
+  it("can show beat-clear extension marks for dotted notes ending off beat", () => {
+    const score = parse("M:4/4\nL:1/4\nK:C jianpu\n| 3'e 2's 1's~ ~1'e 5e 2'. 3's 2's |");
+
+    expect(renderJianpu(score, { rhythmDisplay: "beat-clear" })).toContain('class="duration-extension beat-clear-extension"');
+  });
+
   it("connects equal subdivisions within each beat", () => {
     const eighths = renderJianpu(parse("M:4/4\nL:1/8\nK:C jianpu\n| 1 2 3 4 |"));
     const sixteenths = renderJianpu(parse("M:4/4\nL:1/16\nK:C jianpu\n| 1 2 3 4 |"));

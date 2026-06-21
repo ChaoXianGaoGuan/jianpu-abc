@@ -14,6 +14,7 @@ export interface EventTimeSpan {
   end: Fraction;
   beatIndex: number;
   startsOnBeat: boolean;
+  endsOnBeat: boolean;
   crossesBeat: boolean;
 }
 
@@ -81,6 +82,7 @@ export function eventTimeSpans(measure: Measure, beatDuration: Fraction): EventT
       end,
       beatIndex: beatIndexAt(elapsed, beatDuration),
       startsOnBeat: isBeatBoundary(elapsed, beatDuration),
+      endsOnBeat: isBeatBoundary(end, beatDuration),
       crossesBeat: crossesBeatBoundary(elapsed, end, beatDuration),
     });
     elapsed = end;
