@@ -135,7 +135,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     .ending-number{font:700 ${fontSize * 0.45}px Georgia,'Songti SC',serif;fill:#33483f}
     .event-bg{fill:transparent;transition:fill .12s ease}
     .event-symbol,.duration-extension{font:600 ${fontSize}px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#1f332a;text-anchor:middle}
-    .beat-clear-boundary{stroke:#8a6a1f;stroke-width:1.25;stroke-linecap:round;opacity:.7;stroke-dasharray:2 2}
+    .beat-clear-tie{stroke-width:1.25;opacity:.86}
     .event-key-change{font:700 ${fontSize * 0.48}px Inter,'Microsoft YaHei',sans-serif;fill:#a4522c;text-anchor:middle}
     .event-accidental{font:700 ${fontSize * 0.8}px 'Bravura','Noto Music','Segoe UI Symbol',Georgia,serif;fill:#1f332a;text-anchor:middle;dominant-baseline:middle}
     .octave-dot,.duration-dot{fill:#1f332a}
@@ -212,14 +212,12 @@ function renderMeasure(
       fontSize,
       showLyrics,
       eventId === highlightEventId,
+      rhythmDisplay,
     );
   }).join("");
   const rightBarlineX = placed.measure.barline
     ? placed.width - fontSize * 0.22
     : undefined;
-  const beatClearBoundaries = rhythmDisplay === "beat-clear"
-    ? renderBeatClearBoundaries(positioned, placed.cellWidth, placed.beatGap, fontSize)
-    : "";
   const durationLines = renderDurationLines(positioned, beatDuration, fontSize, rightBarlineX);
   const relations = renderRelations(
     positioned,
@@ -237,32 +235,7 @@ function renderMeasure(
   const barline = placed.measure.barline && !suppressRightBarline
     ? renderBarline(placed.measure.barline, "right", placed.width, fontSize)
     : "";
-  return `<g class="measure" data-measure-index="${placed.measureIndex}" transform="translate(${round(placed.x)} ${round(placed.y)})">${leftBarline}${ending}${events}${beatClearBoundaries}${durationLines}${relations}${barline}</g>`;
-}
-
-function renderBeatClearBoundaries(
-  positioned: PositionedEvent[],
-  cellWidth: number,
-  beatGap: number,
-  fontSize: number,
-): string {
-  const output: string[] = [];
-  for (const item of positioned) {
-    if (item.event.type !== "note") continue;
-    const endOffset = item.layoutOffset + item.layoutSpan;
-    if (isIntegerPosition(item.layoutOffset) && isIntegerPosition(endOffset)) continue;
-    for (let boundary = Math.floor(item.layoutOffset + 1e-9) + 1; boundary < endOffset - 1e-9; boundary += 1) {
-      const x = layoutXAt(boundary, cellWidth, beatGap);
-      const top = -fontSize * 0.72;
-      const bottom = fontSize * 0.5;
-      output.push(`<line class="beat-clear-boundary" x1="${round(x)}" y1="${round(top)}" x2="${round(x)}" y2="${round(bottom)}"/>`);
-    }
-  }
-  return output.join("");
-}
-
-function isIntegerPosition(value: number): boolean {
-  return Math.abs(value - Math.round(value)) < 1e-9;
+  return `<g class="measure" data-measure-index="${placed.measureIndex}" transform="translate(${round(placed.x)} ${round(placed.y)})">${leftBarline}${ending}${events}${durationLines}${relations}${barline}</g>`;
 }
 
 function renderBarline(
@@ -324,6 +297,7 @@ function renderEvent(
   fontSize: number,
   showLyrics: boolean,
   highlighted: boolean,
+  rhythmDisplay: RhythmDisplayMode,
 ): string {
   const { event, centerX, slotCount, layoutSpan, layoutOffset, dotXs } = positioned;
   const symbol = event.type === "note"
@@ -334,6 +308,10 @@ function renderEvent(
   const dots = event.type === "note" || event.type === "rest" ? event.dots ?? 0 : 0;
   if (event.type === "key-change") {
     return `<g class="${className}" data-event-id="${escapeXml(eventId)}" aria-label="${escapeXml(event.sourceText ?? symbol)}"><text class="event-key-change" x="${round(centerX)}" y="${round(-fontSize * 1.42)}">${symbol}</text></g>`;
+  }
+
+  if (rhythmDisplay === "beat-clear" && event.type === "note" && shouldSplitBeatClear(positioned)) {
+    return renderBeatClearSplitNote(positioned, eventId, cellWidth, beatGap, fontSize, showLyrics, highlighted);
   }
 
   const visualStartX = layoutXAt(layoutOffset, cellWidth, beatGap);
@@ -365,6 +343,117 @@ function renderEvent(
   }
 
   return `<g class="${className}" data-event-id="${escapeXml(eventId)}" aria-label="${escapeXml(event.sourceText ?? symbol)}">${parts.join("")}</g>`;
+}
+
+interface BeatClearSegment {
+  startOffset: number;
+  endOffset: number;
+  centerX: number;
+  span: number;
+}
+
+function shouldSplitBeatClear(item: PositionedEvent): boolean {
+  if (item.event.type !== "note") return false;
+  const endOffset = item.layoutOffset + item.layoutSpan;
+  if (isIntegerPosition(item.layoutOffset) && isIntegerPosition(endOffset)) return false;
+  return beatClearSegments(item, 1, 0).length > 1;
+}
+
+function renderBeatClearSplitNote(
+  positioned: PositionedEvent,
+  eventId: string,
+  cellWidth: number,
+  beatGap: number,
+  fontSize: number,
+  showLyrics: boolean,
+  highlighted: boolean,
+): string {
+  const event = positioned.event;
+  if (event.type !== "note") return "";
+  const segments = beatClearSegments(positioned, cellWidth, beatGap);
+  const visualStartX = layoutXAt(positioned.layoutOffset, cellWidth, beatGap);
+  const visualEndX = layoutXAt(positioned.layoutOffset + positioned.layoutSpan, cellWidth, beatGap);
+  const visualWidth = visualEndX - visualStartX;
+  const backgroundHeight = fontSize * (showLyrics ? 2.45 : 1.75);
+  const className = highlighted ? "jabc-event is-highlighted" : "jabc-event";
+  const parts = [
+    `<rect class="event-bg" x="${round(visualStartX + visualWidth * 0.1)}" y="${round(-fontSize * 1.25)}" width="${round(visualWidth * 0.8)}" height="${round(backgroundHeight)}" rx="7"/>`,
+  ];
+  const symbol = String(event.degree);
+  const tieY = -fontSize * 0.82;
+  const tiePeak = -fontSize * 1.04;
+  const tieInset = fontSize * 0.22;
+
+  for (const [index, segment] of segments.entries()) {
+    parts.push(`<text class="event-symbol beat-clear-segment" x="${round(segment.centerX)}" y="0">${symbol}</text>`);
+    if (event.accidental && index === 0) {
+      parts.push(`<text class="event-accidental" x="${round(segment.centerX - fontSize * 0.38)}" y="${round(-fontSize * 0.45)}">${ACCIDENTAL_TEXT[event.accidental]}</text>`);
+    }
+    parts.push(renderOctaveDots(segment.centerX, event.octaveShift, fontSize));
+    parts.push(renderBeatClearSegmentDurationLines(segment.centerX, segment.span, fontSize));
+    if (index > 0) {
+      const previous = segments[index - 1] as BeatClearSegment;
+      parts.push(arcPath(
+        "tie-arc beat-clear-tie",
+        previous.centerX + tieInset,
+        Math.max(previous.centerX + tieInset + fontSize * 0.12, segment.centerX - tieInset),
+        tieY,
+        tiePeak,
+      ));
+    }
+  }
+
+  if (showLyrics && event.lyric) {
+    parts.push(`<text class="event-lyric" x="${round(segments[0]!.centerX)}" y="${round(fontSize * 1.5)}">${escapeXml(event.lyric)}</text>`);
+  }
+
+  return `<g class="${className}" data-event-id="${escapeXml(eventId)}" data-beat-clear="split" aria-label="${escapeXml(event.sourceText ?? symbol)}">${parts.join("")}</g>`;
+}
+
+function beatClearSegments(item: PositionedEvent, cellWidth: number, beatGap: number): BeatClearSegment[] {
+  const output: BeatClearSegment[] = [];
+  const endOffset = item.layoutOffset + item.layoutSpan;
+  let segmentStart = item.layoutOffset;
+  for (let boundary = Math.floor(item.layoutOffset + 1e-9) + 1; boundary < endOffset - 1e-9; boundary += 1) {
+    output.push(beatClearSegment(segmentStart, boundary, cellWidth, beatGap));
+    segmentStart = boundary;
+  }
+  output.push(beatClearSegment(segmentStart, endOffset, cellWidth, beatGap));
+  return output.filter((segment) => segment.span > 1e-9);
+}
+
+function beatClearSegment(startOffset: number, endOffset: number, cellWidth: number, beatGap: number): BeatClearSegment {
+  const centerOffset = (startOffset + endOffset) / 2;
+  return {
+    startOffset,
+    endOffset,
+    centerX: layoutXAt(centerOffset, cellWidth, beatGap),
+    span: endOffset - startOffset,
+  };
+}
+
+function renderBeatClearSegmentDurationLines(centerX: number, segmentSpan: number, fontSize: number): string {
+  const level = durationLineLevel(segmentSpan);
+  const output: string[] = [];
+  for (let lineLevel = 1; lineLevel <= level; lineLevel += 1) {
+    const y = fontSize * 0.43 + (lineLevel - 1) * 4.5;
+    output.push(`<line class="duration-line beat-clear-duration-line" data-line-level="${lineLevel}" data-group-size="1" x1="${round(centerX - fontSize * 0.34)}" y1="${round(y)}" x2="${round(centerX + fontSize * 0.34)}" y2="${round(y)}"/>`);
+  }
+  return output.join("");
+}
+
+function durationLineLevel(segmentSpan: number): number {
+  if (segmentSpan >= 1) return 0;
+  const subdivisions = 1 / segmentSpan;
+  return isPowerOfTwo(subdivisions) ? Math.round(Math.log2(subdivisions)) : 0;
+}
+
+function isIntegerPosition(value: number): boolean {
+  return Math.abs(value - Math.round(value)) < 1e-9;
+}
+
+function isPowerOfTwo(value: number): boolean {
+  return value > 0 && Math.abs(value - Math.round(value)) < 1e-9 && Number.isInteger(Math.log2(Math.round(value)));
 }
 
 function renderRelations(
