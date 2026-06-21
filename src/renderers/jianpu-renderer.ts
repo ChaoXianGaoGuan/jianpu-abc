@@ -9,6 +9,12 @@ import type {
   Voice,
 } from "../core/ast";
 import { DEFAULT_NOTE_LENGTH, reduceFraction } from "../core/fraction";
+import {
+  layoutMeasures as buildLayoutMeasures,
+  positionEvents as buildPositionedEvents,
+  type LayoutMeasure,
+  type PositionedEvent,
+} from "./jianpu-layout";
 
 export interface RenderOptions {
   width?: number;
@@ -16,27 +22,6 @@ export interface RenderOptions {
   showLyrics?: boolean;
   highlightEventId?: string;
   alignMeasuresAcrossSystems?: boolean;
-}
-
-interface LayoutMeasure {
-  measure: Measure;
-  measureIndex: number;
-  x: number;
-  y: number;
-  width: number;
-  cellWidth: number;
-  beatGap: number;
-}
-
-interface PositionedEvent {
-  event: MusicalEvent;
-  eventIndex: number;
-  centerX: number;
-  slotCount: number;
-  layoutSpan: number;
-  layoutOffset: number;
-  dotXs: number[];
-  startTime: Fraction;
 }
 
 interface CrossMeasureTie {
@@ -84,8 +69,8 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     if (score.voices.length > 1) {
       renderedVoices.push(`<text class="voice-label" x="${padding}" y="${round(cursorY - fontSize * 1.18)}">${escapeXml(voice.id)}</text>`);
     }
-    const layout = layoutMeasures(
-      voice,
+    const layout = buildLayoutMeasures(
+      voice.measures,
       width,
       padding,
       cursorY,
@@ -96,7 +81,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
       minCellWidth,
     );
     renderedWidth = Math.max(renderedWidth, ...layout.map((placed) => placed.x + placed.width + padding * 0.2));
-    const positionedByMeasure = layout.map((placed) => positionEvents(placed, beatDuration, fontSize));
+    const positionedByMeasure = layout.map((placed) => buildPositionedEvents(placed, beatDuration, fontSize));
     const crossMeasureTies = findCrossMeasureTies(layout, positionedByMeasure);
     const connectedBoundaries = new Set(
       crossMeasureTies.map((connection) => connection.boundaryIndex),

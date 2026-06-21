@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Changed
+
+- Began the jianpu renderer refactor by introducing a pure layout module for measure and event positioning.
+
 ### Fixed
 
 - Clear the jianpu editor-caret highlight when the JABC textarea loses focus, and restore it when editing resumes.

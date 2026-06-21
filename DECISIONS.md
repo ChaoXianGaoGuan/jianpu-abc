@@ -195,7 +195,30 @@ Future work:
 - Improve spacing and multi-voice alignment.
 - Add optional measure numbers and engraving controls.
 
-## 13. Playback scheduling is pure
+## 13. Jianpu rendering is layout-first
+
+Decision:
+
+Jianpu rendering should follow this internal pipeline:
+
+```text
+Score AST -> JianpuLayout -> SVG
+```
+
+The layout step owns system grouping, measure widths, beat/event positions, readable-width expansion, and measure-column alignment. The SVG step consumes the layout and draws header text, events, duration lines, relation arcs, lyrics, and barlines.
+
+Reason:
+
+Recent fixes around row justification, duration-line clearance, header sizing, and beat grouping show that layout rules need a first-class model. Keeping layout separate from SVG string construction makes engraving changes safer and makes future beat-clear rhythm display possible without parsing source text in the renderer.
+
+Consequences:
+
+- Layout code belongs in `src/renderers/jianpu-layout.ts` and must remain pure/browser-independent.
+- `renderJianpu(score, options)` remains the public API.
+- New renderer behavior should prefer layout-level tests before SVG string assertions.
+- Web UI controls should pass rendering options into the public API rather than inspecting or mutating layout internals.
+
+## 14. Playback scheduling is pure
 
 Decision:
 
@@ -210,7 +233,7 @@ Consequences:
 - No DOM or Web Audio APIs in pure scheduling.
 - Web Audio code belongs in `src/playback/web-audio-player.ts`.
 
-## 14. Multi-voice is supported but intentionally simple
+## 15. Multi-voice is supported but intentionally simple
 
 Decision:
 
@@ -225,7 +248,7 @@ Future work:
 - Add same-staff voice grouping.
 - Add `%%score`-style semantics or a JABC-native grouping syntax.
 
-## 15. Avoid OCR and full engraving until import/export stabilizes
+## 16. Avoid OCR and full engraving until import/export stabilizes
 
 Decision:
 
@@ -235,7 +258,7 @@ Reason:
 
 They are large projects on their own. The core format, AST, import/export, and playback semantics should stabilize first.
 
-## 16. Tests define compatibility
+## 17. Tests define compatibility
 
 Decision:
 
@@ -249,7 +272,7 @@ Required tests by feature type:
 - Rendering behavior: SVG string tests.
 - Error behavior: structured parse/export/playback errors where applicable.
 
-## 17. Documentation is part of the feature
+## 18. Documentation is part of the feature
 
 Decision:
 

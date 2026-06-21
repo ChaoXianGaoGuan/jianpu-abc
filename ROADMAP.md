@@ -26,7 +26,25 @@ It is intentionally conservative: prioritize stable syntax, AST semantics, and t
 
 ## Short-term priorities
 
-### 1. Standard ABC import
+### 1. Jianpu layout engine refactor
+
+Goal: separate jianpu layout calculation from SVG string rendering so future engraving fixes do not require editing one large renderer file.
+
+Scope:
+
+- Move system, row, measure, beat, event positioning, readable-width scaling, and measure-column alignment into `src/renderers/jianpu-layout.ts`.
+- Keep `renderJianpu(score, options)` as the public API while internally using `Score AST -> JianpuLayout -> SVG`.
+- Add layout-focused tests for explicit systems, automatic wrapping, expanded readable viewBox widths, and beat-level event placement.
+- Keep the layout engine pure and browser-independent.
+
+Follow-up slices:
+
+- Remove legacy local layout helper copies from `jianpu-renderer.ts` after the new layout module is covered by focused tests.
+- Extract duration-line grouping and barline clearance into a dedicated module.
+- Add a core rhythm/beat analysis module for measure validation and beat-clear display.
+- Split the Web workbench controllers after the rendering boundary is stable.
+
+### 2. Standard ABC import
 
 Goal: parse a useful subset of standard ABC into the existing `Score` AST.
 
@@ -49,7 +67,7 @@ Deliverables:
 - Tests with round-trip examples.
 - Documentation update.
 
-### 2. MusicXML import
+### 3. MusicXML import
 
 Goal: import a focused subset of MusicXML partwise documents into AST/JABC.
 
@@ -70,7 +88,7 @@ Deliverables:
 - Importer module and tests.
 - Documentation for supported MusicXML subset.
 
-### 3. Minor and pentatonic semantics
+### 4. Minor and pentatonic semantics
 
 Goal: make parsed `K:A minor jianpu` and `K:G pentatonic jianpu` musically meaningful.
 
@@ -81,7 +99,7 @@ Scope:
 - Decide how accidentals interact with non-major modes.
 - Update ABC/MusicXML export expectations.
 
-### 4. Remaining renderer quality improvements
+### 5. Remaining renderer quality improvements
 
 Goal: improve readability without attempting full engraving.
 
@@ -91,7 +109,7 @@ Scope:
 - Optional measure numbers.
 - Better lyrics spacing.
 
-### 5. Same-staff multi-voice semantics
+### 6. Same-staff multi-voice semantics
 
 Goal: represent multiple voices on the same staff in ABC/MusicXML/rendering when appropriate.
 
