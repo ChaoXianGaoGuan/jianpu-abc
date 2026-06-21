@@ -534,15 +534,15 @@ function updateCurrentMeasurePreview(): void {
     }],
   };
   const previewEventId = `${voice.id}:0:${target.eventIndex}`;
-  const width = Math.max(320, Math.floor(currentMeasurePreview.clientWidth || 420));
+  const width = Math.max(240, Math.floor(currentMeasurePreview.clientWidth || 520));
   currentMeasureLabel.textContent = `${voice.id} · 第 ${target.measureIndex + 1} 小节`;
   currentMeasurePreview.className = "current-measure-preview";
   try {
     currentMeasurePreview.innerHTML = renderJianpu(previewScore, {
       width,
-      fontSize: 26,
+      fontSize: 22,
       showHeader: false,
-      showLyrics: true,
+      showLyrics: false,
       highlightEventId: previewEventId,
       alignMeasuresAcrossSystems: false,
       rhythmDisplay: beatClearToggle.checked ? "beat-clear" : "source",
