@@ -603,12 +603,13 @@ code {
 .current-measure-preview {
   display: flex;
   align-items: center;
-  min-height: 76px;
-  max-height: 104px;
-  overflow: hidden;
+  justify-content: center;
+  min-height: 104px;
+  max-height: 132px;
+  overflow: visible;
   border: 1px solid #c9d2cb;
   border-radius: 12px;
-  padding: 2px 8px;
+  padding: 8px 8px;
   background: #fffef9;
 }
 
@@ -616,7 +617,9 @@ code {
   display: block;
   width: 100%;
   height: auto;
+  max-height: 116px;
   min-width: 0;
+  overflow: visible;
 }
 
 textarea {

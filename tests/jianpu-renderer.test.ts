@@ -123,10 +123,10 @@ describe("renderJianpu", () => {
     expect(svg).toContain("event-repeat-marker");
     expect(svg).toContain("event-repeat-marker-segno");
     expect(svg).toContain("event-repeat-marker-coda");
-    expect(svg).toContain('y="-48.64">𝄋</text>');
-    expect(svg).toContain('y="66.56">D.S.</text>');
-    expect(svg).toContain('y="-48.64">𝄌</text>');
-    expect(svg).toContain('y="66.56">Fine</text>');
+    expect(svg).toContain('y="-39.04">𝄋</text>');
+    expect(svg).toContain('y="38.4">D.S.</text>');
+    expect(svg).toContain('y="-39.04">𝄌</text>');
+    expect(svg).toContain('y="38.4">Fine</text>');
   });
 
   it("joins duration underlines across inline key changes within the same beat", () => {

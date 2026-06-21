@@ -145,7 +145,8 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     ${cssScope}.event-symbol,${cssScope}.duration-extension{font:600 ${fontSize}px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#1f332a;text-anchor:middle}
     ${cssScope}.event-key-change{font:700 ${fontSize * 0.48}px Inter,'Microsoft YaHei',sans-serif;fill:#a4522c;text-anchor:middle}
     ${cssScope}.event-repeat-marker{font:700 ${round(fontSize * 0.54)}px Inter,'Microsoft YaHei',sans-serif;fill:#7f3f25;text-anchor:middle}
-    ${cssScope}.event-repeat-marker-segno,${cssScope}.event-repeat-marker-coda{font:700 ${round(fontSize * 0.78)}px 'Bravura','Noto Music','Segoe UI Symbol',serif;fill:#7f3f25}
+    ${cssScope}.event-repeat-marker-segno,${cssScope}.event-repeat-marker-coda{font:700 ${round(fontSize)}px 'Bravura','Noto Music','Segoe UI Symbol',serif;fill:#7f3f25}
+    ${cssScope}.event-repeat-marker-coda{font-size:${round(fontSize * 1.08)}px}
     ${cssScope}.event-accidental{font:700 ${fontSize * 0.8}px 'Bravura','Noto Music','Segoe UI Symbol',Georgia,serif;fill:#1f332a;text-anchor:middle;dominant-baseline:middle}
     ${cssScope}.octave-dot,${cssScope}.duration-dot{fill:#1f332a}
     ${cssScope}.duration-line{stroke:#1f332a;stroke-width:1.7;stroke-linecap:round}
@@ -355,8 +356,8 @@ function renderEvent(
 
 function repeatMarkerY(kind: RepeatMarkerKind, fontSize: number, showLyrics: boolean): number {
   return kind === "segno" || kind === "coda"
-    ? -fontSize * 1.52
-    : fontSize * (showLyrics ? 2.08 : 1.35);
+    ? -fontSize * 1.22
+    : fontSize * (showLyrics ? 1.2 : 1.05);
 }
 
 function renderRelations(

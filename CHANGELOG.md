@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Changed
 
-- Place Segno/Coda repeat markers above jianpu barlines and D.C./D.S./Fine markers below them.
+- Anchor repeat navigation markers directly to jianpu barlines, bring them closer to the barline, enlarge Coda, and give the current-measure preview more vertical room.
 - Make the Web current-measure preview a compact inline strip that fills the preview slot more effectively.
 - Clarify Web playback-start behavior so only left-clicked jianpu events set the persistent start anchor, while source navigation remains separate.
 - Split the Web UI into a focused workbench view and a separate score-library view with top navigation.
