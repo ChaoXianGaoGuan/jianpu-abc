@@ -102,6 +102,13 @@ describe("renderJianpu", () => {
     expect(svg).toContain('class="event-symbol"');
   });
 
+  it("can scope SVG styles to avoid leaking between previews", () => {
+    const svg = renderJianpu(parse("K:C jianpu\n| 1 |"), { styleScope: "measure-preview" });
+
+    expect(svg).toContain('class="jianpu-score measure-preview"');
+    expect(svg).toContain(".measure-preview .event-symbol");
+  });
+
   it("renders inline key change markers above the melody", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| 1 [K:G jianpu] 1 |"));
 

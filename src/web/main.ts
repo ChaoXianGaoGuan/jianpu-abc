@@ -546,6 +546,7 @@ function updateCurrentMeasurePreview(): void {
       highlightEventId: previewEventId,
       alignMeasuresAcrossSystems: false,
       rhythmDisplay: beatClearToggle.checked ? "beat-clear" : "source",
+      styleScope: "current-measure-preview-score",
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

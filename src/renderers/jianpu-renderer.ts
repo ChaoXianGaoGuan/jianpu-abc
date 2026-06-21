@@ -26,6 +26,7 @@ export interface RenderOptions {
   highlightEventId?: string;
   alignMeasuresAcrossSystems?: boolean;
   rhythmDisplay?: RhythmDisplayMode;
+  styleScope?: string;
 }
 
 interface CrossMeasureTie {
@@ -123,38 +124,41 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
 
   const displayScale = Math.min(1, width / renderedWidth);
   const displayHeight = Math.ceil(height * displayScale);
-  return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeXml(title)}" viewBox="0 0 ${round(renderedWidth)} ${height}" width="100%" height="${displayHeight}" class="jianpu-score">
+  const styleScope = options.styleScope ? cssClassName(options.styleScope) : undefined;
+  const cssScope = styleScope ? `.${styleScope} ` : "";
+  const svgClass = styleScope ? `jianpu-score ${styleScope}` : "jianpu-score";
+  return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeXml(title)}" viewBox="0 0 ${round(renderedWidth)} ${height}" width="100%" height="${displayHeight}" class="${svgClass}">
   <style>
-    .score-title{font:600 ${round(fontSize * 0.95)}px Georgia,'Songti SC',serif;fill:#20332b;text-anchor:middle}
-    .score-meta{font:650 ${round(fontSize * 0.56)}px Inter,'Microsoft YaHei',sans-serif;fill:#52655c}
-    .score-composer{font:600 ${round(fontSize * 0.5)}px Inter,'Microsoft YaHei',sans-serif;fill:#718078;text-anchor:end}
-    .voice-label{font:700 13px ui-monospace,Consolas,monospace;fill:#a4522c}
-    .barline-thin,.barline-thick,.ending-bracket{stroke:#33483f;fill:none}
-    .barline-thin{stroke-width:1.6}
-    .barline-thick{stroke-width:4.2}
-    .repeat-dot{fill:#33483f}
-    .ending-bracket{stroke-width:1.5;stroke-linecap:square;stroke-linejoin:miter}
-    .ending-number{font:700 ${fontSize * 0.45}px Georgia,'Songti SC',serif;fill:#33483f}
-    .jabc-event{cursor:pointer}
-    .event-bg{fill:transparent;transition:fill .12s ease,stroke .12s ease}
-    .event-symbol,.duration-extension{font:600 ${fontSize}px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#1f332a;text-anchor:middle}
-    .event-key-change{font:700 ${fontSize * 0.48}px Inter,'Microsoft YaHei',sans-serif;fill:#a4522c;text-anchor:middle}
-    .event-accidental{font:700 ${fontSize * 0.8}px 'Bravura','Noto Music','Segoe UI Symbol',Georgia,serif;fill:#1f332a;text-anchor:middle;dominant-baseline:middle}
-    .octave-dot,.duration-dot{fill:#1f332a}
-    .duration-line{stroke:#1f332a;stroke-width:1.7;stroke-linecap:round}
-    .relation-arc{fill:none;stroke:#35483f;stroke-width:1.8;stroke-linecap:round}
-    .relation-arc-mask{fill:none;stroke:#fffef9;stroke-width:5.5;stroke-linecap:round}
-    .tie-arc{stroke-width:1.45}
-    .slur-arc{stroke-width:1.5}
-    .tuplet-arc{stroke-width:1.4}
-    .tuplet-number{font:700 ${fontSize * 0.48}px Georgia,serif;fill:#35483f;text-anchor:middle;dominant-baseline:middle}
-    .event-lyric{font:15px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#4f6259;text-anchor:middle}
-    .is-source-active .event-bg{fill:#cfe5da;stroke:#4e8069;stroke-width:1.2}
-    .is-source-active .event-symbol,.is-source-active .event-accidental,.is-source-active .duration-extension{fill:#245b45}
-    .is-playback-start .event-bg{fill:#dbeafe;stroke:#3b6f9e;stroke-width:1.2}
-    .is-playback-start .event-symbol,.is-playback-start .event-accidental,.is-playback-start .duration-extension{fill:#1f4f7a}
-    .is-highlighted .event-bg{fill:#f7d98b}
-    .is-highlighted .event-symbol,.is-highlighted .event-accidental,.is-highlighted .duration-extension{fill:#8d3f23}
+    ${cssScope}.score-title{font:600 ${round(fontSize * 0.95)}px Georgia,'Songti SC',serif;fill:#20332b;text-anchor:middle}
+    ${cssScope}.score-meta{font:650 ${round(fontSize * 0.56)}px Inter,'Microsoft YaHei',sans-serif;fill:#52655c}
+    ${cssScope}.score-composer{font:600 ${round(fontSize * 0.5)}px Inter,'Microsoft YaHei',sans-serif;fill:#718078;text-anchor:end}
+    ${cssScope}.voice-label{font:700 13px ui-monospace,Consolas,monospace;fill:#a4522c}
+    ${cssScope}.barline-thin,${cssScope}.barline-thick,${cssScope}.ending-bracket{stroke:#33483f;fill:none}
+    ${cssScope}.barline-thin{stroke-width:1.6}
+    ${cssScope}.barline-thick{stroke-width:4.2}
+    ${cssScope}.repeat-dot{fill:#33483f}
+    ${cssScope}.ending-bracket{stroke-width:1.5;stroke-linecap:square;stroke-linejoin:miter}
+    ${cssScope}.ending-number{font:700 ${fontSize * 0.45}px Georgia,'Songti SC',serif;fill:#33483f}
+    ${cssScope}.jabc-event{cursor:pointer}
+    ${cssScope}.event-bg{fill:transparent;transition:fill .12s ease,stroke .12s ease}
+    ${cssScope}.event-symbol,${cssScope}.duration-extension{font:600 ${fontSize}px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#1f332a;text-anchor:middle}
+    ${cssScope}.event-key-change{font:700 ${fontSize * 0.48}px Inter,'Microsoft YaHei',sans-serif;fill:#a4522c;text-anchor:middle}
+    ${cssScope}.event-accidental{font:700 ${fontSize * 0.8}px 'Bravura','Noto Music','Segoe UI Symbol',Georgia,serif;fill:#1f332a;text-anchor:middle;dominant-baseline:middle}
+    ${cssScope}.octave-dot,${cssScope}.duration-dot{fill:#1f332a}
+    ${cssScope}.duration-line{stroke:#1f332a;stroke-width:1.7;stroke-linecap:round}
+    ${cssScope}.relation-arc{fill:none;stroke:#35483f;stroke-width:1.8;stroke-linecap:round}
+    ${cssScope}.relation-arc-mask{fill:none;stroke:#fffef9;stroke-width:5.5;stroke-linecap:round}
+    ${cssScope}.tie-arc{stroke-width:1.45}
+    ${cssScope}.slur-arc{stroke-width:1.5}
+    ${cssScope}.tuplet-arc{stroke-width:1.4}
+    ${cssScope}.tuplet-number{font:700 ${fontSize * 0.48}px Georgia,serif;fill:#35483f;text-anchor:middle;dominant-baseline:middle}
+    ${cssScope}.event-lyric{font:15px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#4f6259;text-anchor:middle}
+    ${cssScope}.is-source-active .event-bg{fill:#cfe5da;stroke:#4e8069;stroke-width:1.2}
+    ${cssScope}.is-source-active .event-symbol,${cssScope}.is-source-active .event-accidental,${cssScope}.is-source-active .duration-extension{fill:#245b45}
+    ${cssScope}.is-playback-start .event-bg{fill:#dbeafe;stroke:#3b6f9e;stroke-width:1.2}
+    ${cssScope}.is-playback-start .event-symbol,${cssScope}.is-playback-start .event-accidental,${cssScope}.is-playback-start .duration-extension{fill:#1f4f7a}
+    ${cssScope}.is-highlighted .event-bg{fill:#f7d98b}
+    ${cssScope}.is-highlighted .event-symbol,${cssScope}.is-highlighted .event-accidental,${cssScope}.is-highlighted .duration-extension{fill:#8d3f23}
   </style>
   ${content}
 </svg>`;
@@ -601,6 +605,11 @@ function renderOctaveDots(centerX: number, octaveShift: number, fontSize: number
 
 function formatFraction(value: Fraction): string {
   return `${value.numerator}/${value.denominator}`;
+}
+
+function cssClassName(value: string): string {
+  const normalized = value.replace(/[^A-Za-z0-9_-]/g, "-");
+  return /^[A-Za-z_-]/.test(normalized) ? normalized : `scope-${normalized}`;
 }
 
 function escapeXml(value: string): string {
