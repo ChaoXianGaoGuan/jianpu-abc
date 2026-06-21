@@ -366,6 +366,66 @@ describe("WebAudioPlayer", () => {
     expect(oscillators[1]?.start).toHaveBeenCalledWith(5.5);
   });
 
+  it("delays highlight callbacks by audio output latency", () => {
+    vi.useFakeTimers();
+    try {
+      const oscillator = {
+        type: "sine" as OscillatorType,
+        frequency: { setValueAtTime: vi.fn() },
+        detune: { setValueAtTime: vi.fn() },
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        start: vi.fn(),
+        stop: vi.fn(),
+        addEventListener: vi.fn(),
+      };
+      const gain = {
+        gain: {
+          setValueAtTime: vi.fn(),
+          linearRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      };
+      const context = {
+        currentTime: 10,
+        outputLatency: 0.08,
+        state: "running",
+        destination: {},
+        createOscillator: vi.fn(() => oscillator),
+        createGain: vi.fn(() => gain),
+        resume: vi.fn(async () => undefined),
+        close: vi.fn(async () => undefined),
+      } as unknown as AudioContext;
+      const onEventStart = vi.fn();
+      const player = new WebAudioPlayer(context, {
+        instrument: "synth",
+        scheduleAheadSeconds: 0,
+        onEventStart,
+      });
+      const event = {
+        id: "playback-1",
+        type: "note" as const,
+        midi: 69,
+        startTime: 0,
+        duration: 1,
+        velocity: 100,
+      };
+
+      player.play([event]);
+
+      expect(oscillator.start).toHaveBeenCalledWith(10);
+      expect(onEventStart).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(79);
+      expect(onEventStart).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(onEventStart).toHaveBeenCalledWith(event);
+    } finally {
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
+  });
+
   it("waits for audio readiness before scheduling notes and highlights", async () => {
     let resumeContext: (() => void) | undefined;
     const resumePromise = new Promise<void>((resolve) => {

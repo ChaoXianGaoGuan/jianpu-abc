@@ -265,6 +265,7 @@ export class WebAudioPlayer {
     this.anchorContextTime = startAt - position;
     this.positionSeconds = position;
     this.setState("playing");
+    const outputLatency = audioOutputLatencySeconds(this.context);
 
     for (const event of this.events) {
       const eventEnd = event.startTime + event.duration;
@@ -275,8 +276,8 @@ export class WebAudioPlayer {
       const contextEnd = this.anchorContextTime + eventEnd;
       this.scheduleNote(event, contextStart, contextEnd);
 
-      const startDelay = Math.max(0, contextStart - this.context.currentTime) * 1000;
-      const endDelay = Math.max(0, contextEnd - this.context.currentTime) * 1000;
+      const startDelay = Math.max(0, contextStart + outputLatency - this.context.currentTime) * 1000;
+      const endDelay = Math.max(0, contextEnd + outputLatency - this.context.currentTime) * 1000;
       this.timers.push(setTimeout(() => this.options.onEventStart?.(event), startDelay));
       this.timers.push(setTimeout(() => this.options.onEventStart?.(null), endDelay));
     }
@@ -288,7 +289,7 @@ export class WebAudioPlayer {
 
     const completionDelay = Math.max(
       0,
-      this.anchorContextTime + this.totalDuration - this.context.currentTime,
+      this.anchorContextTime + this.totalDuration + outputLatency - this.context.currentTime,
     ) * 1000;
     this.timers.push(setTimeout(() => {
       this.voices = [];
@@ -634,6 +635,15 @@ function applyEnvelope(
   for (const point of ordered.slice(1)) {
     gain.linearRampToValueAtTime(point.gain, point.time);
   }
+}
+
+function audioOutputLatencySeconds(context: AudioContext): number {
+  const latencyContext = context as AudioContext & {
+    baseLatency?: number;
+    outputLatency?: number;
+  };
+  const latency = latencyContext.outputLatency ?? latencyContext.baseLatency ?? 0;
+  return Number.isFinite(latency) && latency > 0 ? latency : 0;
 }
 
 function validateInstrument(instrument: InstrumentId): void {

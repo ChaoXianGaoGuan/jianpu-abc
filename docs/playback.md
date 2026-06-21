@@ -66,7 +66,7 @@ await player.dispose();
 
 音源和节拍器使用独立 GainNode。`setInstrumentVolume`、`setMetronomeVolume` 和 `setMetronomeEnabled` 在播放过程中实时生效，不会重新排程时间轴。工作台默认开启节拍器；乐谱缺少 `M:` 或 `Q:` 时提供会话级 `4/4`、`120 BPM` 回退控件，不写入乐谱或本地存储。
 
-播放器在采样加载和浏览器 `AudioContext.resume()` 完成之前会进入 `loading` 状态，不会调度音符或触发高亮回调；这可以避免音源延迟时光标先于声音移动。
+播放器在采样加载和浏览器 `AudioContext.resume()` 完成之前会进入 `loading` 状态，不会调度音符或触发高亮回调；这可以避免音源延迟时光标先于声音移动。调度完成后，高亮计时还会补偿浏览器报告的 `outputLatency` / `baseLatency`，让视觉光标对齐实际输出到扬声器的声音。
 
 当前支持多个声部的并行事件调度、基础反复、一二房子和常见 D.C./D.S. 到 Fine/Coda 的展开。声部分轨音色、离线打包采样、循环、复杂嵌套反复和精细 seek 属于后续扩展。
 
