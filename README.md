@@ -153,13 +153,14 @@ same major-key subset as the ABC exporter.
 ## Playback
 
 ```ts
-import { scoreToPlaybackPlan, WebAudioPlayer } from "./src/index";
+import { prependCountIn, scoreToPlaybackPlan, WebAudioPlayer } from "./src/index";
 
 const plan = scoreToPlaybackPlan(score);
+const countedPlan = prependCountIn(plan);
 const player = new WebAudioPlayer(undefined, { instrument: "guitar" }); // Create from a user interaction in browsers.
-player.play(plan.events, {
-  metronomeEvents: plan.metronomeEvents,
-  totalDuration: plan.duration,
+player.play(countedPlan.events, {
+  metronomeEvents: countedPlan.metronomeEvents,
+  totalDuration: countedPlan.duration,
 });
 ```
 
@@ -169,6 +170,11 @@ player defaults to sampled `guitar`, also provides sampled `piano` and `synth`,
 waits for audio readiness before scheduling highlights, and supports `play`,
 `pause`, `resume`, `stop`, and `dispose`; callbacks expose the active source
 event for score highlighting.
+
+`prependCountIn(plan)` returns a new playback plan with one full meter-aware
+count-in measure. The Web workbench exposes this as an off-by-default
+“预备拍（1小节）” option when the metronome is enabled. It applies to full-score
+playback only; playback from a selected jianpu event still starts immediately.
 
 ## Jianpu rendering
 

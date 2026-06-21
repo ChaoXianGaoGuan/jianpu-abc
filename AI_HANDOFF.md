@@ -63,11 +63,11 @@ The current project supports:
 - Inline key changes such as `[K:G jianpu]` across export, playback, and rendering.
 - Standard ABC export.
 - Native MusicXML 4.0 partwise export.
-- Pure playback planning with metronome accents, ties, triplets, repeats, first/second endings, rests, extensions, and multiple voices.
+- Pure playback planning with metronome accents, optional meter-aware count-in plans, ties, triplets, repeats, first/second endings, rests, extensions, and multiple voices.
 - Web Audio playback with independent live instrument/metronome gain, sampled guitar and piano instruments, a synth preset, and synthesized fallback.
 - SVG jianpu rendering with source-row layout preservation, aligned measure columns, duration grouping, graphical repeats, and SVG relation curves.
 - Staff rendering through `toStandardAbc` and abcjs.
-- Browser validation UI with a single jianpu/staff preview switch, separate playback/editor-caret highlighting, right-click JABC token navigation, SVG/PNG score downloads, instrument selection, and copy/download actions for ABC and MusicXML.
+- Browser validation UI with a single jianpu/staff preview switch, optional one-measure full-score count-in, separate playback/editor-caret highlighting, right-click JABC token navigation, SVG/PNG score downloads, instrument selection, and copy/download actions for ABC and MusicXML.
 - Read-only built-in JABC library with build-time discovery, search, category filtering, and dirty-editor confirmation.
 
 ## Commands to run before committing
@@ -84,7 +84,7 @@ Current expected state after the latest development pass:
 
 ```text
 Test files: 15 passed
-Tests: 184 passed
+Tests: 205 passed
 Typecheck: passes
 Build: passes
 ```

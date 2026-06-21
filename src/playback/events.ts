@@ -120,6 +120,46 @@ export function scoreToPlaybackPlan(
   };
 }
 
+export function prependCountIn(plan: PlaybackPlan, measures = 1): PlaybackPlan {
+  if (!Number.isInteger(measures) || measures < 0) {
+    throw new RangeError("Count-in measures must be a non-negative integer.");
+  }
+  validateTempo(plan.tempo);
+  validateMeter(plan.meter);
+
+  const measureDuration = durationToSeconds({
+    numerator: plan.meter.numerator,
+    denominator: plan.meter.denominator,
+  }, plan.tempo);
+  const pulseDuration = durationToSeconds(metronomePulse(plan.meter), plan.tempo);
+  const countInDuration = measureDuration * measures;
+  const countInEvents: MetronomeEvent[] = [];
+
+  for (let measure = 0; measure < measures; measure += 1) {
+    const measureStart = measure * measureDuration;
+    for (let offset = 0; offset < measureDuration - 1e-9; offset += pulseDuration) {
+      countInEvents.push({ startTime: measureStart + offset, accent: offset === 0 });
+    }
+  }
+
+  return {
+    events: plan.events.map((event) => ({
+      ...event,
+      startTime: event.startTime + countInDuration,
+    })),
+    metronomeEvents: [
+      ...countInEvents,
+      ...plan.metronomeEvents.map((event) => ({
+        ...event,
+        startTime: event.startTime + countInDuration,
+      })),
+    ],
+    duration: plan.duration + countInDuration,
+    meter: { ...plan.meter },
+    tempo: { ...plan.tempo, beat: { ...plan.tempo.beat } },
+  };
+}
+
 function buildVoiceEvents(
   score: Score,
   voice: Voice,

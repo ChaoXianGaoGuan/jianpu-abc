@@ -3,6 +3,7 @@ import { parseJabc } from "../src/core/parser";
 import {
   expandMeasureOrder,
   PlaybackBuildError,
+  prependCountIn,
   scoreToPlaybackEvents,
   scoreToPlaybackPlan,
 } from "../src/playback/events";
@@ -15,6 +16,50 @@ function parse(source: string) {
 }
 
 describe("scoreToPlaybackEvents", () => {
+  it.each([
+    ["4/4", "1/4=120", 4, 2],
+    ["3/4", "1/4=120", 3, 1.5],
+    ["6/8", "3/8=60", 2, 2],
+    ["9/8", "3/8=60", 3, 3],
+    ["12/8", "3/8=60", 4, 4],
+  ])("prepends one full count-in measure for %s", (meter, tempo, clickCount, duration) => {
+    const plan = scoreToPlaybackPlan(parse(
+      `M:${meter}\nL:1/8\nQ:${tempo}\nK:C jianpu\n| 1e 2e |`,
+    ));
+    const counted = prependCountIn(plan);
+
+    expect(counted.metronomeEvents.slice(0, clickCount)).toHaveLength(clickCount);
+    expect(counted.metronomeEvents[0]).toEqual({ startTime: 0, accent: true });
+    expect(counted.metronomeEvents.slice(1, clickCount).every((event) => !event.accent)).toBe(true);
+    expect(counted.events[0]?.startTime).toBeCloseTo((plan.events[0]?.startTime ?? 0) + duration);
+    expect(counted.duration).toBeCloseTo(plan.duration + duration);
+  });
+
+  it("returns a shifted copy without mutating the source plan", () => {
+    const plan = scoreToPlaybackPlan(parse(
+      "M:4/4\nL:1/4\nQ:1/4=120\nK:C jianpu\n| 1 2 3 4 |",
+    ));
+    const original = structuredClone(plan);
+    const counted = prependCountIn(plan);
+
+    expect(plan).toEqual(original);
+    expect(counted).not.toBe(plan);
+    expect(counted.events[0]?.startTime).toBe(2);
+    expect(counted.metronomeEvents.slice(0, 4)).toEqual([
+      { startTime: 0, accent: true },
+      { startTime: 0.5, accent: false },
+      { startTime: 1, accent: false },
+      { startTime: 1.5, accent: false },
+    ]);
+    expect(counted.metronomeEvents[4]).toEqual({ startTime: 2, accent: true });
+  });
+
+  it("rejects invalid count-in measure counts", () => {
+    const plan = scoreToPlaybackPlan(parse("K:C jianpu\n| 1 |"));
+    expect(() => prependCountIn(plan, -1)).toThrow(/non-negative integer/);
+    expect(() => prependCountIn(plan, 0.5)).toThrow(/non-negative integer/);
+  });
+
   it("builds accented metronome pulses and preserves trailing-rest duration", () => {
     const plan = scoreToPlaybackPlan(parse(
       "M:4/4\nL:1/4\nQ:1/4=120\nK:C jianpu\n| 1 2 3 4 | 1 0 0 0 |",

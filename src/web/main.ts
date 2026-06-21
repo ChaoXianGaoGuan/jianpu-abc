@@ -4,7 +4,7 @@ import { parseJabc } from "../core/parser";
 import { toStandardAbc } from "../converters/to-abc";
 import { toMusicXml } from "../converters/to-musicxml";
 import type { PlaybackEvent, PlaybackPlan } from "../playback/events";
-import { scoreToPlaybackPlan } from "../playback/events";
+import { prependCountIn, scoreToPlaybackPlan } from "../playback/events";
 import type { InstrumentId, PlaybackState } from "../playback/web-audio-player";
 import { WebAudioPlayer } from "../playback/web-audio-player";
 import { renderJianpu } from "../renderers/jianpu-renderer";
@@ -68,6 +68,7 @@ const playbackState = element<HTMLElement>("playback-state");
 const currentEvent = element<HTMLElement>("current-event");
 const instrumentSelect = element<HTMLSelectElement>("instrument-select");
 const metronomeToggle = element<HTMLInputElement>("metronome-toggle");
+const countInToggle = element<HTMLInputElement>("count-in-toggle");
 const meterNumerator = element<HTMLInputElement>("meter-numerator");
 const meterDenominator = element<HTMLInputElement>("meter-denominator");
 const tempoBpm = element<HTMLInputElement>("tempo-bpm");
@@ -159,7 +160,7 @@ librarySearch.addEventListener("input", renderLibraryList);
 libraryCategory.addEventListener("change", renderLibraryList);
 
 playButton.addEventListener("click", () => {
-  playFromTime(0);
+  playFromTime(0, metronomeToggle.checked && countInToggle.checked);
 });
 playFromSelectionButton.addEventListener("click", () => {
   const startTime = selectedPlaybackStartTime();
@@ -170,8 +171,10 @@ pauseButton.addEventListener("click", () => player?.pause());
 resumeButton.addEventListener("click", () => player?.resume());
 stopButton.addEventListener("click", () => player?.stop());
 instrumentSelect.addEventListener("change", () => player?.setInstrument(selectedInstrument()));
-metronomeToggle.addEventListener("input", () =>
-  player?.setMetronomeEnabled(metronomeToggle.checked));
+metronomeToggle.addEventListener("input", () => {
+  player?.setMetronomeEnabled(metronomeToggle.checked);
+  updateControls();
+});
 instrumentVolume.addEventListener("input", () => {
   instrumentVolumeValue.value = `${instrumentVolume.value}%`;
   player?.setInstrumentVolume(sliderGain(instrumentVolume));
@@ -397,13 +400,14 @@ function getPlayer(): WebAudioPlayer {
   return player;
 }
 
-function playFromTime(startTime: number): void {
+function playFromTime(startTime: number, useCountIn = false): void {
   if (!playbackPlan || (events.length === 0 && playbackPlan.metronomeEvents.length === 0)) return;
   try {
-    getPlayer().play(events, {
-      metronomeEvents: playbackPlan.metronomeEvents,
-      totalDuration: playbackPlan.duration,
-      startTime,
+    const activePlan = useCountIn ? prependCountIn(playbackPlan) : playbackPlan;
+    getPlayer().play(activePlan.events, {
+      metronomeEvents: activePlan.metronomeEvents,
+      totalDuration: activePlan.duration,
+      startTime: useCountIn ? 0 : startTime,
     });
   } catch (error) {
     showRuntimeError(error);
@@ -685,6 +689,7 @@ function updateControls(): void {
   pauseButton.disabled = playerState !== "playing";
   resumeButton.disabled = playerState !== "paused";
   stopButton.disabled = playerState === "idle";
+  countInToggle.disabled = !metronomeToggle.checked;
   copyAbcButton.disabled = currentAbc === "";
   downloadAbcButton.disabled = currentAbc === "";
   copyMusicXmlButton.disabled = currentMusicXml === "";

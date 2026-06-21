@@ -12,6 +12,8 @@ const events = scoreToPlaybackEvents(score, { velocity: 96 });
 
 `scoreToPlaybackPlan` 还返回节拍事件、包含尾部休止的总时长，以及最终使用的拍号和速度。`M:` / `Q:` 优先于 `defaultMeter` / `defaultTempo`。普通拍按分母单位点击；6/8、9/8、12/8 分别按每小节 2、3、4 个附点四分音符主拍点击，每小节首拍标记为重音。反复展开和非完整小节均按实际小节边界重新重音。
 
+`prependCountIn(plan, measures = 1)` 返回一个新计划：按计划中的拍号和速度生成预备拍，将音符、原节拍和总时长整体后移，不修改输入计划。普通拍与复合拍沿用相同主拍规则，每个预备小节首拍使用重音；`measures` 必须是非负整数。
+
 时间换算以 `Q:` 的 beat 和 bpm 为准。例如 `Q:1/8=60` 下，一个 `1/4` 音符持续 2 秒。未声明 `Q:` 时使用 `1/4=120`。
 
 调度规则：
@@ -47,9 +49,10 @@ const player = new WebAudioPlayer(undefined, {
   onStateChange: (state) => updateControls(state),
 });
 
-player.play(plan.events, {
-  metronomeEvents: plan.metronomeEvents,
-  totalDuration: plan.duration,
+const countedPlan = prependCountIn(plan);
+player.play(countedPlan.events, {
+  metronomeEvents: countedPlan.metronomeEvents,
+  totalDuration: countedPlan.duration,
 });
 player.setInstrumentVolume(0.5);
 player.setMetronomeVolume(0.25);
@@ -64,7 +67,7 @@ await player.dispose();
 
 `instrument` 可选 `"guitar"`、`"piano"` 或 `"synth"`，默认是 `"guitar"`。`synth` 保留原有振荡器音色；`piano` 和 `guitar` 会优先从 `sampleBaseUrl` 加载真实 mp3 采样，默认使用 tonejs-instruments 的 `piano` 与 `guitar-acoustic` 目录。播放器会找最近的采样音并通过 `playbackRate` 变调；如果网络或解码失败，会退回多泛音 Web Audio 预设。运行时可调用 `player.setInstrument("piano")` 切换音源；切换会停止当前播放并使用新音源重新播放。
 
-音源和节拍器使用独立 GainNode。`setInstrumentVolume`、`setMetronomeVolume` 和 `setMetronomeEnabled` 在播放过程中实时生效，不会重新排程时间轴。工作台默认开启节拍器；乐谱缺少 `M:` 或 `Q:` 时提供会话级 `4/4`、`120 BPM` 回退控件，不写入乐谱或本地存储。
+音源和节拍器使用独立 GainNode。`setInstrumentVolume`、`setMetronomeVolume` 和 `setMetronomeEnabled` 在播放过程中实时生效，不会重新排程时间轴。工作台默认开启节拍器，预备拍默认关闭；勾选后仅整曲“播放”会先打一小节，“从起播点播放”仍立即开始。节拍器关闭时预备拍控件禁用但保留勾选状态。预备拍期间暂停后继续剩余时间轴，不重新打一整小节。乐谱缺少 `M:` 或 `Q:` 时提供会话级 `4/4`、`120 BPM` 回退控件，不写入乐谱或本地存储。
 
 播放器在采样加载和浏览器 `AudioContext.resume()` 完成之前会进入 `loading` 状态，不会调度音符或触发高亮回调；这可以避免音源延迟时光标先于声音移动。调度完成后，高亮计时还会补偿浏览器报告的 `outputLatency` / `baseLatency`，让视觉光标对齐实际输出到扬声器的声音。
 

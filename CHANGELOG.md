@@ -51,6 +51,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
+- Add an optional one-measure, meter-aware metronome count-in for full-score Web playback and a reusable `prependCountIn()` playback-plan helper.
 - Add zero-duration repeat navigation markers for Segno, Coda, Fine, D.C., D.S., Da Capo, and Da Coda in parsing, jianpu rendering, ABC export, and D.C./D.S. playback expansion.
 - Add a Web current-measure jianpu preview that follows the editor caret.
 - Add selectable playback start points in the jianpu preview plus a "play from current position" Web control.
