@@ -562,6 +562,54 @@ code {
   align-items: flex-start;
 }
 
+.measure-preview-card {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  border: 1px solid #d2dacf;
+  border-radius: 14px;
+  padding: 16px;
+  background: rgb(255 255 252 / 58%);
+}
+
+.measure-preview-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.measure-preview-heading h3 {
+  margin: 0;
+  color: #263a32;
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 1.05rem;
+}
+
+.measure-preview-empty,
+.measure-preview-error {
+  color: #718078;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.measure-preview-error {
+  color: #a13f2d;
+}
+
+.current-measure-preview {
+  overflow-x: auto;
+  border: 1px solid #c9d2cb;
+  border-radius: 12px;
+  padding: 8px;
+  background: #fffef9;
+}
+
+.current-measure-preview svg {
+  display: block;
+  min-width: 260px;
+}
+
 textarea {
   width: 100%;
   min-height: 410px;
@@ -703,7 +751,8 @@ textarea:focus {
 
   .panel-heading,
   .library-heading,
-  .guide-section-heading {
+  .guide-section-heading,
+  .measure-preview-heading {
     align-items: flex-start;
     flex-direction: column;
   }

@@ -22,6 +22,7 @@ export interface RenderOptions {
   width?: number;
   fontSize?: number;
   showLyrics?: boolean;
+  showHeader?: boolean;
   highlightEventId?: string;
   alignMeasuresAcrossSystems?: boolean;
   rhythmDisplay?: RhythmDisplayMode;
@@ -45,6 +46,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
   const width = Math.max(320, options.width ?? 900);
   const fontSize = Math.max(18, options.fontSize ?? 32);
   const showLyrics = options.showLyrics ?? true;
+  const showHeader = options.showHeader ?? true;
   const alignMeasuresAcrossSystems = options.alignMeasuresAcrossSystems ?? true;
   const displayScore = options.rhythmDisplay === "beat-clear" ? toBeatClearScore(score) : score;
   const padding = Math.max(24, fontSize);
@@ -53,8 +55,8 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     ? { numerator: 1, denominator: displayScore.header.meter.denominator }
     : defaultLength;
   const titleY = padding;
-  const metaY = displayScore.header.title ? padding + fontSize * 1.2 : padding;
-  const musicTop = metaY + fontSize * 2;
+  const metaY = showHeader && displayScore.header.title ? padding + fontSize * 1.2 : padding;
+  const musicTop = showHeader ? metaY + fontSize * 2 : padding + fontSize * 1.35;
   const lineHeight = fontSize * (showLyrics ? 3.35 : 2.55);
   const minCellWidth = fontSize * 0.62;
   const title = displayScore.header.title ?? "JABC score";
@@ -115,7 +117,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
 
   const height = Math.ceil(cursorY + padding * 0.4);
   const content = [
-    renderHeader(displayScore, renderedWidth, padding, titleY, metaY, fontSize),
+    showHeader ? renderHeader(displayScore, renderedWidth, padding, titleY, metaY, fontSize) : "",
     ...renderedVoices,
   ].join("");
 

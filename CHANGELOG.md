@@ -48,6 +48,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
+- Add a Web current-measure jianpu preview that follows the editor caret.
 - Add selectable playback start points in the jianpu preview plus a "play from current position" Web control.
 - Add a Web guide view with JABC syntax quick reference cards and loadable examples.
 - Add direct unit coverage for the pure jianpu layout module across explicit systems, automatic wrapping, narrow readable widths, and event positioning.

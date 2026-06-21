@@ -114,6 +114,16 @@
               </div>
               <span class="live-indicator">实时解析</span>
             </div>
+            <div class="measure-preview-card" aria-live="polite">
+              <div class="measure-preview-heading">
+                <div>
+                  <p class="section-label">当前位置</p>
+                  <h3>当前小节预览</h3>
+                </div>
+                <span id="current-measure-label" class="counter">未定位</span>
+              </div>
+              <div id="current-measure-preview" class="measure-preview-empty">把插入符放到音符、休止符或转调标记上查看该小节。</div>
+            </div>
             <label class="sr-only" for="jabc-editor">JABC 文本编辑器</label>
             <textarea id="jabc-editor" spellcheck="false"></textarea>
             <div id="parse-status" class="status" role="status"></div>

@@ -60,6 +60,8 @@ const downloadScoreSvgButton = element<HTMLButtonElement>("download-score-svg-bu
 const downloadScorePngButton = element<HTMLButtonElement>("download-score-png-button");
 const parseStatus = element<HTMLDivElement>("parse-status");
 const parseErrors = element<HTMLPreElement>("parse-errors");
+const currentMeasureLabel = element<HTMLSpanElement>("current-measure-label");
+const currentMeasurePreview = element<HTMLDivElement>("current-measure-preview");
 const eventCount = element<HTMLSpanElement>("event-count");
 const playbackState = element<HTMLElement>("playback-state");
 const currentEvent = element<HTMLElement>("current-event");
@@ -182,7 +184,10 @@ meterDenominator.addEventListener("input", updateManualTiming);
 tempoBpm.addEventListener("input", updateManualTiming);
 notationSelect.addEventListener("change", renderActivePreview);
 alignMeasuresToggle.addEventListener("change", renderActivePreview);
-beatClearToggle.addEventListener("change", renderActivePreview);
+beatClearToggle.addEventListener("change", () => {
+  updateCurrentMeasurePreview();
+  renderActivePreview();
+});
 downloadScoreSvgButton.addEventListener("click", () => void downloadScoreImage("svg"));
 downloadScorePngButton.addEventListener("click", () => void downloadScoreImage("png"));
 jianpuPreview.addEventListener("click", selectPlaybackStartFromJianpu);
@@ -191,7 +196,10 @@ copyAbcButton.addEventListener("click", () => void copyText(currentAbc, "ABC 已
 downloadAbcButton.addEventListener("click", () => downloadText(currentAbc, fileBaseName("abc"), "text/vnd.abc"));
 copyMusicXmlButton.addEventListener("click", () => void copyText(currentMusicXml, "MusicXML 已复制"));
 downloadMusicXmlButton.addEventListener("click", () => downloadText(currentMusicXml, fileBaseName("musicxml"), "application/vnd.recordare.musicxml+xml"));
-window.addEventListener("resize", renderActivePreview);
+window.addEventListener("resize", () => {
+  updateCurrentMeasurePreview();
+  renderActivePreview();
+});
 
 initializeLibrary();
 updateControls();
@@ -319,6 +327,7 @@ function evaluateSource(): void {
     currentMusicXml = "";
     jianpuPreview.replaceChildren();
     staffPreview.replaceChildren();
+    showEmptyMeasurePreview("解析成功后可查看当前小节预览。");
     parseStatus.textContent = `解析失败：${result.errors.length} 个错误`;
     parseStatus.className = "status error-status";
     parseErrors.className = "errors";
@@ -340,6 +349,7 @@ function evaluateSource(): void {
     events = playbackPlan.events;
     currentAbc = toStandardAbc(result.value);
     currentMusicXml = toMusicXml(result.value);
+    updateCurrentMeasurePreview();
     renderActivePreview();
     const measureCount = result.value.voices[0]?.measures.length ?? 0;
     const rhythmWarnings = rhythmWarningMessages(result.value, manualMeter);
@@ -491,6 +501,92 @@ function renderJianpuPreview(): void {
   updateControls();
 }
 
+function updateCurrentMeasurePreview(): void {
+  if (!currentScore) {
+    showEmptyMeasurePreview("解析成功后可查看当前小节预览。");
+    return;
+  }
+
+  const range = sourceEventForMeasurePreview();
+  const target = parseSourceEventId(range?.eventId);
+  if (!target) {
+    showEmptyMeasurePreview("把插入符放到音符、休止符或转调标记上查看该小节。");
+    return;
+  }
+
+  const voice = currentScore.voices.find((candidate) => candidate.id === target.voiceId);
+  const measure = voice?.measures[target.measureIndex];
+  if (!voice || !measure) {
+    showEmptyMeasurePreview("无法定位当前小节。");
+    return;
+  }
+
+  const header = { ...currentScore.header };
+  delete header.title;
+  delete header.composer;
+  const previewScore: Score = {
+    type: "Score",
+    header,
+    voices: [{
+      id: voice.id,
+      measures: [measure],
+      lyricLines: voice.lyricLines,
+    }],
+  };
+  const previewEventId = `${voice.id}:0:${target.eventIndex}`;
+  const width = Math.max(320, Math.floor(currentMeasurePreview.clientWidth || 420));
+  currentMeasureLabel.textContent = `${voice.id} · 第 ${target.measureIndex + 1} 小节`;
+  currentMeasurePreview.className = "current-measure-preview";
+  try {
+    currentMeasurePreview.innerHTML = renderJianpu(previewScore, {
+      width,
+      fontSize: 26,
+      showHeader: false,
+      showLyrics: true,
+      highlightEventId: previewEventId,
+      alignMeasuresAcrossSystems: false,
+      rhythmDisplay: beatClearToggle.checked ? "beat-clear" : "source",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    showEmptyMeasurePreview(message, "measure-preview-error");
+  }
+}
+
+function sourceEventForMeasurePreview(): SourceEventRange | undefined {
+  const caret = editor.selectionStart;
+  const direct = sourceEventAtCaret(sourceEventRanges, caret);
+  if (direct) return direct;
+  let previous: SourceEventRange | undefined;
+  for (const range of sourceEventRanges) {
+    if (range.start > caret) break;
+    previous = range;
+  }
+  return previous;
+}
+
+function parseSourceEventId(eventId: string | undefined): {
+  voiceId: string;
+  measureIndex: number;
+  eventIndex: number;
+} | undefined {
+  if (!eventId) return undefined;
+  const parts = eventId.split(":");
+  const eventPart = parts.pop();
+  const measurePart = parts.pop();
+  const voiceId = parts.join(":");
+  const measureIndex = Number(measurePart);
+  const eventIndex = Number(eventPart);
+  if (!voiceId || !Number.isInteger(measureIndex) || !Number.isInteger(eventIndex)) return undefined;
+  return { voiceId, measureIndex, eventIndex };
+}
+
+function showEmptyMeasurePreview(message: string, className = "measure-preview-empty"): void {
+  currentMeasureLabel.textContent = "未定位";
+  currentMeasurePreview.className = className;
+  currentMeasurePreview.textContent = message;
+}
+
 function highlightJianpuEvents(): void {
   for (const item of jianpuPreview.querySelectorAll<SVGGElement>(".jabc-event")) {
     const eventId = item.dataset.eventId;
@@ -528,6 +624,7 @@ async function renderStaffPreview(score: Score): Promise<void> {
 function updateSourceCaretHighlight(): void {
   if (!currentScore || playerState === "playing") return;
   sourceEventId = sourceEventAtCaret(sourceEventRanges, editor.selectionStart)?.eventId;
+  updateCurrentMeasurePreview();
   highlightJianpuEvents();
   updateControls();
 }

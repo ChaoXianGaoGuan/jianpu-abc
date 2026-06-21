@@ -94,6 +94,14 @@ describe("renderJianpu", () => {
     expect(svg).toContain('<text class="score-meta" x="32" y="70.4"><tspan>1=C</tspan><tspan dx="30.4">4/4</tspan><tspan dx="30.4">1/4=120</tspan></text>');
   });
 
+  it("can render compact previews without score header text", () => {
+    const svg = renderJianpu(parse(SCORE), { showHeader: false });
+
+    expect(svg).not.toContain('class="score-title"');
+    expect(svg).not.toContain('class="score-meta"');
+    expect(svg).toContain('class="event-symbol"');
+  });
+
   it("renders inline key change markers above the melody", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| 1 [K:G jianpu] 1 |"));
 
