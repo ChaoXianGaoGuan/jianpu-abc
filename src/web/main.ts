@@ -35,12 +35,14 @@ import {
 import { rhythmWarningMessages } from "./rhythm-warnings";
 
 type NotationMode = "jianpu" | "staff";
-type AppView = "workbench" | "library";
+type AppView = "workbench" | "library" | "guide";
 
 const workbenchViewButton = element<HTMLButtonElement>("workbench-view-button");
 const libraryViewButton = element<HTMLButtonElement>("library-view-button");
+const guideViewButton = element<HTMLButtonElement>("guide-view-button");
 const workbenchView = element<HTMLElement>("workbench-view");
 const libraryView = element<HTMLElement>("library-view");
+const guideView = element<HTMLElement>("guide-view");
 const editor = element<HTMLTextAreaElement>("jabc-editor");
 const librarySearch = element<HTMLInputElement>("library-search");
 const libraryCategory = element<HTMLSelectElement>("library-category");
@@ -99,8 +101,43 @@ let manualMeter = { numerator: 4, denominator: 4 };
 let manualBpm = 120;
 let currentView: AppView = "workbench";
 
+const guideExamples: Record<string, string> = {
+  basic: `T:两只老虎
+M:4/4
+L:1/4
+Q:1/4=120
+K:C jianpu
+| 1 2 3 1 | 1 2 3 1 |
+| 3 4 5 - | 3 4 5 - |
+w: 两 只 老 虎 两 只 老 虎`,
+  durations: `T:时值示例
+M:4/4
+L:1/4
+Q:1/4=96
+K:C jianpu
+| 1 2/2 3e 4s 5. 6*2 |`,
+  repeats: `T:反复示例
+M:4/4
+L:1/4
+K:C jianpu
+|: 1 2 | 3 4 :| [1 5 5 || [2 1' - |]`,
+  advanced: `T:进阶示例
+M:4/4
+L:1/4
+Q:1/4=100
+K:C jianpu
+V:melody
+| (3 1 2 3 | 1~ | ~1 - |
+V:bass
+| 1, 5, | 1, - |`,
+};
+
 workbenchViewButton.addEventListener("click", () => showAppView("workbench"));
 libraryViewButton.addEventListener("click", () => showAppView("library"));
+guideViewButton.addEventListener("click", () => showAppView("guide"));
+for (const button of document.querySelectorAll<HTMLButtonElement>("[data-guide-example]")) {
+  button.addEventListener("click", () => loadGuideExample(button.dataset.guideExample));
+}
 
 editor.addEventListener("input", () => {
   player?.stop();
@@ -232,13 +269,35 @@ function showAppView(view: AppView): void {
   if (currentView === view) return;
   currentView = view;
   const showWorkbench = view === "workbench";
+  const showLibrary = view === "library";
+  const showGuide = view === "guide";
   workbenchView.classList.toggle("hidden", !showWorkbench);
-  libraryView.classList.toggle("hidden", showWorkbench);
+  libraryView.classList.toggle("hidden", !showLibrary);
+  guideView.classList.toggle("hidden", !showGuide);
   workbenchViewButton.classList.toggle("is-active", showWorkbench);
-  libraryViewButton.classList.toggle("is-active", !showWorkbench);
+  libraryViewButton.classList.toggle("is-active", showLibrary);
+  guideViewButton.classList.toggle("is-active", showGuide);
   workbenchViewButton.setAttribute("aria-pressed", String(showWorkbench));
-  libraryViewButton.setAttribute("aria-pressed", String(!showWorkbench));
+  libraryViewButton.setAttribute("aria-pressed", String(showLibrary));
+  guideViewButton.setAttribute("aria-pressed", String(showGuide));
   if (showWorkbench) renderActivePreview();
+}
+
+function loadGuideExample(exampleId: string | undefined): void {
+  const source = exampleId ? guideExamples[exampleId] : undefined;
+  if (source === undefined) return;
+  if (
+    isLibraryEditorDirty(editor.value, loadedLibrarySource)
+    && !window.confirm("当前编辑内容尚未保存。确定载入示例并覆盖当前修改吗？")
+  ) return;
+
+  player?.stop();
+  loadedLibraryId = undefined;
+  loadedLibrarySource = source;
+  editor.value = source;
+  evaluateSource();
+  renderLibraryList();
+  showAppView("workbench");
 }
 
 function evaluateSource(): void {

@@ -46,6 +46,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
+- Add a Web guide view with JABC syntax quick reference cards and loadable examples.
 - Add direct unit coverage for the pure jianpu layout module across explicit systems, automatic wrapping, narrow readable widths, and event positioning.
 - Add optional beat-clear jianpu visual rewrites for notes and rests that hide beat boundaries.
 - Show non-fatal Web workbench rhythm tips for incomplete measures and cross-beat dotted spans.

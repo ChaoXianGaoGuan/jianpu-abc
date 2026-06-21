@@ -148,14 +148,23 @@ h2 {
   accent-color: #254f40;
 }
 
-.library-view {
+.library-view,
+.guide-view {
   display: grid;
   gap: 18px;
 }
 
-.library-hero {
+.library-hero,
+.guide-hero {
   display: grid;
   gap: 16px;
+}
+
+.guide-hero p {
+  max-width: 780px;
+  margin: 0;
+  color: #52635d;
+  line-height: 1.6;
 }
 
 .library-heading {
@@ -168,7 +177,8 @@ h2 {
 .library-hint,
 .library-maintenance,
 .library-empty,
-.preview-hint {
+.preview-hint,
+.guide-section span {
   color: #718078;
   font-size: 0.82rem;
   line-height: 1.5;
@@ -268,6 +278,63 @@ button.score-library-item {
 .library-empty,
 .library-maintenance {
   margin: 0;
+}
+
+.guide-section h3 {
+  margin: 0;
+  color: #263a32;
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 1.25rem;
+}
+
+.guide-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.guide-grid div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid #d2dacf;
+  border-radius: 13px;
+  padding: 14px;
+  background: rgb(255 255 252 / 58%);
+}
+
+.guide-grid code,
+.guide-code code,
+.guide-hero code {
+  color: #8f4829;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.guide-grid div > code:first-child {
+  color: #263a32;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.guide-code {
+  margin: 14px 0 0;
+  overflow-x: auto;
+  border: 1px solid #d2dacf;
+  border-radius: 14px;
+  padding: 16px;
+  color: #263a32;
+  background: #fffef9;
+  font: 0.88rem/1.65 ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
 .controls,
@@ -628,13 +695,15 @@ textarea:focus {
 
   .panel-heading,
   .library-heading,
+  .guide-section-heading,
   .export-card,
   .library-filters {
     grid-template-columns: 1fr;
   }
 
   .panel-heading,
-  .library-heading {
+  .library-heading,
+  .guide-section-heading {
     align-items: flex-start;
     flex-direction: column;
   }
