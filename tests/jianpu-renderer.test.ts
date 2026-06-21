@@ -102,6 +102,14 @@ describe("renderJianpu", () => {
     expect(svg).not.toContain('y="0">1=G</text>');
   });
 
+  it("joins duration underlines across inline key changes within the same beat", () => {
+    const svg = renderJianpu(parse("M:4/4\nL:1/4\nK:C jianpu\n| 7/2 [K:E jianpu] 1/2 |"));
+    const levelOneLines = durationLineSegments(svg).filter((line) => line.level === 1);
+
+    expect(levelOneLines).toHaveLength(1);
+    expect(levelOneLines[0]).toMatchObject({ groupSize: 2 });
+  });
+
   it("places larger duration dots beside the vertical center of the number", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| 1. |"), { fontSize: 32 });
 

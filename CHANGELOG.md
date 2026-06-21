@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
+- Keep jianpu duration underlines joined across inline key changes within the same beat.
 - Detect cross-beat dotted notes that start on a beat but end off the next beat in rhythm tips and beat-clear display.
 - Clear the jianpu editor-caret highlight when the JABC textarea loses focus, and restore it when editing resumes.
 - Preserve the cross-bar tie into the first ending in 《一千年以后》 and cover ties that leave a triplet at an ending boundary.

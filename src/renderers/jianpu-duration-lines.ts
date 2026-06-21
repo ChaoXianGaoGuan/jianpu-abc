@@ -27,20 +27,30 @@ export function renderDurationLines(
       }
 
       const group = [first];
+      let groupEndIndex = index;
       if (isDurationLineJoinable(first)) {
-        while (index + group.length < positioned.length) {
-          const next = positioned[index + group.length] as PositionedEvent;
+        const firstBeat = beatIndex(first.startTime, beatDuration);
+        let scanIndex = index + 1;
+        while (scanIndex < positioned.length) {
+          const next = positioned[scanIndex] as PositionedEvent;
+          const nextBeat = beatIndex(next.startTime, beatDuration);
+          if (isDurationLineTransparent(next) && nextBeat === firstBeat) {
+            scanIndex += 1;
+            continue;
+          }
           if (
             !isDurationLineJoinable(next)
             || !hasDurationLine(next, beatDuration, lineLevel)
-            || beatIndex(next.startTime, beatDuration) !== beatIndex(first.startTime, beatDuration)
+            || nextBeat !== firstBeat
           ) break;
           group.push(next);
+          groupEndIndex = scanIndex;
+          scanIndex += 1;
         }
       }
 
       const previousBoundary = closestDurationLineItem(positioned, index - 1, -1, beatDuration, 1);
-      const nextBoundary = closestDurationLineItem(positioned, index + group.length, 1, beatDuration, 1);
+      const nextBoundary = closestDurationLineItem(positioned, groupEndIndex + 1, 1, beatDuration, 1);
       const firstBeat = beatIndex(first.startTime, beatDuration);
       const lastBeat = beatIndex(group.at(-1)!.startTime, beatDuration);
       const startsAfterBeatBoundary = previousBoundary !== undefined
@@ -56,7 +66,7 @@ export function renderDurationLines(
         endsBeforeBeatBoundary,
         ...(maxEndX === undefined ? {} : { maxEndX }),
       }));
-      index += group.length;
+      index = groupEndIndex + 1;
     }
   }
   return output.join("");
@@ -72,6 +82,10 @@ function hasDurationLine(
 
 function isDurationLineJoinable(item: PositionedEvent): boolean {
   return item.event.type === "note" || item.event.type === "rest";
+}
+
+function isDurationLineTransparent(item: PositionedEvent): boolean {
+  return item.event.type === "key-change";
 }
 
 function closestDurationLineItem(
