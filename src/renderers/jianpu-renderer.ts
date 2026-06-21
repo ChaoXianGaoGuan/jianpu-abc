@@ -26,6 +26,7 @@ export interface RenderOptions {
   showHeader?: boolean;
   highlightEventId?: string;
   alignMeasuresAcrossSystems?: boolean;
+  measuresPerSystem?: number | undefined;
   rhythmDisplay?: RhythmDisplayMode;
   styleScope?: string;
 }
@@ -70,8 +71,9 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     if (displayScore.voices.length > 1) {
       renderedVoices.push(`<text class="voice-label" x="${padding}" y="${round(cursorY - fontSize * 1.18)}">${escapeXml(voice.id)}</text>`);
     }
+    const renderMeasures = applyFixedMeasureSystems(voice.measures, options.measuresPerSystem);
     const layout = buildLayoutMeasures(
-      voice.measures,
+      renderMeasures,
       width,
       padding,
       cursorY,
@@ -172,6 +174,29 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
   </style>
   ${content}
 </svg>`;
+}
+
+function applyFixedMeasureSystems(
+  measures: Measure[],
+  measuresPerSystem: number | undefined,
+): Measure[] {
+  const fixedCount = normalizeMeasuresPerSystem(measuresPerSystem);
+  if (fixedCount === undefined) return measures;
+  return measures.map((measure, index) => {
+    const copy: Measure = { ...measure };
+    if ((index + 1) % fixedCount === 0 && index < measures.length - 1) {
+      copy.systemBreakAfter = true;
+    } else {
+      delete copy.systemBreakAfter;
+    }
+    return copy;
+  });
+}
+
+function normalizeMeasuresPerSystem(value: number | undefined): number | undefined {
+  if (value === undefined || !Number.isFinite(value)) return undefined;
+  const fixedCount = Math.floor(value);
+  return fixedCount >= 1 ? fixedCount : undefined;
 }
 
 function renderHeader(

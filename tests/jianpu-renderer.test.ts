@@ -512,6 +512,20 @@ describe("renderJianpu", () => {
     expect(rowPositions[4]).toBe(rowPositions[5]);
   });
 
+  it("can force a fixed number of measures per row", () => {
+    const score = parse("K:C jianpu\n| 1 | 2 |\n| 3 | 4 |\n| 5 | 6 |");
+    const svg = renderJianpu(score, { width: 900, measuresPerSystem: 3 });
+    const rowPositions = measureTransforms(svg).map((transform) => transform.y);
+
+    expect(rowPositions).toHaveLength(6);
+    expect(new Set(rowPositions).size).toBe(2);
+    expect(rowPositions[0]).toBe(rowPositions[1]);
+    expect(rowPositions[1]).toBe(rowPositions[2]);
+    expect(rowPositions[3]).toBe(rowPositions[4]);
+    expect(rowPositions[4]).toBe(rowPositions[5]);
+    expect(rowPositions[2]).not.toBe(rowPositions[3]);
+  });
+
   it("aligns measure columns across source rows by default", () => {
     const score = parse("K:C jianpu\n| 1 2 3 4 | 1 |\n| 1 | 1 2 3 4 |");
     const svg = renderJianpu(score, { width: 620 });

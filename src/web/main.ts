@@ -55,6 +55,7 @@ const staffPreview = element<HTMLDivElement>("staff-preview");
 const notationSelect = element<HTMLSelectElement>("notation-select");
 const previewKindIndicator = element<HTMLSpanElement>("preview-kind-indicator");
 const alignMeasuresToggle = element<HTMLInputElement>("align-measures-toggle");
+const measureColumnsSelect = element<HTMLSelectElement>("measure-columns-select");
 const beatClearToggle = element<HTMLInputElement>("beat-clear-toggle");
 const downloadScoreSvgButton = element<HTMLButtonElement>("download-score-svg-button");
 const downloadScorePngButton = element<HTMLButtonElement>("download-score-png-button");
@@ -184,6 +185,7 @@ meterDenominator.addEventListener("input", updateManualTiming);
 tempoBpm.addEventListener("input", updateManualTiming);
 notationSelect.addEventListener("change", renderActivePreview);
 alignMeasuresToggle.addEventListener("change", renderActivePreview);
+measureColumnsSelect.addEventListener("change", renderActivePreview);
 beatClearToggle.addEventListener("change", () => {
   updateCurrentMeasurePreview();
   renderActivePreview();
@@ -475,6 +477,7 @@ function renderActivePreview(): void {
   jianpuPreview.classList.toggle("hidden", !showJianpu);
   staffPreview.classList.toggle("hidden", showJianpu);
   alignMeasuresToggle.disabled = !showJianpu;
+  measureColumnsSelect.disabled = !showJianpu;
   beatClearToggle.disabled = !showJianpu;
   previewKindIndicator.textContent = showJianpu ? "SVG" : "ABCJS";
 
@@ -494,6 +497,7 @@ function renderJianpuPreview(): void {
     width,
     showLyrics: true,
     alignMeasuresAcrossSystems: alignMeasuresToggle.checked,
+    measuresPerSystem: selectedMeasuresPerSystem(),
     rhythmDisplay: beatClearToggle.checked ? "beat-clear" : "source",
   });
   previewReady = true;
@@ -840,6 +844,12 @@ function selectedInstrument(): InstrumentId {
 
 function selectedNotation(): NotationMode {
   return notationSelect.value === "staff" ? "staff" : "jianpu";
+}
+
+function selectedMeasuresPerSystem(): number | undefined {
+  if (measureColumnsSelect.value === "auto") return undefined;
+  const value = Number(measureColumnsSelect.value);
+  return Number.isInteger(value) && value >= 1 ? value : undefined;
 }
 
 function element<T extends HTMLElement>(id: string): T {
