@@ -83,8 +83,8 @@ npm run build
 Current expected state after the latest development pass:
 
 ```text
-Test files: 11 passed
-Tests: 162 passed
+Test files: 15 passed
+Tests: 184 passed
 Typecheck: passes
 Build: passes
 ```
@@ -132,7 +132,7 @@ The build may regenerate `dist/`, but those files should not be manually changed
 
 ## Recommended next task
 
-Pick from `ROADMAP.md`. The best next engineering task is usually one of:
+Pick from `ROADMAP.md`. The jianpu layout refactor now has a dedicated pure layout module and direct unit coverage for source systems, automatic wrapping, readable narrow widths, and event positioning. The best next engineering task is usually one of:
 
 1. Add import support from standard ABC to AST/JABC.
 2. Add import support from MusicXML to AST/JABC.

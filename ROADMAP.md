@@ -30,15 +30,11 @@ It is intentionally conservative: prioritize stable syntax, AST semantics, and t
 
 Goal: separate jianpu layout calculation from SVG string rendering so future engraving fixes do not require editing one large renderer file.
 
-Scope:
-
-- Move system, row, measure, beat, event positioning, readable-width scaling, and measure-column alignment into `src/renderers/jianpu-layout.ts`.
-- Keep `renderJianpu(score, options)` as the public API while internally using `Score AST -> JianpuLayout -> SVG`.
-- Add layout-focused tests for explicit systems, automatic wrapping, expanded readable viewBox widths, and beat-level event placement.
-- Keep the layout engine pure and browser-independent.
+Status: the core extraction is complete. `renderJianpu(score, options)` keeps the public API and now routes `Score AST -> JianpuLayout -> SVG`. The pure layout module handles source systems, automatic wrapping, readable narrow widths, measure-column alignment, and beat-level event positioning, with direct unit coverage in `tests/jianpu-layout.test.ts`.
 
 Follow-up slices:
 
+- Keep future engraving fixes in the layout module or narrow renderer helpers instead of expanding `jianpu-renderer.ts`.
 - Extend beat-clear visual rewriting to more edge cases such as cross-measure splits and complex tie/slur combinations.
 - Split the Web workbench controllers after the rendering boundary is stable.
 

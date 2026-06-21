@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Changed
 
+- Update AI handoff and roadmap status for the completed jianpu layout extraction and current validation counts.
 - Route beat-clear display through a core Score transform instead of renderer-only visual fragments.
 - Retire renderer-only beat-clear visual fragments after moving display rewriting to the core transform.
 - Shared hidden beat-boundary detection between rhythm warnings and beat-clear transformation.
@@ -44,6 +45,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Added
 
+- Add direct unit coverage for the pure jianpu layout module across explicit systems, automatic wrapping, narrow readable widths, and event positioning.
 - Add optional beat-clear jianpu visual rewrites for notes and rests that hide beat boundaries.
 - Show non-fatal Web workbench rhythm tips for incomplete measures and cross-beat dotted spans.
 - Bidirectional JABC/jianpu source navigation with editor-caret highlighting and right-click token selection, plus SVG/PNG downloads for current jianpu and staff previews.
