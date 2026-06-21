@@ -35,7 +35,12 @@ import {
 import { rhythmWarningMessages } from "./rhythm-warnings";
 
 type NotationMode = "jianpu" | "staff";
+type AppView = "workbench" | "library";
 
+const workbenchViewButton = element<HTMLButtonElement>("workbench-view-button");
+const libraryViewButton = element<HTMLButtonElement>("library-view-button");
+const workbenchView = element<HTMLElement>("workbench-view");
+const libraryView = element<HTMLElement>("library-view");
 const editor = element<HTMLTextAreaElement>("jabc-editor");
 const librarySearch = element<HTMLInputElement>("library-search");
 const libraryCategory = element<HTMLSelectElement>("library-category");
@@ -92,6 +97,10 @@ let loadedLibraryId: string | undefined;
 let loadedLibrarySource: string | undefined;
 let manualMeter = { numerator: 4, denominator: 4 };
 let manualBpm = 120;
+let currentView: AppView = "workbench";
+
+workbenchViewButton.addEventListener("click", () => showAppView("workbench"));
+libraryViewButton.addEventListener("click", () => showAppView("library"));
 
 editor.addEventListener("input", () => {
   player?.stop();
@@ -188,8 +197,13 @@ function renderLibraryList(): void {
     title.textContent = entry.title;
     const metadata = document.createElement("span");
     metadata.textContent = [entry.composer, entry.category].filter(Boolean).join(" · ");
-    button.append(title, metadata);
-    button.addEventListener("click", () => loadLibraryEntry(entry, true));
+    const action = document.createElement("span");
+    action.className = "score-library-action";
+    action.textContent = entry.id === loadedLibraryId ? "当前曲谱" : "载入工作台";
+    button.append(title, metadata, action);
+    button.addEventListener("click", () => {
+      if (loadLibraryEntry(entry, true)) showAppView("workbench");
+    });
     libraryList.append(button);
   }
   libraryCount.textContent = visibleEntries.length === bundledScoreLibrary.entries.length
@@ -198,12 +212,12 @@ function renderLibraryList(): void {
   libraryEmpty.classList.toggle("hidden", visibleEntries.length > 0);
 }
 
-function loadLibraryEntry(entry: ScoreLibraryEntry, protectEdits: boolean): void {
+function loadLibraryEntry(entry: ScoreLibraryEntry, protectEdits: boolean): boolean {
   if (
     protectEdits
     && isLibraryEditorDirty(editor.value, loadedLibrarySource)
     && !window.confirm("当前编辑内容尚未保存。确定载入另一首曲谱并覆盖当前修改吗？")
-  ) return;
+  ) return false;
 
   player?.stop();
   loadedLibraryId = entry.id;
@@ -211,6 +225,20 @@ function loadLibraryEntry(entry: ScoreLibraryEntry, protectEdits: boolean): void
   editor.value = entry.source;
   evaluateSource();
   renderLibraryList();
+  return true;
+}
+
+function showAppView(view: AppView): void {
+  if (currentView === view) return;
+  currentView = view;
+  const showWorkbench = view === "workbench";
+  workbenchView.classList.toggle("hidden", !showWorkbench);
+  libraryView.classList.toggle("hidden", showWorkbench);
+  workbenchViewButton.classList.toggle("is-active", showWorkbench);
+  libraryViewButton.classList.toggle("is-active", !showWorkbench);
+  workbenchViewButton.setAttribute("aria-pressed", String(showWorkbench));
+  libraryViewButton.setAttribute("aria-pressed", String(!showWorkbench));
+  if (showWorkbench) renderActivePreview();
 }
 
 function evaluateSource(): void {

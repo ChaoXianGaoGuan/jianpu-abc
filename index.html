@@ -11,162 +11,170 @@
       <div>
         <p class="eyebrow">Jianpu ABC</p>
         <h1>JABC 简谱工作台</h1>
-        <p class="subtitle">编辑简谱文本，实时检查 AST 转换并用 Web Audio 播放。</p>
+        <p class="subtitle">编辑简谱文本，实时预览、播放并导出 ABC 与 MusicXML。</p>
       </div>
-      <div class="milestone">Milestone 5</div>
+      <nav class="app-nav" aria-label="主导航">
+        <button id="workbench-view-button" class="nav-button is-active" type="button" aria-pressed="true">工作台</button>
+        <button id="library-view-button" class="nav-button" type="button" aria-pressed="false">曲谱库</button>
+      </nav>
     </header>
 
     <main class="app-shell">
-      <aside class="panel score-library" aria-labelledby="score-library-title">
-        <div class="library-heading">
-          <div>
-            <p class="section-label">仓库内置</p>
-            <h2 id="score-library-title">曲谱库</h2>
-          </div>
-          <span id="library-count" class="counter">0 首</span>
-        </div>
-        <p class="library-hint">曲谱随仓库发布，载入后可在编辑器中修改。</p>
-        <label class="sr-only" for="library-search">搜索曲谱</label>
-        <input id="library-search" class="library-search" type="search" placeholder="搜索标题、作者或分类" />
-        <label class="sr-only" for="library-category">曲谱分类</label>
-        <select id="library-category" class="library-category">
-          <option value="">全部分类</option>
-        </select>
-        <div id="library-errors" class="library-errors" role="status"></div>
-        <div id="library-list" class="score-library-list"></div>
-        <p id="library-empty" class="library-empty hidden">没有符合条件的曲谱。</p>
-        <p class="library-maintenance">新增曲谱：向 <code>src/library/&lt;分类&gt;/</code> 提交 <code>.jabc</code> 文件。</p>
-      </aside>
-
-      <div class="workbench">
-      <section class="controls" aria-labelledby="playback-title">
-        <div class="playback-panel-main">
-          <p class="section-label" id="playback-title">播放控制</p>
-          <div class="button-row">
-            <button id="play-button" class="primary" type="button">播放</button>
-            <button id="pause-button" type="button">暂停</button>
-            <button id="resume-button" type="button">继续</button>
-            <button id="stop-button" type="button">停止</button>
-          </div>
-          <label class="instrument-control" for="instrument-select">
-            <span>音源</span>
-            <select id="instrument-select">
-              <option value="guitar" selected>吉他</option>
-              <option value="piano">钢琴</option>
-              <option value="synth">合成器</option>
-            </select>
-          </label>
-          <div class="playback-settings">
-            <label class="toggle-control">
-              <input id="metronome-toggle" type="checkbox" checked />
-              <span>节拍器</span>
-            </label>
-            <div class="setting-control">
-              <span>拍号</span>
-              <span class="meter-inputs">
-                <input id="meter-numerator" aria-label="拍号分子" type="number" min="1" max="32" value="4" />
-                <span>/</span>
-                <input id="meter-denominator" aria-label="拍号分母" type="number" min="1" max="64" value="4" />
-              </span>
+      <section id="workbench-view" class="app-view workbench-view" aria-labelledby="workbench-title">
+        <section class="controls" aria-labelledby="playback-title">
+          <div class="playback-panel-main">
+            <p class="section-label" id="playback-title">播放控制</p>
+            <div class="button-row">
+              <button id="play-button" class="primary" type="button">播放</button>
+              <button id="pause-button" type="button">暂停</button>
+              <button id="resume-button" type="button">继续</button>
+              <button id="stop-button" type="button">停止</button>
             </div>
-            <label class="setting-control" for="tempo-bpm">
-              <span id="tempo-label">速度（1/4 BPM）</span>
-              <input id="tempo-bpm" type="number" min="20" max="300" value="120" />
-            </label>
-            <label class="volume-control" for="instrument-volume">
-              <span>音源音量 <output id="instrument-volume-value">20%</output></span>
-              <input id="instrument-volume" type="range" min="0" max="100" value="20" />
-            </label>
-            <label class="volume-control" for="metronome-volume">
-              <span>节拍器音量 <output id="metronome-volume-value">30%</output></span>
-              <input id="metronome-volume" type="range" min="0" max="100" value="30" />
-            </label>
-          </div>
-        </div>
-        <div class="playback-readout">
-          <span>播放器：<strong id="playback-state">空闲</strong></span>
-          <span>当前事件：<code id="current-event">—</code></span>
-        </div>
-      </section>
-
-      <section class="panel preview-panel" aria-labelledby="score-preview-title">
-        <div class="panel-heading">
-          <div>
-            <p class="section-label">实时乐谱</p>
-            <h2 id="score-preview-title">乐谱预览</h2>
-          </div>
-          <div class="preview-actions">
-            <label class="notation-control" for="notation-select">
-              <span>显示</span>
-              <select id="notation-select">
-                <option value="jianpu" selected>简谱</option>
-                <option value="staff">五线谱</option>
+            <label class="instrument-control" for="instrument-select">
+              <span>音源</span>
+              <select id="instrument-select">
+                <option value="guitar" selected>吉他</option>
+                <option value="piano">钢琴</option>
+                <option value="synth">合成器</option>
               </select>
             </label>
-            <label class="toggle-control" title="开启后，上下行同一列的小节宽度保持一致">
-              <input id="align-measures-toggle" type="checkbox" checked />
-              <span>小节列对齐</span>
-            </label>
-            <label class="toggle-control" title="显示跨拍附点等隐藏拍点的辅助延音标记">
-              <input id="beat-clear-toggle" type="checkbox" />
-              <span>分拍显示</span>
-            </label>
-            <button id="download-score-svg-button" type="button">下载 SVG</button>
-            <button id="download-score-png-button" type="button">下载 PNG</button>
-            <span id="preview-kind-indicator" class="live-indicator">SVG</span>
+            <div class="playback-settings">
+              <label class="toggle-control">
+                <input id="metronome-toggle" type="checkbox" checked />
+                <span>节拍器</span>
+              </label>
+              <div class="setting-control">
+                <span>拍号</span>
+                <span class="meter-inputs">
+                  <input id="meter-numerator" aria-label="拍号分子" type="number" min="1" max="32" value="4" />
+                  <span>/</span>
+                  <input id="meter-denominator" aria-label="拍号分母" type="number" min="1" max="64" value="4" />
+                </span>
+              </div>
+              <label class="setting-control" for="tempo-bpm">
+                <span id="tempo-label">速度（1/4 BPM）</span>
+                <input id="tempo-bpm" type="number" min="20" max="300" value="120" />
+              </label>
+              <label class="volume-control" for="instrument-volume">
+                <span>音源音量 <output id="instrument-volume-value">20%</output></span>
+                <input id="instrument-volume" type="range" min="0" max="100" value="20" />
+              </label>
+              <label class="volume-control" for="metronome-volume">
+                <span>节拍器音量 <output id="metronome-volume-value">30%</output></span>
+                <input id="metronome-volume" type="range" min="0" max="100" value="30" />
+              </label>
+            </div>
           </div>
+          <div class="playback-readout">
+            <span>播放器：<strong id="playback-state">空闲</strong></span>
+            <span>当前事件：<code id="current-event">—</code></span>
+          </div>
+        </section>
+
+        <section class="panel preview-panel" aria-labelledby="score-preview-title">
+          <div class="panel-heading preview-heading">
+            <div>
+              <p class="section-label">实时乐谱</p>
+              <h2 id="score-preview-title">乐谱预览</h2>
+            </div>
+            <div class="preview-actions">
+              <label class="notation-control" for="notation-select">
+                <span>显示</span>
+                <select id="notation-select">
+                  <option value="jianpu" selected>简谱</option>
+                  <option value="staff">五线谱</option>
+                </select>
+              </label>
+              <label class="toggle-control" title="开启后，上下行同一列的小节宽度保持一致">
+                <input id="align-measures-toggle" type="checkbox" checked />
+                <span>小节列对齐</span>
+              </label>
+              <label class="toggle-control" title="显示跨拍附点等隐藏拍点的辅助延音标记">
+                <input id="beat-clear-toggle" type="checkbox" />
+                <span>分拍显示</span>
+              </label>
+              <button id="download-score-svg-button" type="button">下载 SVG</button>
+              <button id="download-score-png-button" type="button">下载 PNG</button>
+              <span id="preview-kind-indicator" class="live-indicator">SVG</span>
+            </div>
+          </div>
+          <div id="jianpu-preview" class="jianpu-preview" aria-live="polite"></div>
+          <div id="staff-preview" class="staff-preview hidden" aria-live="polite"></div>
+          <p class="preview-hint">提示：编辑器光标会高亮对应音符；右键乐谱音符可定位源码。</p>
+        </section>
+
+        <section class="workspace" aria-labelledby="workbench-title">
+          <article class="panel editor-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="section-label">输入</p>
+                <h2 id="workbench-title">JABC 文本</h2>
+              </div>
+              <span class="live-indicator">实时解析</span>
+            </div>
+            <label class="sr-only" for="jabc-editor">JABC 文本编辑器</label>
+            <textarea id="jabc-editor" spellcheck="false"></textarea>
+            <div id="parse-status" class="status" role="status"></div>
+            <pre id="parse-errors" class="errors" aria-live="polite"></pre>
+          </article>
+
+          <article class="panel output-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="section-label">转换结果</p>
+                <h2>导出</h2>
+              </div>
+              <span id="event-count" class="counter">0 个音符</span>
+            </div>
+            <div class="export-card">
+              <div>
+                <h3>标准 ABC</h3>
+                <p>复制到 ABC 工具，或下载为 .abc 文件。</p>
+              </div>
+              <div class="export-actions">
+                <button id="copy-abc-button" type="button">复制 ABC</button>
+                <button id="download-abc-button" type="button">下载 ABC</button>
+              </div>
+            </div>
+            <div class="export-card">
+              <div>
+                <h3>MusicXML</h3>
+                <p>复制 XML 内容，或下载为 .musicxml 文件。</p>
+              </div>
+              <div class="export-actions">
+                <button id="copy-musicxml-button" type="button">复制 MusicXML</button>
+                <button id="download-musicxml-button" type="button">下载 MusicXML</button>
+              </div>
+            </div>
+            <p class="hint">支持组合语法：#4、b7、1'、1,、1e、1s、1/2、1*2、1.、#4'e.，以及正文转调 [K:G jianpu]。修改文本后再次点击播放即可验收。</p>
+          </article>
+        </section>
+      </section>
+
+      <section id="library-view" class="app-view library-view hidden" aria-labelledby="score-library-title">
+        <div class="library-hero panel">
+          <div class="library-heading">
+            <div>
+              <p class="section-label">仓库内置</p>
+              <h2 id="score-library-title">曲谱库</h2>
+            </div>
+            <span id="library-count" class="counter">0 首</span>
+          </div>
+          <p class="library-hint">曲谱随仓库发布。选择曲谱后会载入到工作台，你可以继续编辑、预览和播放。</p>
+          <div class="library-filters">
+            <label class="sr-only" for="library-search">搜索曲谱</label>
+            <input id="library-search" class="library-search" type="search" placeholder="搜索标题、作者或分类" />
+            <label class="sr-only" for="library-category">曲谱分类</label>
+            <select id="library-category" class="library-category">
+              <option value="">全部分类</option>
+            </select>
+          </div>
+          <div id="library-errors" class="library-errors" role="status"></div>
         </div>
-        <div id="jianpu-preview" class="jianpu-preview" aria-live="polite"></div>
-        <div id="staff-preview" class="staff-preview hidden" aria-live="polite"></div>
+        <div id="library-list" class="score-library-list"></div>
+        <p id="library-empty" class="library-empty hidden">没有符合条件的曲谱。</p>
+        <p class="library-maintenance panel">新增曲谱：向 <code>src/library/&lt;分类&gt;/</code> 提交 <code>.jabc</code> 文件。</p>
       </section>
-
-      <section class="workspace">
-        <article class="panel editor-panel">
-          <div class="panel-heading">
-            <div>
-              <p class="section-label">输入</p>
-              <h2>JABC 文本</h2>
-            </div>
-            <span class="live-indicator">实时解析</span>
-          </div>
-          <label class="sr-only" for="jabc-editor">JABC 文本编辑器</label>
-          <textarea id="jabc-editor" spellcheck="false"></textarea>
-          <div id="parse-status" class="status" role="status"></div>
-          <pre id="parse-errors" class="errors" aria-live="polite"></pre>
-        </article>
-
-        <article class="panel output-panel">
-          <div class="panel-heading">
-            <div>
-              <p class="section-label">转换结果</p>
-              <h2>导出</h2>
-            </div>
-            <span id="event-count" class="counter">0 个音符</span>
-          </div>
-          <div class="export-card">
-            <div>
-              <h3>标准 ABC</h3>
-              <p>复制到 ABC 工具，或下载为 .abc 文件。</p>
-            </div>
-            <div class="export-actions">
-              <button id="copy-abc-button" type="button">复制 ABC</button>
-              <button id="download-abc-button" type="button">下载 ABC</button>
-            </div>
-          </div>
-          <div class="export-card">
-            <div>
-              <h3>MusicXML</h3>
-              <p>复制 XML 内容，或下载为 .musicxml 文件。</p>
-            </div>
-            <div class="export-actions">
-              <button id="copy-musicxml-button" type="button">复制 MusicXML</button>
-              <button id="download-musicxml-button" type="button">下载 MusicXML</button>
-            </div>
-          </div>
-          <p class="hint">支持组合语法：#4、b7、1'、1,、1e、1s、1/2、1*2、1.、#4'e.，以及正文转调 [K:G jianpu]。修改左侧文本后再次点击播放即可验收。</p>
-        </article>
-      </section>
-      </div>
     </main>
 
     <script type="module" src="/src/web/main.ts"></script>
