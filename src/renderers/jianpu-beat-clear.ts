@@ -1,4 +1,5 @@
-import type { Accidental, Fraction } from "../core/ast";
+import type { Accidental } from "../core/ast";
+import { hidesBeatBoundary } from "../core/rhythm";
 import {
   layoutXAt,
   type PositionedEvent,
@@ -27,8 +28,12 @@ export function shouldSplitBeatClear(
   if (rhythmDisplay !== "beat-clear") return false;
   if (item.event.type !== "note") return false;
   const endOffset = item.layoutOffset + item.layoutSpan;
-  if (isIntegerPosition(item.layoutOffset) && isIntegerPosition(endOffset)) return false;
-  return beatClearSegments(item, 1, 0).length > 1;
+  const segments = beatClearSegments(item, 1, 0);
+  return hidesBeatBoundary({
+    startsOnBeat: isIntegerPosition(item.layoutOffset),
+    endsOnBeat: isIntegerPosition(endOffset),
+    crossesBeat: segments.length > 1,
+  });
 }
 
 export function renderBeatClearSplitNote(

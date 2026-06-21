@@ -6,16 +6,19 @@ import type {
 } from "./ast";
 import { DEFAULT_NOTE_LENGTH, reduceFraction } from "./fraction";
 
-export interface EventTimeSpan {
+export interface BeatBoundarySpan {
+  startsOnBeat: boolean;
+  endsOnBeat: boolean;
+  crossesBeat: boolean;
+}
+
+export interface EventTimeSpan extends BeatBoundarySpan {
   event: MusicalEvent;
   eventIndex: number;
   start: Fraction;
   duration: Fraction;
   end: Fraction;
   beatIndex: number;
-  startsOnBeat: boolean;
-  endsOnBeat: boolean;
-  crossesBeat: boolean;
 }
 
 export interface MeasureRhythm {
@@ -117,6 +120,10 @@ export function isBeatBoundary(time: Fraction, beatDuration: Fraction): boolean 
 export function crossesBeatBoundary(start: Fraction, end: Fraction, beatDuration: Fraction): boolean {
   if (compareFractions(start, end) >= 0) return false;
   return beatIndexAt(start, beatDuration) !== beatIndexAt(subtractEpsilon(end), beatDuration);
+}
+
+export function hidesBeatBoundary(span: BeatBoundarySpan): boolean {
+  return span.crossesBeat && !(span.startsOnBeat && span.endsOnBeat);
 }
 
 export function addFractions(left: Fraction, right: Fraction): Fraction {

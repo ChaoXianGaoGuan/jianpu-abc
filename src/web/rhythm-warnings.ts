@@ -1,6 +1,7 @@
 import type { Fraction, MusicalEvent, Score, TimeSignature } from "../core/ast";
 import {
   analyzeMeasureRhythm,
+  hidesBeatBoundary,
   type EventTimeSpan,
 } from "../core/rhythm";
 
@@ -41,7 +42,7 @@ function crossBeatWarning(
   span: EventTimeSpan,
 ): string | undefined {
   if (!isTimedNoteOrRest(span.event)) return undefined;
-  if (!span.crossesBeat || (span.startsOnBeat && span.endsOnBeat)) return undefined;
+  if (!hidesBeatBoundary(span)) return undefined;
   return `${voicePrefix(score, voiceId)}第 ${measureIndex + 1} 小节第 ${span.eventIndex + 1} 个事件 ${eventLabel(span.event)} 跨过拍点；若需要每拍更清楚，可考虑用延音线或分拍写法。`;
 }
 

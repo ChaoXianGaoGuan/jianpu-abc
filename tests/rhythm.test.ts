@@ -4,6 +4,7 @@ import {
   analyzeMeasureRhythm,
   beatDurationForMeter,
   eventTimeSpans,
+  hidesBeatBoundary,
   measureDuration,
 } from "../src/core/rhythm";
 
@@ -52,6 +53,13 @@ describe("rhythm analysis", () => {
     expect(spans[1]!.duration).toEqual({ numerator: 0, denominator: 1 });
     expect(spans[1]!.start).toEqual(spans[1]!.end);
     expect(measureDuration(measure)).toEqual({ numerator: 1, denominator: 1 });
+  });
+
+  it("shares hidden beat boundary detection for warning and rendering policies", () => {
+    expect(hidesBeatBoundary({ startsOnBeat: true, endsOnBeat: true, crossesBeat: true })).toBe(false);
+    expect(hidesBeatBoundary({ startsOnBeat: false, endsOnBeat: true, crossesBeat: true })).toBe(true);
+    expect(hidesBeatBoundary({ startsOnBeat: true, endsOnBeat: false, crossesBeat: true })).toBe(true);
+    expect(hidesBeatBoundary({ startsOnBeat: false, endsOnBeat: false, crossesBeat: false })).toBe(false);
   });
 
   it("detects underfull and overfull measures", () => {
