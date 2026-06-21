@@ -603,19 +603,19 @@ code {
 .current-measure-preview {
   display: flex;
   align-items: center;
-  min-height: 54px;
-  max-height: 72px;
+  min-height: 76px;
+  max-height: 104px;
   overflow: hidden;
   border: 1px solid #c9d2cb;
   border-radius: 12px;
-  padding: 4px 8px;
+  padding: 2px 8px;
   background: #fffef9;
 }
 
 .current-measure-preview svg {
   display: block;
   width: 100%;
-  height: 64px;
+  height: auto;
   min-width: 0;
 }
 

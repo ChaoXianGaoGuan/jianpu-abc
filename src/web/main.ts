@@ -540,7 +540,7 @@ function updateCurrentMeasurePreview(): void {
   try {
     currentMeasurePreview.innerHTML = renderJianpu(previewScore, {
       width,
-      fontSize: 22,
+      fontSize: 24,
       showHeader: false,
       showLyrics: false,
       highlightEventId: previewEventId,
