@@ -490,6 +490,18 @@ describe("renderJianpu", () => {
     expect(svg).not.toContain(">高</text>");
   });
 
+  it("renders lyrics in a headerless single-measure preview", () => {
+    const svg = renderJianpu(parse("K:C jianpu\n| 1 2 |\nw: 你 好"), {
+      showHeader: false,
+      showLyrics: true,
+      fontSize: 24,
+    });
+
+    expect(svg).toContain('class="event-lyric"');
+    expect(svg).toContain(">你</text>");
+    expect(svg).toContain(">好</text>");
+  });
+
   it("wraps measures onto multiple SVG rows at narrow widths", () => {
     const score = parse("K:C jianpu\n| 1 2 3 4 | 1 2 3 4 | 1 2 3 4 | 1 2 3 4 |");
     const svg = renderJianpu(score, { width: 320 });

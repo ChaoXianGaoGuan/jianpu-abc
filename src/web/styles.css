@@ -622,6 +622,15 @@ code {
   overflow: visible;
 }
 
+.current-measure-preview.has-lyrics {
+  min-height: 132px;
+  max-height: 164px;
+}
+
+.current-measure-preview.has-lyrics svg {
+  max-height: 148px;
+}
+
 textarea {
   width: 100%;
   min-height: 410px;

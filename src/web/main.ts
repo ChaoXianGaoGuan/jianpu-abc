@@ -571,15 +571,19 @@ function updateCurrentMeasurePreview(): void {
     }],
   };
   const previewEventId = `${voice.id}:0:${target.eventIndex}`;
+  const showMeasureLyrics = measure.events.some((event) =>
+    event.type === "note" && event.lyric !== undefined
+  );
   const width = Math.max(240, Math.floor(currentMeasurePreview.clientWidth || 520));
   currentMeasureLabel.textContent = `${voice.id} · 第 ${target.measureIndex + 1} 小节`;
   currentMeasurePreview.className = "current-measure-preview";
+  currentMeasurePreview.classList.toggle("has-lyrics", showMeasureLyrics);
   try {
     currentMeasurePreview.innerHTML = renderJianpu(previewScore, {
       width,
       fontSize: 24,
       showHeader: false,
-      showLyrics: false,
+      showLyrics: showMeasureLyrics,
       highlightEventId: previewEventId,
       alignMeasuresAcrossSystems: false,
       rhythmDisplay: beatClearToggle.checked ? "beat-clear" : "source",

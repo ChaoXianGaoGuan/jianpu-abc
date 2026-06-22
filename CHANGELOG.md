@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
+- Show attached lyrics in the Web current-measure preview and expand only lyric-bearing preview cards to preserve readable spacing.
 - Expand aligned jianpu measure columns to fill complete fixed-count rows instead of leaving unused space when one or two measures per row are selected.
 - Scope current-measure preview SVG styles so they do not change the main jianpu preview font size.
 - Keep jianpu duration underlines joined across inline key changes within the same beat.
