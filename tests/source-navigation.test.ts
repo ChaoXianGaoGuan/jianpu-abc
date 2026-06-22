@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { parseJabc } from "../src/core/parser";
 import {
+  buildLyricSourceRanges,
   buildSourceEventRanges,
   sourceEventAtCaret,
   sourceEventById,
+  sourceLyricAtCaret,
+  sourceLyricByEventId,
 } from "../src/web/source-navigation";
 
 function parse(source: string) {
@@ -39,5 +42,40 @@ describe("source navigation", () => {
     expect(sourceEventAtCaret(ranges, first.end + 1)).toBeUndefined();
     expect(sourceEventAtCaret(ranges, 2)).toBeUndefined();
     expect(sourceEventById(ranges, "default:0:1")?.eventId).toBe("default:0:1");
+  });
+
+  it("maps lyric syllable tokens to lyric units with continuations", () => {
+    const source = "K:C jianpu\n| 1 - 2~ | ~2 (4 5) 6. |\nw: 长 连 啊 点";
+    const ranges = buildLyricSourceRanges(parse(source), source);
+
+    expect(ranges.map(({ start, end, eventIds }) => ({
+      text: source.slice(start, end),
+      eventIds,
+    }))).toEqual([
+      { text: "长", eventIds: ["default:0:0", "default:0:1"] },
+      { text: "连", eventIds: ["default:0:2", "default:1:0"] },
+      { text: "啊", eventIds: ["default:1:1", "default:1:2"] },
+      { text: "点", eventIds: ["default:1:3"] },
+    ]);
+    expect(sourceLyricAtCaret(ranges, source.indexOf("连"))?.eventIds).toEqual([
+      "default:0:2",
+      "default:1:0",
+    ]);
+    expect(sourceLyricByEventId(ranges, "default:1:2")?.syllableIndex).toBe(2);
+  });
+
+  it("keeps extra lyric lines navigable only when they own a music row", () => {
+    const source = "K:C jianpu\n| 1 2 |\nw: 一 二\nw: 重 复\n| 3 4 |\nw: 三 四";
+    const ranges = buildLyricSourceRanges(parse(source), source);
+
+    expect(ranges.map(({ start, end, eventIds }) => ({
+      text: source.slice(start, end),
+      eventIds,
+    }))).toEqual([
+      { text: "一", eventIds: ["default:0:0"] },
+      { text: "二", eventIds: ["default:0:1"] },
+      { text: "三", eventIds: ["default:1:0"] },
+      { text: "四", eventIds: ["default:1:1"] },
+    ]);
   });
 });

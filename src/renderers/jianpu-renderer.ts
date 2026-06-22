@@ -166,7 +166,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     ${cssScope}.tuplet-number{font:700 ${fontSize * 0.48}px Georgia,serif;fill:#35483f;text-anchor:middle;dominant-baseline:middle}
     ${cssScope}.event-lyric{font:15px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#4f6259;text-anchor:middle}
     ${cssScope}.is-source-active .event-bg{fill:#cfe5da;stroke:#4e8069;stroke-width:1.2}
-    ${cssScope}.is-source-active .event-symbol,${cssScope}.is-source-active .event-accidental,${cssScope}.is-source-active .duration-extension{fill:#245b45}
+    ${cssScope}.is-source-active .event-symbol,${cssScope}.is-source-active .event-accidental,${cssScope}.is-source-active .duration-extension,${cssScope}.is-source-active .event-lyric{fill:#245b45}
     ${cssScope}.is-playback-start .event-bg{fill:#dbeafe;stroke:#3b6f9e;stroke-width:1.2}
     ${cssScope}.is-playback-start .event-symbol,${cssScope}.is-playback-start .event-accidental,${cssScope}.is-playback-start .duration-extension{fill:#1f4f7a}
     ${cssScope}.is-highlighted .event-bg{fill:#f7d98b}
@@ -379,7 +379,7 @@ function renderEvent(
     }
   }
   if (showLyrics && event.type === "note" && event.lyric) {
-    parts.push(`<text class="event-lyric" x="${round(centerX)}" y="${round(fontSize * 1.5)}">${escapeXml(event.lyric)}</text>`);
+    parts.push(`<text class="event-lyric" data-lyric-event-id="${escapeXml(eventId)}" x="${round(centerX)}" y="${round(fontSize * 1.5)}">${escapeXml(event.lyric)}</text>`);
   }
 
   return `<g class="${className}" data-event-id="${escapeXml(eventId)}" aria-label="${escapeXml(event.sourceText ?? symbol)}">${parts.join("")}</g>`;

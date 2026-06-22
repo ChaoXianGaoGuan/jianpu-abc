@@ -27,9 +27,13 @@ import {
   type SvgFragment,
 } from "./score-image-export";
 import {
+  buildLyricSourceRanges,
   buildSourceEventRanges,
   sourceEventAtCaret,
   sourceEventById,
+  sourceLyricAtCaret,
+  sourceLyricByEventId,
+  type LyricSourceRange,
   type SourceEventRange,
 } from "./source-navigation";
 import { rhythmWarningMessages } from "./rhythm-warnings";
@@ -95,7 +99,9 @@ let currentMusicXml = "";
 let playbackEventId: string | undefined;
 let playbackStartEventId: string | undefined;
 let sourceEventId: string | undefined;
+let sourceEventIds: string[] = [];
 let sourceEventRanges: SourceEventRange[] = [];
+let sourceLyricRanges: LyricSourceRange[] = [];
 let staffRenderVersion = 0;
 let previewReady = false;
 let previewExportPending = false;
@@ -354,7 +360,9 @@ function evaluateSource(): void {
     playbackEventId = undefined;
     playbackStartEventId = undefined;
     sourceEventId = undefined;
+    sourceEventIds = [];
     sourceEventRanges = [];
+    sourceLyricRanges = [];
     previewReady = false;
     staffRenderVersion += 1;
     currentAbc = "";
@@ -377,7 +385,8 @@ function evaluateSource(): void {
     currentScore = result.value;
     playbackEventId = undefined;
     sourceEventRanges = buildSourceEventRanges(result.value, editor.value);
-    sourceEventId = sourceEventAtCaret(sourceEventRanges, editor.selectionStart)?.eventId;
+    sourceLyricRanges = buildLyricSourceRanges(result.value, editor.value);
+    setSourceCaretHighlightFromCaret(editor.selectionStart);
     syncTimingControls(result.value);
     playbackPlan = createPlaybackPlan(result.value);
     events = playbackPlan.events;
@@ -607,6 +616,14 @@ function sourceEventForMeasurePreview(): SourceEventRange | undefined {
   return previous;
 }
 
+function sourceLineNumber(source: string, offset: number): number {
+  let line = 1;
+  for (let index = 0; index < offset; index += 1) {
+    if (source[index] === "\n") line += 1;
+  }
+  return line;
+}
+
 function parseSourceEventId(eventId: string | undefined): {
   voiceId: string;
   measureIndex: number;
@@ -630,9 +647,10 @@ function showEmptyMeasurePreview(message: string, className = "measure-preview-e
 }
 
 function highlightJianpuEvents(): void {
+  const sourceActiveIds = new Set(sourceEventIds);
   for (const item of jianpuPreview.querySelectorAll<SVGGElement>(".jabc-event")) {
     const eventId = item.dataset.eventId;
-    const isSourceActive = eventId === sourceEventId;
+    const isSourceActive = eventId !== undefined && sourceActiveIds.has(eventId);
     item.classList.toggle("is-highlighted", eventId === playbackEventId);
     item.classList.toggle("is-source-active", isSourceActive);
     item.classList.toggle("is-playback-start", !isSourceActive && eventId === playbackStartEventId);
@@ -665,14 +683,37 @@ async function renderStaffPreview(score: Score): Promise<void> {
 
 function updateSourceCaretHighlight(): void {
   if (!currentScore || playerState === "playing") return;
-  sourceEventId = sourceEventAtCaret(sourceEventRanges, editor.selectionStart)?.eventId;
+  setSourceCaretHighlightFromCaret(editor.selectionStart);
   updateCurrentMeasurePreview();
   highlightJianpuEvents();
   updateControls();
 }
 
+function setSourceCaretHighlightFromCaret(caret: number): void {
+  const lyricRange = sourceLyricAtCaret(sourceLyricRanges, caret);
+  if (lyricRange) {
+    setSourceActiveEvents(lyricRange.eventIds);
+    return;
+  }
+
+  const eventRange = sourceEventAtCaret(sourceEventRanges, caret);
+  if (!eventRange) {
+    setSourceActiveEvents([]);
+    return;
+  }
+
+  const lyricForEvent = sourceLyricByEventId(sourceLyricRanges, eventRange.eventId);
+  setSourceActiveEvents(lyricForEvent?.eventIds ?? [eventRange.eventId]);
+}
+
+function setSourceActiveEvents(eventIds: string[]): void {
+  sourceEventIds = eventIds;
+  sourceEventId = eventIds[0];
+}
+
 function clearSourceCaretHighlight(): void {
   sourceEventId = undefined;
+  sourceEventIds = [];
   highlightJianpuEvents();
   updateControls();
 }
@@ -689,22 +730,28 @@ function selectPlaybackStartFromJianpu(event: MouseEvent): void {
 }
 
 function navigateFromJianpu(event: MouseEvent): void {
+  const lyricTarget = event.target instanceof Element
+    ? event.target.closest<SVGTextElement>(".event-lyric")
+    : null;
   const target = event.target instanceof Element
     ? event.target.closest<SVGGElement>(".jabc-event")
     : null;
-  const eventId = target?.dataset.eventId;
+  const eventId = lyricTarget?.dataset.lyricEventId ?? target?.dataset.eventId;
   if (!eventId) return;
-  const range = sourceEventById(sourceEventRanges, eventId);
+  const lyricRange = lyricTarget ? sourceLyricByEventId(sourceLyricRanges, eventId) : undefined;
+  const eventRange = lyricRange === undefined ? sourceEventById(sourceEventRanges, eventId) : undefined;
+  const range = lyricRange ?? eventRange;
   if (!range) return;
 
   event.preventDefault();
   player?.stop();
   playbackEventId = undefined;
-  sourceEventId = eventId;
+  setSourceActiveEvents(lyricRange?.eventIds ?? [eventId]);
   editor.focus();
   editor.setSelectionRange(range.start, range.end);
   const lineHeight = Number.parseFloat(getComputedStyle(editor).lineHeight) || 25;
-  editor.scrollTop = Math.max(0, (range.line - 2) * lineHeight);
+  const line = "line" in range ? range.line : sourceLineNumber(editor.value, range.start);
+  editor.scrollTop = Math.max(0, (line - 2) * lineHeight);
   highlightJianpuEvents();
 }
 
