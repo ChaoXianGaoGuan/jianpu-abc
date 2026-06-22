@@ -576,6 +576,14 @@ describe("renderJianpu", () => {
     expect(wide[1]!.y - wide[0]!.y).toBeCloseTo((standard[1]!.y - standard[0]!.y) * 1.5, 3);
   });
 
+  it("reserves lyric height only for visual rows that contain lyrics", () => {
+    const score = parse("K:C jianpu\n| 1 |\n| 2 |\nw: 唱\n| 3 |");
+    const rows = numericMeasureTransforms(renderJianpu(score, { fontSize: 32 }));
+
+    expect(rows[1]!.y - rows[0]!.y).toBeCloseTo(32 * 2.55, 3);
+    expect(rows[2]!.y - rows[1]!.y).toBeCloseTo(32 * 3.35, 3);
+  });
+
   it("can force a fixed number of measures per row", () => {
     const score = parse("K:C jianpu\n| 1 | 2 |\n| 3 | 4 |\n| 5 | 6 |");
     const svg = renderJianpu(score, { width: 900, measuresPerSystem: 3 });

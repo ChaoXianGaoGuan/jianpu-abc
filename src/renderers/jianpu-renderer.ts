@@ -69,7 +69,11 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
   const titleY = padding;
   const metaY = showHeader && displayScore.header.title ? padding + fontSize * 1.2 : padding;
   const musicTop = showHeader ? metaY + fontSize * 2 : padding + fontSize * 1.35;
-  const lineHeight = fontSize * (showLyrics ? 3.35 : 2.55) * lineSpacing;
+  const compactLineHeight = fontSize * 2.55 * lineSpacing;
+  const lyricLineHeight = fontSize * 3.35 * lineSpacing;
+  const lineHeightForRow = (measures: Measure[]) => showLyrics && measures.some(measureHasLyrics)
+    ? lyricLineHeight
+    : compactLineHeight;
   const minCellWidth = fontSize * 0.62;
   const title = displayScore.header.title ?? "JABC score";
   const renderedVoices: string[] = [];
@@ -86,7 +90,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
       width,
       padding,
       cursorY,
-      lineHeight,
+      lineHeightForRow,
       fontSize,
       beatDuration,
       alignMeasuresAcrossSystems,
@@ -146,7 +150,11 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     renderedVoices.push(renderCrossMeasureSlurs(sameRowCrossMeasureSlurs, layout, fontSize));
     renderedVoices.push(renderCrossMeasureTies(crossMeasureTies, layout, fontSize));
     const lastLineY = layout.at(-1)?.y ?? cursorY;
-    cursorY = lastLineY + lineHeight + (voiceIndex === displayScore.voices.length - 1 ? 0 : fontSize * 0.9);
+    const lastLineMeasures = layout
+      .filter((placed) => placed.y === lastLineY)
+      .map((placed) => placed.measure);
+    cursorY = lastLineY + lineHeightForRow(lastLineMeasures)
+      + (voiceIndex === displayScore.voices.length - 1 ? 0 : fontSize * 0.9);
   }
 
   const height = Math.ceil(cursorY + padding * 0.4);
@@ -199,6 +207,10 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
   </style>
   ${content}
 </svg>`;
+}
+
+function measureHasLyrics(measure: Measure): boolean {
+  return measure.events.some((event) => event.type === "note" && event.lyric !== undefined);
 }
 
 function applyFixedMeasureSystems(

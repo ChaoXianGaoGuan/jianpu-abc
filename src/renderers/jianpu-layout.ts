@@ -37,12 +37,14 @@ interface MeasureLayoutMetric {
   cellWidth: number;
 }
 
+export type RowLineHeight = number | ((measures: Measure[]) => number);
+
 export function layoutMeasures(
   measures: Measure[],
   width: number,
   padding: number,
   musicTop: number,
-  lineHeight: number,
+  lineHeight: RowLineHeight,
   fontSize: number,
   beatDuration: Fraction,
   alignMeasuresAcrossSystems: boolean,
@@ -143,7 +145,7 @@ export function layoutMeasures(
         });
         systemX += measureWidth + scaledGap;
       }
-      systemY += lineHeight;
+      systemY += resolveRowLineHeight(lineHeight, system.map((item) => item.measure));
     }
     return output;
   }
@@ -226,9 +228,13 @@ export function layoutMeasures(
       });
       x += measureWidth + scaledGap;
     }
-    y += lineHeight;
+    y += resolveRowLineHeight(lineHeight, row.map((item) => item.measure));
   }
   return output;
+}
+
+function resolveRowLineHeight(lineHeight: RowLineHeight, measures: Measure[]): number {
+  return typeof lineHeight === "function" ? lineHeight(measures) : lineHeight;
 }
 
 export function positionEvents(
