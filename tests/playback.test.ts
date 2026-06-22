@@ -182,11 +182,38 @@ describe("scoreToPlaybackEvents", () => {
     expect(scoreToPlaybackEvents(score).map((event) => event.midi)).toEqual([60, 62, 64, 65, 62, 64]);
   });
 
+  it("stops D.S. playback at Fine before Coda", () => {
+    const score = parse(
+      "L:1/4\nQ:1/4=120\nK:C jianpu\n| 1 | !segno! 2 !fine! !coda! | 3 !coda! :| 4 !D.S.! |",
+    );
+
+    expect(expandMeasureOrder(score.voices[0]?.measures ?? [])).toEqual([0, 1, 2, 0, 1, 2, 3, 1]);
+    expect(scoreToPlaybackEvents(score).map((event) => event.midi)).toEqual([60, 62, 64, 60, 62, 64, 65, 62]);
+  });
+
+  it("ignores Coda markers without a post-directive Coda destination", () => {
+    const score = parse(
+      "L:1/4\nQ:1/4=120\nK:C jianpu\n| 1 | !segno! 2 !coda! | 3 !fine! :| 4 !D.S.! |",
+    );
+
+    expect(expandMeasureOrder(score.voices[0]?.measures ?? [])).toEqual([0, 1, 2, 0, 1, 2, 3, 1, 2]);
+    expect(scoreToPlaybackEvents(score).map((event) => event.midi)).toEqual([60, 62, 64, 60, 62, 64, 65, 62, 64]);
+  });
+
   it("expands D.S. playback to Coda", () => {
     const score = parse("L:1/4\nQ:1/4=120\nK:C jianpu\n| 1 | !segno! 2 | !coda! 3 | 4 !D.S.! | !coda! 5 |");
 
     expect(expandMeasureOrder(score.voices[0]?.measures ?? [])).toEqual([0, 1, 2, 3, 1, 4]);
     expect(scoreToPlaybackEvents(score).map((event) => event.midi)).toEqual([60, 62, 64, 65, 62, 67]);
+  });
+
+  it("lets Coda before Fine win during D.S. navigation", () => {
+    const score = parse(
+      "L:1/4\nQ:1/4=120\nK:C jianpu\n| 1 | !segno! 2 !coda! !fine! | 3 :| 4 !D.S.! | !coda! 5 !fine! |",
+    );
+
+    expect(expandMeasureOrder(score.voices[0]?.measures ?? [])).toEqual([0, 1, 2, 0, 1, 2, 3, 1, 4]);
+    expect(scoreToPlaybackEvents(score).map((event) => event.midi)).toEqual([60, 62, 64, 60, 62, 64, 65, 62, 67]);
   });
 
   it("expands D.C. playback to Coda", () => {

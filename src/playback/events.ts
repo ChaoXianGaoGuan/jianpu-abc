@@ -49,6 +49,12 @@ interface VoicePlaybackTimeline {
   duration: number;
 }
 
+interface RepeatNavigationPoint {
+  measureIndex: number;
+  eventIndex: number;
+  kind: "fine" | "coda";
+}
+
 export type PlaybackBuildErrorCode =
   | "MISSING_KEY"
   | "INVALID_TEMPO"
@@ -347,22 +353,25 @@ function expandRepeatNavigationOrder(measures: Measure[], baseOrder: number[]): 
 
   const firstPass = baseOrder.slice(0, directive.orderIndex + 1);
   const target = directive.kind === "ds" ? firstMarkerMeasure(measures, "segno") ?? 0 : 0;
-  const codaMeasures = markerMeasures(measures, "coda");
-  const codaJump = codaMeasures.find((index) => index >= target && index <= directive.measureIndex);
-  const codaDestination = codaJump === undefined
-    ? undefined
-    : codaMeasures.find((index) => index > directive.measureIndex) ?? codaMeasures.find((index) => index > codaJump);
-  if (codaJump !== undefined && codaDestination !== undefined) {
+  const codaDestination = firstMarkerMeasure(measures, "coda", directive.measureIndex + 1);
+  const navigationPoint = firstRepeatNavigationPoint(
+    measures,
+    target,
+    directive.measureIndex,
+    directive.eventIndex,
+    codaDestination !== undefined,
+  );
+
+  if (navigationPoint?.kind === "coda" && codaDestination !== undefined) {
     return [
       ...firstPass,
-      ...measureRange(target, repeatNavigationEnd(measures, codaJump)),
+      ...measureRange(target, repeatNavigationEnd(navigationPoint)),
       ...measureRange(codaDestination, measures.length - 1),
     ];
   }
 
-  const fine = firstMarkerMeasure(measures, "fine", target, directive.measureIndex);
-  if (fine !== undefined) {
-    return [...firstPass, ...measureRange(target, repeatNavigationEnd(measures, fine))];
+  if (navigationPoint?.kind === "fine") {
+    return [...firstPass, ...measureRange(target, repeatNavigationEnd(navigationPoint))];
   }
 
   return [...firstPass, ...measureRange(target, measures.length - 1)];
@@ -371,11 +380,41 @@ function expandRepeatNavigationOrder(measures: Measure[], baseOrder: number[]): 
 function firstDirectiveMeasure(
   measures: Measure[],
   order: number[],
-): { measureIndex: number; orderIndex: number; kind: "dc" | "ds" } | undefined {
+): { measureIndex: number; orderIndex: number; eventIndex: number; kind: "dc" | "ds" } | undefined {
   for (const [orderIndex, measureIndex] of order.entries()) {
-    const kind = firstMarkerKind(measures[measureIndex], ["dc", "dacapo", "ds"]);
-    if (kind === "dc" || kind === "dacapo") return { measureIndex, orderIndex, kind: "dc" };
-    if (kind === "ds") return { measureIndex, orderIndex, kind: "ds" };
+    const measure = measures[measureIndex];
+    if (!measure) continue;
+    for (const [eventIndex, event] of measure.events.entries()) {
+      if (event.type !== "repeat-marker") continue;
+      if (event.kind === "dc" || event.kind === "dacapo") return {
+        measureIndex,
+        orderIndex,
+        eventIndex,
+        kind: "dc",
+      };
+      if (event.kind === "ds") return { measureIndex, orderIndex, eventIndex, kind: "ds" };
+    }
+  }
+  return undefined;
+}
+
+function firstRepeatNavigationPoint(
+  measures: Measure[],
+  start: number,
+  endMeasureIndex: number,
+  endEventIndex: number,
+  codaCanJump: boolean,
+): RepeatNavigationPoint | undefined {
+  for (let measureIndex = Math.max(0, start); measureIndex <= endMeasureIndex; measureIndex += 1) {
+    const measure = measures[measureIndex];
+    if (!measure) continue;
+    const eventEnd = measureIndex === endMeasureIndex ? endEventIndex : measure.events.length;
+    for (let eventIndex = 0; eventIndex < eventEnd; eventIndex += 1) {
+      const event = measure.events[eventIndex];
+      if (event?.type !== "repeat-marker") continue;
+      if (event.kind === "fine") return { measureIndex, eventIndex, kind: "fine" };
+      if (event.kind === "coda" && codaCanJump) return { measureIndex, eventIndex, kind: "coda" };
+    }
   }
   return undefined;
 }
@@ -403,14 +442,10 @@ function firstMarkerKind(measure: Measure | undefined, kinds: RepeatMarkerKind[]
   )?.kind;
 }
 
-function repeatNavigationEnd(measures: Measure[], markerMeasureIndex: number): number {
-  return markerIsAtMeasureStart(measures[markerMeasureIndex]) ? markerMeasureIndex - 1 : markerMeasureIndex;
+function repeatNavigationEnd(point: RepeatNavigationPoint): number {
+  return point.eventIndex === 0 ? point.measureIndex - 1 : point.measureIndex;
 }
 
-function markerIsAtMeasureStart(measure: Measure | undefined): boolean {
-  const firstEvent = measure?.events[0];
-  return firstEvent?.type === "repeat-marker";
-}
 
 function measureRange(start: number, end: number): number[] {
   const output: number[] = [];
