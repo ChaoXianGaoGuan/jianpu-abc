@@ -509,7 +509,7 @@ function cubicArcPath(
   fontSize: number,
 ): string {
   const span = Math.max(fontSize * 0.2, x2 - x1);
-  const archHeight = Math.min(fontSize * 0.52, Math.max(fontSize * 0.26, span * 0.08));
+  const archHeight = Math.min(fontSize * 0.54, Math.max(fontSize * 0.27, span * 0.1));
   const peak = Math.min(y1, y2) - archHeight;
   const controlInset = span * 0.3;
   return `<path class="relation-arc ${className}" d="M ${round(x1)} ${round(y1)} C ${round(x1 + controlInset)} ${round(peak)} ${round(x2 - controlInset)} ${round(peak)} ${round(x2)} ${round(y2)}"/>`;
