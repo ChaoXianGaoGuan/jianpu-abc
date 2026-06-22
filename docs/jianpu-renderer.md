@@ -33,7 +33,7 @@ const svg = renderJianpu(score, {
 
 每个事件组包含 `data-event-id="voiceId:measureIndex:eventIndex"`。传入相同的 `highlightEventId` 会添加 `is-highlighted` class；该 ID 与 `PlaybackEvent.sourceEventId` 一致，因此播放层无需维护第二套映射。Web 工作台在播放过程中切换 `is-highlighted`，编辑器光标则使用独立的 `is-source-active`。光标位于音乐 token 内或紧邻 token 末尾时高亮对应事件；若该事件属于已分配歌词的发音单元，则同一发音单元内的延音、tie continuation、slur continuation 会一起高亮。歌词 `<text class="event-lyric">` 带有 `data-lyric-event-id`，右键歌词文字会停止播放、聚焦编辑器并选中对应 `w:` token；右键非歌词事件图形仍选中完整音乐 token。空白、注释和标题字段不映射到事件。
 
-第一阶段歌词/音符双向定位计划放在 Web/UI 层：`src/web/source-navigation.ts` 同时维护 `SourceEventRange` 与 `LyricSourceRange`，不把歌词源码范围写入 AST。当前支持单段逐音歌词的 caret 高亮和右键歌词跳转；后续多段歌词显示、歌词左键设置播放起点、以及更细的主/轻高亮样式可以在同一映射结构上继续扩展。
+歌词/音符双向定位位于 Web/UI 层：`src/web/source-navigation.ts` 同时维护 `SourceEventRange` 与 `LyricSourceRange`，不把歌词源码范围写入 AST。当前支持单段逐音歌词的 caret 高亮和右键歌词跳转；多段歌词显示、歌词左键设置播放起点、以及更细的主/轻高亮样式尚未实现，可以在同一映射结构上继续扩展。
 
 预览区可以将当前简谱布局下载为 SVG 或白底 2x PNG。导出副本会移除播放与源码光标 class，不把临时交互状态写入文件。
 

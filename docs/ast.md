@@ -30,9 +30,9 @@ Score
 
 - `NoteEvent`：级数 `1`–`7`、可选变音、八度偏移、最终时值、附点数、tie 标记及可选歌词。
 - `RestEvent`：休止符、最终时值及可选附点数。
-- `ExtensionEvent`：尚未解析的 `-` 延音单位。
+- `ExtensionEvent`：保持独立的 `-` 延音单位；导出和播放层会将其并入前一个音符，AST 本身不被改写。
 
-结束小节的单小节线存入 `Measure.barline`，不作为独立音乐事件。音乐源码行末的小节带有 `Measure.systemBreakAfter`；ABC、MusicXML 和渲染器必须使用该标记保持谱面系统结构。事件的 `sourceText` 和 `location` 用于错误定位、编辑器映射及未来播放高亮，不应影响音高或时值计算。
+结束小节的单小节线存入 `Measure.barline`，不作为独立音乐事件。音乐源码行末的小节带有 `Measure.systemBreakAfter`；ABC、MusicXML 和渲染器必须使用该标记保持谱面系统结构。事件的 `sourceText` 和 `location` 用于错误定位、编辑器映射及当前播放高亮，不应影响音高或时值计算。
 
 ## 解析与规范化
 
@@ -44,13 +44,13 @@ JABC text -> parseJabc -> raw Score -> normalizeScore -> Score
 
 parser 在构建事件时已把 `/N`、`*N` 和附点折算进 `duration`；`dots` 仍保留原记谱信息，供简谱渲染使用。下游播放和导出必须读取最终 `duration`，不得再次应用附点。
 
-后续时值合并、延音解析和小节校验应作为独立规范化步骤加入，而不是塞入 parser 或下游导出器。
+parser 不合并 `ExtensionEvent`。当前 ABC/MusicXML 导出和播放层各自按相同规则解析延音；若未来需要统一的小节时值校验或持久化后的合并结果，应增加独立纯规范化步骤，而不是塞入 parser。
 
 `degreeToPitch` 位于 `src/core/pitch.ts`，将调号、音级、变音和八度偏移解析为音名、MIDI、ABC token 与 MusicXML pitch object。该函数当前只实现大调音程；其他调式会明确报错。
 
 播放事件不写回 `Score`。`scoreToPlaybackEvents` 使用
-`voiceId:measureIndex:eventIndex` 生成 `sourceEventId`，供播放器回调和未来
-渲染高亮关联源事件。
+`voiceId:measureIndex:eventIndex` 生成 `sourceEventId`，供播放器回调、简谱
+播放高亮和编辑器源码定位关联同一事件。
 
 ## 兼容性规则
 

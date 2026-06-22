@@ -17,28 +17,18 @@ It is intentionally conservative: prioritize stable syntax, AST semantics, and t
 - Sampled guitar and piano playback, synth selection, and synthesized fallback.
 - SVG jianpu rendering.
 - Jianpu duration grouping, graphical repeats/endings, SVG ties/slurs/tuplets, source-row preservation, and optional aligned measure columns.
+- Pure jianpu layout extraction with direct layout tests, fixed measures per system, beat-clear display, and configurable line spacing.
 - Staff rendering through abcjs.
 - Inline key changes across parsing, export, playback, and rendering.
-- Browser validation UI with notation switching, playback highlighting, instrument selection, and ABC/MusicXML copy and download actions.
+- Common single-jump D.C./D.S. playback to Fine or Coda, with visual repeat-navigation markers and ABC preservation.
+- Browser validation UI with notation switching, current-measure preview, source navigation, count-in/metronome controls, SVG/PNG downloads, instrument selection, and ABC/MusicXML copy/download actions.
 - Repository-backed read-only JABC score library with search, categories, and dirty-editor protection.
 - Documentation for syntax, AST, converters, playback, and renderers.
 - AI handoff and design decision documentation.
 
 ## Short-term priorities
 
-### 1. Jianpu layout engine refactor
-
-Goal: separate jianpu layout calculation from SVG string rendering so future engraving fixes do not require editing one large renderer file.
-
-Status: the core extraction is complete. `renderJianpu(score, options)` keeps the public API and now routes `Score AST -> JianpuLayout -> SVG`. The pure layout module handles source systems, automatic wrapping, readable narrow widths, measure-column alignment, and beat-level event positioning, with direct unit coverage in `tests/jianpu-layout.test.ts`.
-
-Follow-up slices:
-
-- Keep future engraving fixes in the layout module or narrow renderer helpers instead of expanding `jianpu-renderer.ts`.
-- Extend beat-clear visual rewriting to more edge cases such as cross-measure splits and complex tie/slur combinations.
-- Split the Web workbench controllers after the rendering boundary is stable.
-
-### 2. Repeat navigation semantics
+### 1. Repeat navigation semantics
 
 Goal: support the four common repeat-navigation forms in two layers: visual notation first, then semantic playback/export flow.
 
@@ -51,7 +41,7 @@ Follow-up slices:
 - Add validation for missing Segno, Coda, or Fine targets and ambiguous multiple markers.
 - Extend the Web guide and examples with complete D.C./D.S. playback examples.
 
-### 3. Standard ABC import
+### 2. Standard ABC import
 
 Goal: parse a useful subset of standard ABC into the existing `Score` AST.
 
@@ -74,7 +64,7 @@ Deliverables:
 - Tests with round-trip examples.
 - Documentation update.
 
-### 4. MusicXML import
+### 3. MusicXML import
 
 Goal: import a focused subset of MusicXML partwise documents into AST/JABC.
 
@@ -95,7 +85,7 @@ Deliverables:
 - Importer module and tests.
 - Documentation for supported MusicXML subset.
 
-### 5. Minor and pentatonic semantics
+### 4. Minor and pentatonic semantics
 
 Goal: make parsed `K:A minor jianpu` and `K:G pentatonic jianpu` musically meaningful.
 
@@ -106,7 +96,7 @@ Scope:
 - Decide how accidentals interact with non-major modes.
 - Update ABC/MusicXML export expectations.
 
-### 6. Remaining renderer quality improvements
+### 5. Remaining renderer quality improvements
 
 Goal: improve readability without attempting full engraving.
 
@@ -115,6 +105,17 @@ Scope:
 - Align multi-voice measures more clearly.
 - Optional measure numbers.
 - Better lyrics spacing.
+- Extend beat-clear rewriting to cross-measure splits and complex tie/slur combinations.
+- Keep engraving changes in the layout module or narrow renderer helpers rather than growing `jianpu-renderer.ts`.
+
+### 6. Web workbench maintainability
+
+Goal: split the growing plain-TypeScript workbench controller without adding a UI framework.
+
+Scope:
+
+- Separate preview, playback, source-navigation, library, and export controllers.
+- Preserve the existing AST-first integration boundary and browser behavior.
 
 ### 7. Same-staff multi-voice semantics
 

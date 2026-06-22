@@ -64,4 +64,4 @@ if (result.success) {
 
 ## 当前限制
 
-当前是原生基础 MusicXML 导出器，不依赖外部 ABC-to-MusicXML 工具。它支持多声部导出为多个 part，并保留反复/ending 符号，但只支持大调和基础音符/休止符/歌词。反复播放展开、复杂连线、连音、装饰音、同谱表多声部合并和 `jianpu` clef 尚未实现。新增语义时必须同步增加单元测试和文档。
+当前是原生 MusicXML 导出器，不依赖外部 ABC-to-MusicXML 工具。它支持大调音高、音符/休止符/歌词、tie、slur、基础三连音、inline key change、多声部独立 part，以及反复/ending 符号。D.C.、D.S.、Segno、Coda 和 Fine 的 MusicXML direction、反复播放展开、通用比例连音、装饰音、同谱表多声部合并和 `jianpu` clef 尚未实现。新增语义时必须同步增加单元测试和文档。

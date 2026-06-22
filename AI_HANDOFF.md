@@ -84,7 +84,7 @@ Current expected state after the latest development pass:
 
 ```text
 Test files: 15 passed
-Tests: 219 passed
+Tests: 221 passed
 Typecheck: passes
 Build: passes
 ```
@@ -123,7 +123,7 @@ The build may regenerate `dist/`, but those files should not be manually changed
 - Only major-key pitch semantics are fully implemented.
 - Minor/pentatonic modes may be parsed but are not semantically mapped yet.
 - General tuplets beyond `(3` are not implemented.
-- Nested repeats and advanced repeat jumps such as D.C., D.S., Fine, and Coda are not implemented.
+- Common single-jump D.C./D.S. playback to Fine or Coda is implemented; nested, ambiguous, or multiple-target repeat navigation is not.
 - Multi-voice MusicXML currently exports voices as separate parts; same-staff voice merging is not implemented.
 - Slurs are exported and rendered, but playback does not yet apply legato shaping.
 - Jianpu SVG rendering is preview-oriented, not publication-grade engraving.
@@ -134,10 +134,11 @@ The build may regenerate `dist/`, but those files should not be manually changed
 
 Pick from `ROADMAP.md`. The jianpu layout refactor now has a dedicated pure layout module and direct unit coverage for source systems, automatic wrapping, readable narrow widths, and event positioning. The best next engineering task is usually one of:
 
-1. Add import support from standard ABC to AST/JABC.
-2. Add import support from MusicXML to AST/JABC.
-3. Implement minor-key and pentatonic pitch semantics.
-4. Improve same-measure multi-voice alignment, lyric spacing, and optional measure numbering.
+1. Finish repeat-navigation semantics with MusicXML directions, target validation, and explicit AST meaning.
+2. Add import support from standard ABC to AST/JABC.
+3. Add import support from MusicXML to AST/JABC.
+4. Implement minor-key and pentatonic pitch semantics.
+5. Improve same-measure multi-voice alignment, lyric spacing, and optional measure numbering.
 
 Avoid starting with OCR, full publication engraving, or arbitrary MusicXML round-tripping until the AST and importer rules are better defined.
 

@@ -131,8 +131,8 @@ and current limits.
 - Notes, rests, and extensions initially receive the current `L:` duration.
 - Each `w:` line targets the nearest preceding music source row in the same voice; if that row already has an attached lyric line, the extra `w:` is preserved but not rendered as note lyrics.
 - Lyrics are assigned by vocal unit rather than raw event count: a note with dots or duration modifiers consumes one syllable; `-` extensions, tied notes, and slurred groups continue the same syllable; rests, key changes, repeat markers, barlines, and endings do not consume syllables. A `*` syllable consumes one vocal unit without displaying text.
-- Extensions remain explicit AST events. Duration resolution belongs to a
-  later milestone.
+- Extensions remain explicit AST events. ABC/MusicXML export and playback
+  resolve them against the preceding note without mutating the AST.
 
 ## MusicXML export
 

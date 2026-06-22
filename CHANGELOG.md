@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Changed
 
+- Align Roadmap, README, AI handoff, AST, exporter, and renderer documentation with the implemented repeat-navigation, extension-resolution, source-navigation, layout, tie/slur, and triplet behavior.
 - Add compact, standard, wide, extra-wide, and custom jianpu line-spacing controls backed by a bounded renderer option.
 - Reduce the Segno size, enlarge Coda, and move both closer to their jianpu barline while retaining barline-boundary anchoring.
 - Make the Web current-measure preview a compact inline strip that fills the preview slot more effectively.
@@ -21,6 +22,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 
+- Move low-octave jianpu dots closer to note numbers so they no longer overlap short-duration underlines.
 - Show attached lyrics in the Web current-measure preview and expand only lyric-bearing preview cards to preserve readable spacing.
 - Expand aligned jianpu measure columns to fill complete fixed-count rows instead of leaving unused space when one or two measures per row are selected.
 - Scope current-measure preview SVG styles so they do not change the main jianpu preview font size.

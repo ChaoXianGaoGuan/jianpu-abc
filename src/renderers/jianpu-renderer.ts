@@ -730,7 +730,7 @@ function renderOctaveDots(centerX: number, octaveShift: number, fontSize: number
   for (let index = 0; index < Math.abs(octaveShift); index += 1) {
     const y = direction > 0
       ? -fontSize * 1.02 - index * 6
-      : fontSize * 0.35 + index * 6;
+      : fontSize * 0.27 + index * 6;
     output.push(`<circle class="octave-dot" cx="${round(centerX)}" cy="${round(y)}" r="2.3"/>`);
   }
   return output.join("");
