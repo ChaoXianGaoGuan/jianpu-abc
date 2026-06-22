@@ -58,6 +58,11 @@ function repeatMarkerXs(svg: string, kind: string): number[] {
     .map((match) => Number(match[1]));
 }
 
+function relationArcStartY(svg: string, className: string): number {
+  const match = new RegExp(`class="relation-arc ${className}" d="M [\\d.-]+ ([\\d.-]+)`).exec(svg);
+  return Number(match?.[1] ?? Number.NaN);
+}
+
 const SCORE = `T:渲染测试 <曲>
 C:传统来源
 M:4/4
@@ -381,6 +386,12 @@ describe("renderJianpu", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| 3~ ~3 |"), { fontSize: 32 });
 
     expect(svg).toContain('class="relation-arc tie-arc" d="M 32.96 -26.24 Q 52.48 -33.28 72 -26.24"');
+  });
+
+  it("keeps slurs visually above ties when both start on the same note", () => {
+    const svg = renderJianpu(parse("K:C jianpu\n| (6s~ ~6e 1'.) |"), { fontSize: 32 });
+
+    expect(relationArcStartY(svg, "slur-arc")).toBeLessThan(relationArcStartY(svg, "tie-arc"));
   });
 
   it("renders long notes as beat-sized extension dashes", () => {

@@ -459,9 +459,10 @@ function renderSlurArcs(
 }
 
 function slurEndpointY(item: PositionedEvent, fontSize: number): number {
-  return item.event.type === "note" && item.event.octaveShift > 0
-    ? -fontSize * (1.08 + (item.event.octaveShift - 1) * 0.16)
-    : -fontSize * 0.82;
+  if (item.event.type === "note" && item.event.octaveShift > 0) {
+    return -fontSize * (1.28 + (item.event.octaveShift - 1) * 0.16);
+  }
+  return -fontSize * 1.06;
 }
 
 function cubicArcPath(
