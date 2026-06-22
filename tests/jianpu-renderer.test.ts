@@ -356,6 +356,28 @@ describe("renderJianpu", () => {
     expect(svg).not.toContain(">(</text>");
   });
 
+  it("renders same-row cross-measure slurs as one continuous arc", () => {
+    const svg = renderJianpu(parse("K:C jianpu\n| (6s~ | ~6e 1'.) |"), {
+      width: 900,
+      fontSize: 32,
+      showHeader: false,
+    });
+
+    expect(svg.match(/class="relation-arc slur-arc/g)).toHaveLength(1);
+    expect(svg).toContain('class="relation-arc slur-arc cross-measure-slur"');
+  });
+
+  it("splits cross-measure slurs when measures are on different rows", () => {
+    const svg = renderJianpu(parse("K:C jianpu\n| (6s~ |\n| ~6e 1'.) |"), {
+      width: 900,
+      fontSize: 32,
+      showHeader: false,
+    });
+
+    expect(svg.match(/class="relation-arc slur-arc/g)).toHaveLength(2);
+    expect(svg).not.toContain("cross-measure-slur");
+  });
+
   it("renders triplet marks", () => {
     const svg = renderJianpu(parse("K:C jianpu\n| (3 1 2 3 |"));
 

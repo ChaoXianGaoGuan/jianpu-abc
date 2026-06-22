@@ -28,7 +28,7 @@ const svg = renderJianpu(score, {
 - SVG 粗细竖线与圆点形式的反复/终止线，以及带水平括号的编号 ending。
 - 反复导航标记：Segno/Coda 显示在小节线正上方，D.C./D.S./Fine 显示在小节线正下方，Coda 与 Segno 使用同一档符号字号。
 - 单小节线、复小节线、歌词、声部标签和按小节自动换行。
-- SVG 曲线路径形式的圆滑线、从数字边缘起止的延音线，以及中央留出数字断口的三连音弧线。圆滑线端点会避开高音点；同一行的跨小节延音线连续绘制，并在与小节线交叉处留出视觉净空，不同行时拆为行尾和行首两段。
+- SVG 曲线路径形式的圆滑线、从数字边缘起止的延音线，以及中央留出数字断口的三连音弧线。圆滑线端点会避开高音点；同一行的跨小节圆滑线和延音线连续绘制，延音线还会在与小节线交叉处留出视觉净空，不同行时拆为行尾和行首两段。
 
 每个事件组包含 `data-event-id="voiceId:measureIndex:eventIndex"`。传入相同的 `highlightEventId` 会添加 `is-highlighted` class；该 ID 与 `PlaybackEvent.sourceEventId` 一致，因此播放层无需维护第二套映射。Web 工作台在播放过程中切换 `is-highlighted`，编辑器光标则使用独立的 `is-source-active`。光标位于音乐 token 内或紧邻 token 末尾时高亮对应事件；若该事件属于已分配歌词的发音单元，则同一发音单元内的延音、tie continuation、slur continuation 会一起高亮。歌词 `<text class="event-lyric">` 带有 `data-lyric-event-id`，右键歌词文字会停止播放、聚焦编辑器并选中对应 `w:` token；右键非歌词事件图形仍选中完整音乐 token。空白、注释和标题字段不映射到事件。
 

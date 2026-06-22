@@ -37,6 +37,13 @@ interface CrossMeasureTie {
   end: PositionedEvent;
 }
 
+interface CrossMeasureSlur {
+  startMeasureIndex: number;
+  endMeasureIndex: number;
+  start: PositionedEvent;
+  end: PositionedEvent;
+}
+
 const ACCIDENTAL_TEXT: Record<Accidental, string> = {
   sharp: "♯",
   flat: "♭",
@@ -94,8 +101,20 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
       buildPositionedEvents(placed, beatDuration, fontSize, leftBoundaryXs[measureIndex] ?? 0)
     );
     const crossMeasureTies = findCrossMeasureTies(layout, positionedByMeasure);
+    const sameRowCrossMeasureSlurs = findCrossMeasureSlurs(layout, positionedByMeasure)
+      .filter((slur) => {
+        const startLayout = layout[slur.startMeasureIndex];
+        const endLayout = layout[slur.endMeasureIndex];
+        return startLayout !== undefined && endLayout !== undefined && startLayout.y === endLayout.y;
+      });
     const connectedBoundaries = new Set(
       crossMeasureTies.map((connection) => connection.boundaryIndex),
+    );
+    const suppressIncomingSlurs = new Set(
+      sameRowCrossMeasureSlurs.map((slur) => slur.endMeasureIndex),
+    );
+    const suppressOutgoingSlurs = new Set(
+      sameRowCrossMeasureSlurs.map((slur) => slur.startMeasureIndex),
     );
     renderedVoices.push(...layout.map((placed, measureIndex) => {
       const previous = layout[measureIndex - 1];
@@ -116,10 +135,13 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
         options.highlightEventId,
         connectedBoundaries.has(measureIndex - 1),
         connectedBoundaries.has(measureIndex),
+        suppressIncomingSlurs.has(measureIndex),
+        suppressOutgoingSlurs.has(measureIndex),
         suppressRightBarline,
         sharedLeftBarlineX,
       );
     }));
+    renderedVoices.push(renderCrossMeasureSlurs(sameRowCrossMeasureSlurs, layout, fontSize));
     renderedVoices.push(renderCrossMeasureTies(crossMeasureTies, layout, fontSize));
     const lastLineY = layout.at(-1)?.y ?? cursorY;
     cursorY = lastLineY + lineHeight + (voiceIndex === displayScore.voices.length - 1 ? 0 : fontSize * 0.9);
@@ -241,6 +263,8 @@ function renderMeasure(
   highlightEventId: string | undefined,
   suppressIncomingTie: boolean,
   suppressOutgoingTie: boolean,
+  suppressIncomingSlur: boolean,
+  suppressOutgoingSlur: boolean,
   suppressRightBarline: boolean,
   leftBarlineX: number | undefined,
 ): string {
@@ -266,6 +290,8 @@ function renderMeasure(
     fontSize,
     suppressIncomingTie,
     suppressOutgoingTie,
+    suppressIncomingSlur,
+    suppressOutgoingSlur,
   );
   const leftBarline = placed.measure.leftBarline
     ? renderBarline(placed.measure.leftBarline, "left", placed.width, fontSize, leftBarlineX)
@@ -397,9 +423,17 @@ function renderRelations(
   fontSize: number,
   suppressIncomingTie: boolean,
   suppressOutgoingTie: boolean,
+  suppressIncomingSlur: boolean,
+  suppressOutgoingSlur: boolean,
 ): string {
   const output: string[] = [];
-  output.push(...renderSlurArcs(positioned, measureWidth, fontSize));
+  output.push(...renderSlurArcs(
+    positioned,
+    measureWidth,
+    fontSize,
+    suppressIncomingSlur,
+    suppressOutgoingSlur,
+  ));
   output.push(...renderTieArcs(
     positioned,
     measureWidth,
@@ -429,6 +463,8 @@ function renderSlurArcs(
   positioned: PositionedEvent[],
   measureWidth: number,
   fontSize: number,
+  suppressIncoming: boolean,
+  suppressOutgoing: boolean,
 ): string[] {
   const output: string[] = [];
   const inset = fontSize * 0.28;
@@ -440,12 +476,14 @@ function renderSlurArcs(
       const x2 = Math.max(x1 + fontSize * 0.2, item.centerX - inset);
       const y1 = open ? slurEndpointY(open, fontSize) : -fontSize * 1.02;
       const y2 = slurEndpointY(item, fontSize);
-      output.push(cubicArcPath("slur-arc", x1, y1, x2, y2, fontSize));
+      if (open || !suppressIncoming) {
+        output.push(cubicArcPath("slur-arc", x1, y1, x2, y2, fontSize));
+      }
       open = undefined;
     }
     if (item.event.slurStart) open = item;
   }
-  if (open) {
+  if (open && !suppressOutgoing) {
     output.push(cubicArcPath(
       "slur-arc",
       open.centerX + inset,
@@ -554,6 +592,55 @@ function renderTieArcs(
     ));
   }
   return output;
+}
+
+function findCrossMeasureSlurs(
+  layout: LayoutMeasure[],
+  positionedByMeasure: PositionedEvent[][],
+): CrossMeasureSlur[] {
+  const output: CrossMeasureSlur[] = [];
+  let open: { measureIndex: number; item: PositionedEvent } | undefined;
+
+  for (const [measureIndex] of layout.entries()) {
+    const positioned = positionedByMeasure[measureIndex] ?? [];
+    for (const item of positioned) {
+      if (item.event.type !== "note") continue;
+      if (item.event.slurEnd) {
+        if (open && open.measureIndex !== measureIndex) {
+          output.push({
+            startMeasureIndex: open.measureIndex,
+            endMeasureIndex: measureIndex,
+            start: open.item,
+            end: item,
+          });
+        }
+        open = undefined;
+      }
+      if (item.event.slurStart) open = { measureIndex, item };
+    }
+  }
+
+  return output;
+}
+
+function renderCrossMeasureSlurs(
+  slurs: CrossMeasureSlur[],
+  layout: LayoutMeasure[],
+  fontSize: number,
+): string {
+  const inset = fontSize * 0.28;
+  return slurs.map((slur) => {
+    const startLayout = layout[slur.startMeasureIndex] as LayoutMeasure;
+    const endLayout = layout[slur.endMeasureIndex] as LayoutMeasure;
+    return cubicArcPath(
+      "slur-arc cross-measure-slur",
+      startLayout.x + slur.start.centerX + inset,
+      startLayout.y + slurEndpointY(slur.start, fontSize),
+      endLayout.x + slur.end.centerX - inset,
+      endLayout.y + slurEndpointY(slur.end, fontSize),
+      fontSize,
+    );
+  }).join("");
 }
 
 function findCrossMeasureTies(
