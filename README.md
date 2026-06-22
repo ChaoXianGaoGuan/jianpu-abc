@@ -186,6 +186,7 @@ const svg = renderJianpu(score, {
   width: 900,
   alignMeasuresAcrossSystems: true,
   measuresPerSystem: 4,
+  lineSpacing: 1.2,
 });
 ```
 
@@ -194,7 +195,7 @@ inline key-change markers, larger accidentals, standard double-sharp/double-flat
 glyphs, octave and duration marks, rests, extensions, lyrics, aligned source-row
 measure columns, fixed measures-per-row layout, measure wrapping, readable narrow-screen spacing with responsive SVG scaling when needed, short-note underline gaps at beat and barline boundaries, optional beat-clear note/rest visual rewrites, multi-voice labels, and optional event highlighting. The
 validation UI shows jianpu by default, can switch the same preview area to
-staff notation, includes controls for toggling aligned jianpu measure columns and choosing a fixed jianpu measures-per-row layout,
+staff notation, includes controls for aligned jianpu measure columns, fixed measures-per-row layout, and preset or custom jianpu line spacing,
 highlights the JABC token under the editor caret, and selects the matching token
 when a rendered note is right-clicked. Playback follows matching source event IDs
 by toggling existing SVG highlight classes instead of redrawing the whole score.

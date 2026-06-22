@@ -133,9 +133,11 @@ describe("renderJianpu", () => {
     expect(svg).toContain("event-repeat-marker");
     expect(svg).toContain("event-repeat-marker-segno");
     expect(svg).toContain("event-repeat-marker-coda");
-    expect(svg).toContain('y="-39.04">𝄋</text>');
+    expect(svg).toContain('font-size:28.16px');
+    expect(svg).toContain('font-size:38.4px');
+    expect(svg).toContain('y="-35.2">𝄋</text>');
     expect(svg).toContain('y="38.4">D.S.</text>');
-    expect(svg).toContain('y="-39.04">𝄌</text>');
+    expect(svg).toContain('y="-35.2">𝄌</text>');
     expect(svg).toContain('y="38.4">Fine</text>');
   });
 
@@ -555,6 +557,14 @@ describe("renderJianpu", () => {
     expect(rowPositions[0]).toBe(rowPositions[1]);
     expect(rowPositions[2]).toBe(rowPositions[3]);
     expect(rowPositions[4]).toBe(rowPositions[5]);
+  });
+
+  it("adjusts row spacing with a bounded multiplier", () => {
+    const score = parse("K:C jianpu\n| 1 |\n| 2 |");
+    const standard = numericMeasureTransforms(renderJianpu(score));
+    const wide = numericMeasureTransforms(renderJianpu(score, { lineSpacing: 1.5 }));
+
+    expect(wide[1]!.y - wide[0]!.y).toBeCloseTo((standard[1]!.y - standard[0]!.y) * 1.5, 3);
   });
 
   it("can force a fixed number of measures per row", () => {

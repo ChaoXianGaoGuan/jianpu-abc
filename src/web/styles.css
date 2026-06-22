@@ -374,6 +374,16 @@ button.score-library-item {
   margin-top: 12px;
 }
 
+#line-spacing-custom {
+  width: 4.7rem;
+  padding: 7px 8px;
+  border: 1px solid #b8c5bd;
+  border-radius: 8px;
+  background: #fffef9;
+  color: #20332b;
+  font: inherit;
+}
+
 .playback-panel-main {
   flex: 1;
   min-width: 0;

@@ -109,6 +109,20 @@
                   <option value="12">12</option>
                 </select>
               </label>
+              <label class="notation-control" for="line-spacing-select" title="调整简谱各行之间的垂直距离">
+                <span>行间距</span>
+                <select id="line-spacing-select">
+                  <option value="0.85">紧凑</option>
+                  <option value="1" selected>标准</option>
+                  <option value="1.2">宽松</option>
+                  <option value="1.5">超宽</option>
+                  <option value="custom">自定义</option>
+                </select>
+              </label>
+              <label id="line-spacing-custom-control" class="notation-control hidden" for="line-spacing-custom">
+                <span>倍率</span>
+                <input id="line-spacing-custom" type="number" min="0.6" max="2" step="0.05" value="1" inputmode="decimal" />
+              </label>
               <label class="toggle-control" title="显示跨拍附点等隐藏拍点的辅助延音标记">
                 <input id="beat-clear-toggle" type="checkbox" />
                 <span>分拍显示</span>

@@ -61,6 +61,9 @@ const notationSelect = element<HTMLSelectElement>("notation-select");
 const previewKindIndicator = element<HTMLSpanElement>("preview-kind-indicator");
 const alignMeasuresToggle = element<HTMLInputElement>("align-measures-toggle");
 const measureColumnsSelect = element<HTMLSelectElement>("measure-columns-select");
+const lineSpacingSelect = element<HTMLSelectElement>("line-spacing-select");
+const lineSpacingCustomControl = element<HTMLLabelElement>("line-spacing-custom-control");
+const lineSpacingCustom = element<HTMLInputElement>("line-spacing-custom");
 const beatClearToggle = element<HTMLInputElement>("beat-clear-toggle");
 const downloadScoreSvgButton = element<HTMLButtonElement>("download-score-svg-button");
 const downloadScorePngButton = element<HTMLButtonElement>("download-score-png-button");
@@ -225,6 +228,11 @@ tempoBpm.addEventListener("input", updateManualTiming);
 notationSelect.addEventListener("change", renderActivePreview);
 alignMeasuresToggle.addEventListener("change", renderActivePreview);
 measureColumnsSelect.addEventListener("change", renderActivePreview);
+lineSpacingSelect.addEventListener("change", () => {
+  updateLineSpacingControls();
+  renderActivePreview();
+});
+lineSpacingCustom.addEventListener("input", renderActivePreview);
 beatClearToggle.addEventListener("change", () => {
   updateCurrentMeasurePreview();
   renderActivePreview();
@@ -521,6 +529,8 @@ function renderActivePreview(): void {
   staffPreview.classList.toggle("hidden", showJianpu);
   alignMeasuresToggle.disabled = !showJianpu;
   measureColumnsSelect.disabled = !showJianpu;
+  lineSpacingSelect.disabled = !showJianpu;
+  lineSpacingCustom.disabled = !showJianpu || lineSpacingSelect.value !== "custom";
   beatClearToggle.disabled = !showJianpu;
   previewKindIndicator.textContent = showJianpu ? "SVG" : "ABCJS";
 
@@ -541,6 +551,7 @@ function renderJianpuPreview(): void {
     showLyrics: true,
     alignMeasuresAcrossSystems: alignMeasuresToggle.checked,
     measuresPerSystem: selectedMeasuresPerSystem(),
+    lineSpacing: selectedLineSpacing(),
     rhythmDisplay: beatClearToggle.checked ? "beat-clear" : "source",
   });
   previewReady = true;
@@ -928,6 +939,20 @@ function selectedMeasuresPerSystem(): number | undefined {
   if (measureColumnsSelect.value === "auto") return undefined;
   const value = Number(measureColumnsSelect.value);
   return Number.isInteger(value) && value >= 1 ? value : undefined;
+}
+
+function selectedLineSpacing(): number {
+  const source = lineSpacingSelect.value === "custom"
+    ? lineSpacingCustom.value
+    : lineSpacingSelect.value;
+  const value = Number(source);
+  return Number.isFinite(value) ? Math.min(2, Math.max(0.6, value)) : 1;
+}
+
+function updateLineSpacingControls(): void {
+  const custom = lineSpacingSelect.value === "custom";
+  lineSpacingCustomControl.classList.toggle("hidden", !custom);
+  lineSpacingCustom.disabled = !custom || selectedNotation() !== "jianpu";
 }
 
 function element<T extends HTMLElement>(id: string): T {

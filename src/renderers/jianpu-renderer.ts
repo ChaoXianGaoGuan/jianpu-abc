@@ -27,6 +27,7 @@ export interface RenderOptions {
   highlightEventId?: string;
   alignMeasuresAcrossSystems?: boolean;
   measuresPerSystem?: number | undefined;
+  lineSpacing?: number;
   rhythmDisplay?: RhythmDisplayMode;
   styleScope?: string;
 }
@@ -58,6 +59,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
   const showLyrics = options.showLyrics ?? true;
   const showHeader = options.showHeader ?? true;
   const alignMeasuresAcrossSystems = options.alignMeasuresAcrossSystems ?? true;
+  const lineSpacing = Math.min(2, Math.max(0.6, options.lineSpacing ?? 1));
   const displayScore = options.rhythmDisplay === "beat-clear" ? toBeatClearScore(score) : score;
   const padding = Math.max(24, fontSize);
   const defaultLength = displayScore.header.defaultNoteLength ?? DEFAULT_NOTE_LENGTH;
@@ -67,7 +69,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
   const titleY = padding;
   const metaY = showHeader && displayScore.header.title ? padding + fontSize * 1.2 : padding;
   const musicTop = showHeader ? metaY + fontSize * 2 : padding + fontSize * 1.35;
-  const lineHeight = fontSize * (showLyrics ? 3.35 : 2.55);
+  const lineHeight = fontSize * (showLyrics ? 3.35 : 2.55) * lineSpacing;
   const minCellWidth = fontSize * 0.62;
   const title = displayScore.header.title ?? "JABC score";
   const renderedVoices: string[] = [];
@@ -175,8 +177,9 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
     ${cssScope}.event-symbol,${cssScope}.duration-extension{font:600 ${fontSize}px 'Microsoft YaHei','Noto Sans SC',sans-serif;fill:#1f332a;text-anchor:middle}
     ${cssScope}.event-key-change{font:700 ${fontSize * 0.48}px Inter,'Microsoft YaHei',sans-serif;fill:#a4522c;text-anchor:middle}
     ${cssScope}.event-repeat-marker{font:700 ${round(fontSize * 0.54)}px Inter,'Microsoft YaHei',sans-serif;fill:#7f3f25;text-anchor:middle}
-    ${cssScope}.event-repeat-marker-segno,${cssScope}.event-repeat-marker-coda{font:700 ${round(fontSize)}px 'Bravura','Noto Music','Segoe UI Symbol',serif;fill:#7f3f25}
-    ${cssScope}.event-repeat-marker-coda{font-size:${round(fontSize * 1.08)}px}
+    ${cssScope}.event-repeat-marker-segno,${cssScope}.event-repeat-marker-coda{font-family:'Bravura','Noto Music','Segoe UI Symbol',serif;fill:#7f3f25}
+    ${cssScope}.event-repeat-marker-segno{font-size:${round(fontSize * 0.88)}px}
+    ${cssScope}.event-repeat-marker-coda{font-size:${round(fontSize * 1.2)}px}
     ${cssScope}.event-accidental{font:700 ${fontSize * 0.8}px 'Bravura','Noto Music','Segoe UI Symbol',Georgia,serif;fill:#1f332a;text-anchor:middle;dominant-baseline:middle}
     ${cssScope}.octave-dot,${cssScope}.duration-dot{fill:#1f332a}
     ${cssScope}.duration-line{stroke:#1f332a;stroke-width:1.7;stroke-linecap:round}
@@ -413,7 +416,7 @@ function renderEvent(
 
 function repeatMarkerY(kind: RepeatMarkerKind, fontSize: number, showLyrics: boolean): number {
   return kind === "segno" || kind === "coda"
-    ? -fontSize * 1.22
+    ? -fontSize * 1.1
     : fontSize * (showLyrics ? 1.2 : 1.05);
 }
 
