@@ -160,7 +160,10 @@ function lyricUnitsByLine(voice: Voice): Map<number, LyricUnit[]> {
         currentUnit?.eventIds.push(eventId);
         continue;
       }
-      if (event.type !== "note") continue;
+      if (event.type !== "note") {
+        currentUnit = undefined;
+        continue;
+      }
 
       const startsTarget = startsLyricUnit(event, tieOpen, slurOpen);
       if (startsTarget) {

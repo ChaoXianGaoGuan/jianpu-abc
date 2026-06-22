@@ -65,6 +65,20 @@ describe("source navigation", () => {
     expect(sourceLyricByEventId(ranges, "default:1:2")?.syllableIndex).toBe(2);
   });
 
+  it("stops lyric unit extensions at repeat navigation markers", () => {
+    const source = "K:C jianpu\n| 1 7 !D.S.! - 5 |\nw: 无 法 突";
+    const ranges = buildLyricSourceRanges(parse(source), source);
+
+    expect(ranges.map(({ start, end, eventIds }) => ({
+      text: source.slice(start, end),
+      eventIds,
+    }))).toEqual([
+      { text: "无", eventIds: ["default:0:0"] },
+      { text: "法", eventIds: ["default:0:1"] },
+      { text: "突", eventIds: ["default:0:4"] },
+    ]);
+  });
+
   it("resolves measure preview targets from lyric syllable tokens", () => {
     const source = "K:C jianpu\n| 1 2 | 3 4 |\nw: 一 二 三 四";
     const score = parse(source);
