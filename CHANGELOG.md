@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Changed
 
+- Anchor an inline key change written at a measure end above that measure's right barline, and remove 《两只老虎》 from the built-in score library.
 - Align Roadmap, README, AI handoff, AST, exporter, and renderer documentation with the implemented repeat-navigation, extension-resolution, source-navigation, layout, tie/slur, and triplet behavior.
 - Add compact, standard, wide, extra-wide, and custom jianpu line-spacing controls backed by a bounded renderer option.
 - Reduce the Segno size, enlarge Coda, and move both closer to their jianpu barline while retaining barline-boundary anchoring.

@@ -6,10 +6,9 @@
 
 ```text
 src/library/
-  儿歌/
-    two-tigers.jabc
-  练习曲/
-    scale-study.jabc
+  流行歌曲/
+    xin-qiang.jabc
+    yi-qian-nian-yi-hou.jabc
 ```
 
 - 目录名是网页中的分类；嵌套目录使用 ` / ` 连接显示。

@@ -123,4 +123,19 @@ K:C jianpu
     expect((positioned[3]?.centerX ?? 0) - (positioned[1]?.centerX ?? 0))
       .toBeGreaterThan((positioned[1]?.centerX ?? 0) - (positioned[0]?.centerX ?? 0));
   });
+
+  it("anchors a trailing key change to the right barline", () => {
+    const measures = parseMeasures(`M:4/4
+L:1/4
+K:C jianpu
+| 1 2 3 4 [K:G jianpu] | 1 2 3 4 |`);
+    const layout = buildLayout(measures);
+    const first = layout[0];
+    if (first === undefined) throw new Error("Expected a measure layout");
+
+    const positioned = positionEvents(first, QUARTER, 32);
+    const keyChange = positioned.find((item) => item.event.type === "key-change");
+
+    expect(keyChange?.centerX).toBeCloseTo(first.width - 32 * 0.22, 5);
+  });
 });

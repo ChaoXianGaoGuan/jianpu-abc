@@ -249,11 +249,15 @@ export function positionEvents(
       ? nextTimedLayoutSpan(placed.measure.events, layoutSpans, eventIndex, beatDuration)
       : visualUnitSpan;
     const measureSpan = layoutSpans.reduce((total, span) => total + span, 0);
+    const trailingKeyChange = event.type === "key-change"
+      && !hasTimedEventAfter(placed.measure.events, eventIndex);
     const centerOffset = event.type === "repeat-marker"
       ? slotOffset
       : slotOffset + Math.min(markerSpan, 1) / 2;
     const centerX = event.type === "repeat-marker"
       ? repeatMarkerBoundaryX(placed, centerOffset, measureSpan, fontSize, leftBoundaryX)
+      : trailingKeyChange
+        ? placed.width - fontSize * 0.22
       : layoutXAt(
         centerOffset,
         placed.cellWidth,
@@ -380,6 +384,10 @@ function nextTimedLayoutSpan(
     return layoutSpans[index] ?? eventLayoutSpan(event, beatDuration);
   }
   return 1;
+}
+
+function hasTimedEventAfter(events: MusicalEvent[], eventIndex: number): boolean {
+  return events.slice(eventIndex + 1).some((event) => !isZeroTimeEvent(event));
 }
 
 function visualSlotCount(event: MusicalEvent, beatDuration: Fraction): number {
