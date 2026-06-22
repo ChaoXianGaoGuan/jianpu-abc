@@ -70,7 +70,7 @@ export function renderJianpu(score: Score, options: RenderOptions = {}): string 
   const metaY = showHeader && displayScore.header.title ? padding + fontSize * 1.2 : padding;
   const musicTop = showHeader ? metaY + fontSize * 2 : padding + fontSize * 1.35;
   const compactLineHeight = fontSize * 2.55 * lineSpacing;
-  const lyricLineHeight = fontSize * 3.35 * lineSpacing;
+  const lyricLineHeight = fontSize * 3.5 * lineSpacing;
   const lineHeightForRow = (measures: Measure[]) => showLyrics && measures.some(measureHasLyrics)
     ? lyricLineHeight
     : compactLineHeight;

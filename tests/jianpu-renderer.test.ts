@@ -581,7 +581,7 @@ describe("renderJianpu", () => {
     const rows = numericMeasureTransforms(renderJianpu(score, { fontSize: 32 }));
 
     expect(rows[1]!.y - rows[0]!.y).toBeCloseTo(32 * 2.55, 3);
-    expect(rows[2]!.y - rows[1]!.y).toBeCloseTo(32 * 3.35, 3);
+    expect(rows[2]!.y - rows[1]!.y).toBeCloseTo(32 * 3.5, 3);
   });
 
   it("can force a fixed number of measures per row", () => {
