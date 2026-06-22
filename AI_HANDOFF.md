@@ -84,7 +84,7 @@ Current expected state after the latest development pass:
 
 ```text
 Test files: 15 passed
-Tests: 223 passed
+Tests: 226 passed
 Typecheck: passes
 Build: passes
 ```

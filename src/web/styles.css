@@ -349,15 +349,24 @@ button.score-library-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  border-radius: 20px;
-  padding: 20px 24px;
+  gap: 16px;
+  border-radius: 16px;
+  padding: 13px 17px;
+}
+
+.controls .section-label {
+  margin-bottom: 5px;
 }
 
 .button-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 9px;
+  gap: 6px;
+}
+
+.controls .button-row button {
+  min-width: 60px;
+  padding: 7px 12px;
 }
 
 .instrument-control,
@@ -368,10 +377,6 @@ button.score-library-item {
   color: #52635d;
   font-size: 0.88rem;
   font-weight: 700;
-}
-
-.instrument-control {
-  margin-top: 12px;
 }
 
 #line-spacing-custom {
@@ -393,14 +398,29 @@ button.score-library-item {
   display: flex;
   align-items: end;
   flex-wrap: wrap;
-  gap: 10px 14px;
-  margin-top: 14px;
+  gap: 7px 10px;
+  margin-top: 9px;
+}
+
+.controls .instrument-control {
+  display: grid;
+  gap: 3px;
+  font-size: 0.76rem;
+}
+
+.controls .instrument-control select {
+  padding: 6px 25px 6px 9px;
+}
+
+.controls .toggle-control {
+  padding: 6px 10px;
+  font-size: 0.78rem;
 }
 
 .setting-control,
 .volume-control {
   display: grid;
-  gap: 5px;
+  gap: 3px;
   color: #52635d;
   font-size: 0.78rem;
   font-weight: 650;
@@ -413,10 +433,10 @@ button.score-library-item {
 }
 
 .setting-control input[type="number"] {
-  width: 74px;
+  width: 68px;
   border: 1px solid #9eafa5;
   border-radius: 9px;
-  padding: 8px 9px;
+  padding: 6px 8px;
   color: #273a33;
   background: #f7f8f3;
   font: inherit;
@@ -429,11 +449,11 @@ button.score-library-item {
 }
 
 .meter-inputs input[type="number"] {
-  width: 58px;
+  width: 52px;
 }
 
 .volume-control {
-  min-width: 145px;
+  min-width: 124px;
 }
 
 .volume-control span {
@@ -448,7 +468,7 @@ button.score-library-item {
 }
 
 .volume-control input {
-  width: 145px;
+  width: 124px;
   accent-color: #254f40;
 }
 
@@ -501,9 +521,9 @@ button:disabled,
 
 .playback-readout {
   display: grid;
-  gap: 7px;
+  gap: 4px;
   color: #52635d;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   text-align: right;
 }
 
