@@ -496,10 +496,7 @@ function renderSlurArcs(
   return output;
 }
 
-function slurEndpointY(item: PositionedEvent, fontSize: number): number {
-  if (item.event.type === "note" && item.event.octaveShift > 0) {
-    return -fontSize * (1.28 + (item.event.octaveShift - 1) * 0.16);
-  }
+function slurEndpointY(_item: PositionedEvent, fontSize: number): number {
   return -fontSize * 1.06;
 }
 
