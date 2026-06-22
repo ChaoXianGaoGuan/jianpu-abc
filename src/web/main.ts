@@ -31,6 +31,7 @@ import {
   buildSourceEventRanges,
   sourceEventAtCaret,
   sourceEventById,
+  sourceEventForMeasureCaret,
   sourceLyricAtCaret,
   sourceLyricByEventId,
   type LyricSourceRange,
@@ -553,7 +554,11 @@ function updateCurrentMeasurePreview(): void {
     return;
   }
 
-  const range = sourceEventForMeasurePreview();
+  const range = sourceEventForMeasureCaret(
+    sourceEventRanges,
+    sourceLyricRanges,
+    editor.selectionStart,
+  );
   const target = parseSourceEventId(range?.eventId);
   if (!target) {
     showEmptyMeasurePreview("把插入符放到音符、休止符或转调标记上查看该小节。");
@@ -602,18 +607,6 @@ function updateCurrentMeasurePreview(): void {
     const message = error instanceof Error ? error.message : String(error);
     showEmptyMeasurePreview(message, "measure-preview-error");
   }
-}
-
-function sourceEventForMeasurePreview(): SourceEventRange | undefined {
-  const caret = editor.selectionStart;
-  const direct = sourceEventAtCaret(sourceEventRanges, caret);
-  if (direct) return direct;
-  let previous: SourceEventRange | undefined;
-  for (const range of sourceEventRanges) {
-    if (range.start > caret) break;
-    previous = range;
-  }
-  return previous;
 }
 
 function sourceLineNumber(source: string, offset: number): number {

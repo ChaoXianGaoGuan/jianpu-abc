@@ -110,6 +110,29 @@ export function sourceEventById(
   return ranges.find((range) => range.eventId === eventId);
 }
 
+export function sourceEventForMeasureCaret(
+  eventRanges: SourceEventRange[],
+  lyricRanges: LyricSourceRange[],
+  caret: number,
+): SourceEventRange | undefined {
+  const lyricRange = sourceLyricAtCaret(lyricRanges, caret);
+  if (lyricRange) {
+    for (const eventId of lyricRange.eventIds) {
+      const eventRange = sourceEventById(eventRanges, eventId);
+      if (eventRange) return eventRange;
+    }
+  }
+
+  const direct = sourceEventAtCaret(eventRanges, caret);
+  if (direct) return direct;
+  let previous: SourceEventRange | undefined;
+  for (const range of eventRanges) {
+    if (range.start > caret) break;
+    previous = range;
+  }
+  return previous;
+}
+
 export function sourceLyricAtCaret(
   ranges: LyricSourceRange[],
   caret: number,

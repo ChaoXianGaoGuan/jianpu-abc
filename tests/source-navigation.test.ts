@@ -5,6 +5,7 @@ import {
   buildSourceEventRanges,
   sourceEventAtCaret,
   sourceEventById,
+  sourceEventForMeasureCaret,
   sourceLyricAtCaret,
   sourceLyricByEventId,
 } from "../src/web/source-navigation";
@@ -62,6 +63,24 @@ describe("source navigation", () => {
       "default:1:0",
     ]);
     expect(sourceLyricByEventId(ranges, "default:1:2")?.syllableIndex).toBe(2);
+  });
+
+  it("resolves measure preview targets from lyric syllable tokens", () => {
+    const source = "K:C jianpu\n| 1 2 | 3 4 |\nw: 一 二 三 四";
+    const score = parse(source);
+    const eventRanges = buildSourceEventRanges(score, source);
+    const lyricRanges = buildLyricSourceRanges(score, source);
+
+    expect(sourceEventForMeasureCaret(
+      eventRanges,
+      lyricRanges,
+      source.indexOf("一"),
+    )?.eventId).toBe("default:0:0");
+    expect(sourceEventForMeasureCaret(
+      eventRanges,
+      lyricRanges,
+      source.indexOf("三"),
+    )?.eventId).toBe("default:1:0");
   });
 
   it("keeps extra lyric lines navigable only when they own a music row", () => {
